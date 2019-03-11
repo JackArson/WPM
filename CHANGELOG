@@ -71,3 +71,4 @@ idea:  a function that takes these parameters (min/max voltage allowable time mi
 03-11-19-10:28 create changelog, added update script
 03-11-19-11:02 combined old project files
 03-11-19-11:17 moving workbench_lighting_MOSFET_signal_pin to pin 10 due to a broken pin in the Arduino Mega pin 6 slot
+03-11-19-11:23 moving battery_charger_signal_pin from pin 4 to pin 11 to address a possible bad transitor
