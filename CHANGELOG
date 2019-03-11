@@ -66,3 +66,4 @@
 //5.8.2018 Trying to implement a "state machine"
 //5.11.2018  Success!  a machine with 16 states of being.  I'll be able to cut out a whole lot of
 //           spaghetti code now.
+03-11-19-10:28 create changelog, added update script
