@@ -1,5 +1,5 @@
-#include "Time.h"
-#include "TimeLib.h"
+#include <Time.h>
+#include <TimeLib.h>
 #include <LiquidCrystal_I2C.h>
 #include <DS1307RTC.h>
 #include <Wire.h>
@@ -35,7 +35,7 @@ void MyTimer::Update()
     }
 }
 
-void MyTimer::Set(byte x);
+void MyTimer::Set(byte x)
 {
     counter = x;
 }
