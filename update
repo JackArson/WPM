@@ -1,0 +1,24 @@
+#!/bin/bash
+#Copyright (C) 2018 Paul R Bailey  aka  'Jack Arson'
+#This is a script for Linux BASH  \o/
+#My fourth script 2-20-2019
+#GOAL:  type one description and use it to 'git commit -am <description>' and amend the CHANGELOG
+#       with the same description and a timestamp also.  This should free me from manually keeping
+#       a CHANGELOG.
+
+#EXAMPLE USAGE: ./update 'fixed farting sound'
+
+DATE=$(date +"%m-%d-%y-%H:%M")
+echo "update is adding an entry to CHANGELOG: $DATE $1"
+echo "$DATE $1" >> CHANGELOG
+echo "update is committing changes to local git repository"
+git commit -a -m "$1"
+#echo "update is switching to the master branch"
+#git checkout master
+#echo "remember to merge work branch 'git merge <branch name>'"
+
+#type 'chmod 755 myProgram' to set permissions
+#type ./myProgram to run
+
+
+
