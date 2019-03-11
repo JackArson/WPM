@@ -111,9 +111,9 @@ byte          solar_week_number = 1;
                                       // Pins 0 and 1 are reserved for the USB
 byte          the_pin_to_the_LDR_circuit                           = 2; //brown   wire lower cable              
 byte          the_pin_to_the_LDR2_circuit                          = 3; //orange wire lower cable
-byte          battery_charger_signal_pin                              = 4; //green wire upper cable  
+byte          battery_charger_signal_pin                           = 4; //green wire upper cable  
 byte          inverter_signal_pin                                  = 5; //blue wire upper cable
-byte          workbench_lighting_MOSFET_signal_pin                 = 6; //purple wire upper cable* too fast PWM
+byte          workbench_lighting_MOSFET_signal_pin                 = 10; //purple wire upper cable* too fast PWM
 byte          stage_one_inverter_relay                             = 8; //A
 byte          stage_two_inverter_relay                             = 9; //S                                   
                                       // ANALOG
