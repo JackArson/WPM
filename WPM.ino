@@ -92,10 +92,17 @@ class MyStateMachine
 {
 
 };
-//global
-MyLCD           mylcd;
-MyStateMachine  mystatemachine;
 
+class MyImportantDates
+{
+    public:
+        struct  
+};
+//global
+
+MyLCD            mylcd;
+MyStateMachine   mystatemachine;
+MyImportantDates myimportantdates;
 
 
 ////jon lynch apr 15 1968
