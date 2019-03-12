@@ -99,29 +99,48 @@ const byte QTY_IMPORTANT_DATES = 24;
 
 class MyImportantDates
 {
-    public:
-        enum EventType
-        {
-            EVENTTYPE_ANNIVERSARY,
-            EVENTTYPE_BIRTHDAY,
-            EVENTTYPE_APPOINTMENT,
-            MAX_EVENTTYPE 
-        };
-        struct ImportantDate
-        {
-            const char *text;
-            byte        month;
-            byte        day;
-            int         year;
-            EventType   event_type; 
-        };
-    private: //variables
-        ImportantDate importantdatelist[QTY_IMPORTANT_DATES] = 
-        {
-            {"Kathy", 1, 7, 1967, MyImportantDates::EVENTTYPE_BIRTHDAY},
-            {"Joe", 1, 7, 1967, MyImportantDates::EVENTTYPE_BIRTHDAY}
-        };
-        
+public:
+    enum EventType
+    {
+        EVENTTYPE_ANNIVERSARY,
+        EVENTTYPE_BIRTHDAY,
+        EVENTTYPE_APPOINTMENT,
+        EVENTTYPE_HOLIDAY,
+        MAX_EVENTTYPE 
+    };
+    struct ImportantDate
+    {
+        const char *text;
+        byte        month;
+        byte        day;
+        int         year;
+        EventType   event_type; 
+    };
+private: //variables
+    ImportantDate importantdatelist[QTY_IMPORTANT_DATES] = 
+    {
+        {"Kathy",         1,  7, 1967, EVENTTYPE_BIRTHDAY},
+        {"Jack(cat)",     2,  6, 2011, EVENTTYPE_BIRTHDAY},
+        {"Katrina",       2,  9, 2000, EVENTTYPE_BIRTHDAY},
+        {"Alan",          2, 10, 1993, EVENTTYPE_BIRTHDAY},
+        {"Jack(dog)",     2, 27, 2012, EVENTTYPE_BIRTHDAY},
+        {"Joshua",        3, 23, 1993, EVENTTYPE_BIRTHDAY},
+        {"Dad",           3, 30, 1943, EVENTTYPE_BIRTHDAY},
+        {"Christopher",   4,  3, 1990, EVENTTYPE_BIRTHDAY},
+        {"Jon",           4, 15, 1968, EVENTTYPE_BIRTHDAY},
+        {"Mena",          4, 24, 1972, EVENTTYPE_BIRTHDAY},
+        {"Jacob",         4, 26, 2005, EVENTTYPE_BIRTHDAY},
+        {"Elizabeth",     4, 29, 2000, EVENTTYPE_BIRTHDAY},
+        {"Aunt Julie",    5, 31, 1942, EVENTTYPE_BIRTHDAY},
+        {"Paul and Mena", 6, 29, 1991, EVENTTYPE_ANNIVERSARY},
+        {"Cersei",        6, 15, 2015, EVENTTYPE_BIRTHDAY},
+        {"Mom and Dad",   9,  7, 1963, EVENTTYPE_ANNIVERSARY},
+        {"Paul",          9, 24, 1969, EVENTTYPE_BIRTHDAY},
+        {"Mom",          10, 23, 1943, EVENTTYPE_BIRTHDAY},
+        {"Erik",         12,  4, 1999, EVENTTYPE_BIRTHDAY},
+        {"Mathew",       12, 17, 1995, EVENTTYPE_BIRTHDAY},
+        {"Christmas",    12, 25, 0,    EVENTTYPE_HOLIDAY}
+    };        
 };
 //global
 
@@ -130,10 +149,7 @@ MyStateMachine   mystatemachine;
 MyImportantDates myimportantdates;
 
 
-////jon lynch apr 15 1968
-//                          
-//                          // Event type 1) B-day 2) Aniversary                                   
-//                                     //           1                      2                      3                      4                     5                       6                       7                      8                     9                      10                     11                     12                     13                     14                     15                     16                     17                      18                     19                     20                      21                     22
+// 2                      3                      4                     5                       6                       7                      8                     9                      10                     11                     12                     13                     14                     15                     16                     17                      18                     19                     20                      21                     22
 byte  number_of_records_to_scan = 23;      // "12345678901234567890","12345678901234567890","12345678901234567890","12345678901234567890","12345678901234567890",,"12345678901234567890","12345678901234567890","12345678901234567890","12345678901234567890","12345678901234567890","12345678901234567890","12345678901234567890","12345678901234567890","12345678901234567890","12345678901234567890","12345678901234567890","12345678901234567890","12345678901234567890","12345678901234567890","12345678901234567890","12345678901234567890","12345678901234567890"     
 const char* important_dates_string_array[] = {" Kathy"               ,"Jack(cat)"           ,"Katrina"             ,"  Alan"              ,"  Jack"              ," Joshua"              ,"  Dad"               ,"Christopher"         ,"  Jon"                ,"  Mena"              ," Jacob"              ,"Elizabeth"           ,"Aunt Julie"          ," Dentist 8:00AM"     ,"Paul and Mena"       ,"Empty"               ," Cersei"             ," Mom and Dad"        ,"  Paul"              ,"  Mom"               ," Erik"               ,"Mathew"              ,"      Christmas"};
 const byte  important_dates_month_array[]  = {1                      ,2                     ,2                     ,2                     ,2                     ,3                      ,3                     ,4                     ,4                      ,4                     ,4                     ,4                     ,5                     ,10                    ,6                     ,0                     ,6                     ,9                     ,9                     ,10                    ,12                    ,12                    ,12};
