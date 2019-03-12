@@ -78,3 +78,4 @@ idea:  a function that takes these parameters (min/max voltage allowable time mi
 03-12-19-10:24 repaired *char warnings and created MyLCD class
 03-12-19-10:55 added Jons birthday
 03-12-19-11:00 add class MyStateMachine and class MyImportantDates
+03-12-19-12:38 initialization list experiment

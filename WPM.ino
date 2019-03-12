@@ -4,6 +4,8 @@
 #include <DS1307RTC.h>
 #include <Wire.h>
 
+
+
 LiquidCrystal_I2C lcd(0x27, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);  
 class MyTimer
 {
@@ -93,10 +95,33 @@ class MyStateMachine
 
 };
 
+const byte QTY_IMPORTANT_DATES = 24;
+
 class MyImportantDates
 {
     public:
-        struct  
+        enum EventType
+        {
+            EVENTTYPE_ANNIVERSARY,
+            EVENTTYPE_BIRTHDAY,
+            EVENTTYPE_APPOINTMENT,
+            MAX_EVENTTYPE 
+        };
+        struct ImportantDate
+        {
+            const char *text;
+            byte        month;
+            byte        day;
+            int         year;
+            EventType   event_type; 
+        };
+    private: //variables
+        ImportantDate importantdatelist[QTY_IMPORTANT_DATES] = 
+        {
+            {"Kathy", 1, 7, 1967, MyImportantDates::EVENTTYPE_BIRTHDAY},
+            {"Joe", 1, 7, 1967, MyImportantDates::EVENTTYPE_BIRTHDAY}
+        };
+        
 };
 //global
 
