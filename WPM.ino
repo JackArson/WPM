@@ -8,10 +8,10 @@ LiquidCrystal_I2C lcd(0x27, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);
 class MyTimer
 {
   public:
-  MyTimer();
-  byte counter;    // accessable from outside via (MyTimer).counter 
-  void Update       ();
-  void Set          (byte x); 
+    MyTimer();
+    byte counter;    // accessable from outside via (MyTimer).counter 
+    void Update       ();
+    void Set          (byte x); 
 };
 
 MyTimer::MyTimer()
@@ -40,8 +40,56 @@ void MyTimer::Set(byte x)
     counter = x;
 }
 
+class MyLCD
+{
+    public:
+        void printDateSuffix(byte day_of_month);
+};
 
-  
+void MyLCD::printDateSuffix(byte day_of_month)
+{
+    //test if number is in range
+    if (day_of_month > 0 && day_of_month <= 31)
+    {
+    }
+    else
+    {
+        Serial.print(F("myLCD::printDateSuffix:  received parameter of "));
+        Serial.print(day_of_month);
+        Serial.println(F(", but it should be between 1 - 31"));
+        return;
+    }
+    //any number over 20 should be reduced by tens until it is 10 or less
+    if (day_of_month >= 20)
+    {
+        while (day_of_month > 10)
+        {
+            day_of_month = day_of_month -10;
+        }
+    }
+    //day_of_month should be between 1 and 20
+    
+    if (day_of_month == 1)
+    {
+        lcd.print("st");
+    }
+    else if (day_of_month == 2)
+    {
+
+        lcd.print("nd");
+    }
+    else if (day_of_month == 3)
+    {
+        lcd.print("rd");
+    }
+    else
+    {
+        lcd.print("th");
+    }
+}
+
+//global
+MyLCD mylcd;
 ////jon lynch apr 15 1968
 //                          
 //                          // Event type 1) B-day 2) Aniversary                                   
@@ -165,7 +213,7 @@ MyTimer myTimer;
 //Flasher led1(1,100,100);
 //                                  
 // 
-void myPrintStatefunction(char* text);
+void myPrintStatefunction(char const * text);
 void myBacklightfunction();
 byte myCalculateWeekNumberfunction(TimeElements sixpartdate);
 void myClearMessageBoardfunction();
@@ -180,15 +228,15 @@ void myMessageUpcomingEventsfunction(byte n);
 void myMessageVoltageDailyHighfunction();
 void myMessageVoltageDailyLowfunction();
 void myMessageWeekNumberfunction();
-char* myNumericalSuffixCalculatorfunction(byte x);
+//const char* myNumericalSuffixCalculatorfunction(byte x);
 void myPrintDatetoLCDfunction(byte x, byte y);
 void myPrintLDRresultsToLCDfunction();
 void myPrintSerialTimestampfunction ();
 void myPrintTimetoLCDfunction(TimeElements timestamp, byte x, byte y, boolean right_justify);
 void myPrintVoltagetoLCDfunction(int x,int y,float v);
 void myReadPotentiometerAndAdjustWorkbenchTrackLightsfunction();
-char* myReturnDayofWeekfunction (byte x);
-char* myReturnDayofWeekFromUnixTimestampfunction (TimeElements unzipped_time);
+char const * myReturnDayofWeekfunction (byte x);
+char const * myReturnDayofWeekFromUnixTimestampfunction (TimeElements unzipped_time);
 void mySetSunriseSunsetTimesfunction();
 void myVoltagePrintingAndRecordingfunction();
 void myVoltageCalculationfunction();
@@ -426,7 +474,7 @@ void loop(){
 //myVoltagePrintingAndRecordingfunction
 
 //===============================
-void myPrintStatefunction(char* text){
+void myPrintStatefunction(char const * text){
 //========2.27.2018==============
 
 // This code handles the state of operation LCD printing in the upper left 8 characters of the 4x20 display   
@@ -707,7 +755,8 @@ void myMessageUpcomingEventsfunction(byte n){
     lcd.print (important_dates_string_array[reminder_message_pointer [n]]);
     lcd.print ("'s ");
     lcd.print (year() - important_dates_yob_array[reminder_message_pointer [n]]);
-    lcd.print(myNumericalSuffixCalculatorfunction(year() - important_dates_yob_array[reminder_message_pointer [n]]));
+    const byte day_of_month = year() - important_dates_yob_array[reminder_message_pointer [n]];
+    mylcd.printDateSuffix(day_of_month);
     if (event_type_to_print_array[reminder_message_pointer [n]] == 1) {
       lcd.print (" B-day");  
     }
@@ -784,22 +833,7 @@ void myMessageWeekNumberfunction() {
    
 }
 
-//*************************************************
-char* myNumericalSuffixCalculatorfunction(byte x) {
-//*************************************************  
-  const char* suffix = "th";
-  // first, any number over 20 should be reduced by tens until it is 10 or less
-  if (x >= 20) {
-    while (x > 10) {
-      x = x -10;
-    }
-  }
-  // now, x should be between 1 and 20
-  if (x == 1) { suffix = "st"; }
-  if (x == 2) { suffix = "nd"; }
-  if (x == 3) { suffix = "rd"; }
-  return suffix;
-}
+
 
 
 //---------------------------------------------
@@ -931,13 +965,13 @@ void myReadPotentiometerAndAdjustWorkbenchTrackLightsfunction(){
 
 
 //***************************************
-char* myReturnDayofWeekfunction (byte x){
+char const * myReturnDayofWeekfunction (byte x){
 //***************************************  
-char* weekday_array[] = {"Sun","Mon","Tue","Wed","Thu","Fri","Sat"};
+char const * weekday_array[] = {"Sun","Mon","Tue","Wed","Thu","Fri","Sat"};
 return weekday_array[x];  
 }
 //*********************************************************************************
-char* myReturnDayofWeekFromUnixTimestampfunction (TimeElements unzipped_time){
+char const * myReturnDayofWeekFromUnixTimestampfunction (TimeElements unzipped_time){
 //*********************************************************************************
   long unsigned seconds_in_a_day = 86400;
   long unsigned zipped_time      = makeTime(unzipped_time) / seconds_in_a_day ;
