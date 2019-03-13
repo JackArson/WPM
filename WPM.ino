@@ -6,61 +6,42 @@
 
 LiquidCrystal_I2C lcd(0x27, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);  
 
-class MyTimer
+class MySerial
 {
-private:
-    byte mCounter;
-  public:
-    MyTimer();
-    byte getCounter   ();
-    void Update       ();
-    void Set          (byte x); 
-};
-
-MyTimer::MyTimer()
-{}
-
-byte MyTimer::getCounter()
-{
-    return mCounter;
-}
-
-void MyTimer::Update()
-{
-    lcd.setCursor(8,0);
-    if(mCounter)
-    {
-        if(mCounter <= 9)
-        {
-            lcd.print(" "); // clear the first space if a single digit
-        }
-        lcd.print(mCounter);                 // print the counter
-        mCounter--;                          // counter decrements here
-    }
-    else
-    {
-        lcd.print("  ");             // no counter, so clear the board
-    }
-}
-
-void MyTimer::Set(byte x)
-{
-    mCounter = x;
-}
+  
+}myserial;
 
 class MyLCD
 {
     public:
-        void printDateSuffix(byte day_of_month);
-};
+        void setCursor(const byte column, const byte row);
+        void print(const char *string_ptr);
+        void print(const byte numeral);
+        void printDateSuffix(const byte day_of_month);
+}mylcd;
+
+void MyLCD::setCursor(const byte column, const byte row)
+{
+    lcd.setCursor(column, row);
+}
+
+void MyLCD::print(const char *string_ptr)
+{
+    lcd.print(string_ptr);   
+}
+
+void MyLCD::print(const byte numeral)
+{
+    lcd.print(numeral);   
+}
 
 void MyLCD::printDateSuffix(byte day_of_month)
 {
     //test if number is in range
     if (day_of_month < 0 || day_of_month > 31)
     {
-        Serial.print(F("myLCD::printDateSuffix:  received parameter of "));
-        Serial.print(day_of_month);
+        Serial.print  (F("myLCD::printDateSuffix:  received parameter of "));
+        Serial.print  (day_of_month);
         Serial.println(F(", but it should be between 1 - 31"));
         return;
     }
@@ -91,12 +72,54 @@ void MyLCD::printDateSuffix(byte day_of_month)
         lcd.print("th");
     }
 }
+//=========================================================================================================
+
+class MyTimer
+{
+private:
+    byte mCounter;
+  public:
+    MyTimer();
+    byte getCounter   ();
+    void update       ();
+    void set          (byte x); 
+}myTimer;
+
+MyTimer::MyTimer()
+{}
+
+byte MyTimer::getCounter()
+{
+    return mCounter;
+}
+
+void MyTimer::update()
+{
+    mylcd.setCursor(8, 0);
+    if(mCounter) //if a countdown is running
+    {
+        if(mCounter <= 9)
+        {
+            mylcd.print(" "); // clear the first space if a single digit
+        }
+        mylcd.print(mCounter);                 // print the counter
+        mCounter--;                          // counter decrements here
+    }
+    else
+    {
+        mylcd.print("  ");             // no counter, so clear the board
+    }
+}
+
+void MyTimer::set(byte x)
+{
+    mCounter = x;
+}
 
 class MyStateMachine
 {
 
-};
-
+}mystatemachine;
 
 const byte QTY_IMPORTANT_DATES = 21;
 class MyImportantDates
@@ -145,13 +168,7 @@ private: //variables
         {"Mathew",       12, 17, 1995, EVENTTYPE_BIRTHDAY},     //20
         {"Christmas",    12, 25, 0,    EVENTTYPE_HOLIDAY}       //21
     };        
-};
-//global
-
-MyLCD            mylcd;
-MyStateMachine   mystatemachine;
-MyImportantDates myimportantdates;
-
+}myimportantdates;
 
 // 2                      3                      4                     5                       6                       7                      8                     9                      10                     11                     12                     13                     14                     15                     16                     17                      18                     19                     20                      21                     22
 byte  number_of_records_to_scan = 23;      // "12345678901234567890","12345678901234567890","12345678901234567890","12345678901234567890","12345678901234567890",,"12345678901234567890","12345678901234567890","12345678901234567890","12345678901234567890","12345678901234567890","12345678901234567890","12345678901234567890","12345678901234567890","12345678901234567890","12345678901234567890","12345678901234567890","12345678901234567890","12345678901234567890","12345678901234567890","12345678901234567890","12345678901234567890","12345678901234567890"     
@@ -269,10 +286,8 @@ byte dimmer_reference_number = 0;
 const unsigned long seconds_in_a_week = 604800;  
 
 //initialize my objects
-MyTimer myTimer;
-//Flasher led1(1,100,100);
-//                                  
-// 
+
+
 void myPrintStatefunction(char const * text);
 void myBacklightfunction();
 byte myCalculateWeekNumberfunction(TimeElements sixpartdate);
@@ -296,7 +311,7 @@ void myPrintVoltagetoLCDfunction(int x,int y,float v);
 void myReadPotentiometerAndAdjustWorkbenchTrackLightsfunction();
 char const * myReturnDayofWeekfunction (byte x);
 char const * myReturnDayofWeekFromUnixTimestampfunction (TimeElements unzipped_time);
-void mySetSunriseSunsetTimesfunction();
+void mysetSunriseSunsetTimesfunction();
 void myVoltagePrintingAndRecordingfunction();
 void myVoltageCalculationfunction();
 void myStateMachineInitSleepStatefunction();
@@ -328,7 +343,7 @@ void setup(){
      setTime (RTC_reading.Hour,RTC_reading.Minute,RTC_reading.Second,RTC_reading.Day,RTC_reading.Month,RTC_reading.Year-30); // -30 years correction WTF?
      solar_week_number = myCalculateWeekNumberfunction(RTC_reading);
      myLoadUpcomingEventsfunction();
-     mySetSunriseSunsetTimesfunction();
+     mysetSunriseSunsetTimesfunction();
    } else {
      // This code handles errors if the time cannot be found.
      if (RTC.chipPresent()) {
@@ -455,7 +470,7 @@ void loop(){
 //    }
 
         
-    myTimer.Update();
+    myTimer.update();
     myBacklightfunction();
     myPrintSerialTimestampfunction();
     myPrintTimetoLCDfunction((RTC_reading),13, 3,true);
@@ -472,7 +487,7 @@ void loop(){
       todays_low_voltage_timestamp = RTC_reading;
       solar_week_number = myCalculateWeekNumberfunction(RTC_reading); //to read duskdawn data tables
       myLoadUpcomingEventsfunction();
-      mySetSunriseSunsetTimesfunction();  
+      mysetSunriseSunsetTimesfunction();  
     }       
   }
 //
@@ -522,7 +537,7 @@ void loop(){
 //myReadPotentiometerAndAdjustWorkbenchTrackLightsfunction
 //myReturnDayofWeekFromUnixTimestampfunction
 //myReturnDayofWeekfunction
-//mySetSunriseSunsetTimesfunction()
+//mysetSunriseSunsetTimesfunction()
 //mySwitchPowerManagerModesfunction()
 //myTestForChargeFunction()
 //myVoltageCalculationfunction
@@ -1047,7 +1062,7 @@ char const * myReturnDayofWeekFromUnixTimestampfunction (TimeElements unzipped_t
 }
 
 //======================================
-void mySetSunriseSunsetTimesfunction() {
+void mysetSunriseSunsetTimesfunction() {
 //==================12.4.2017===========
 
   
@@ -1119,6 +1134,8 @@ void myVoltageCalculationfunction() {
 //===========================================
 void myStateMachineInitSleepStatefunction() {               //state 0
   //================================5.8.2018===
+  mylcd.setCursor(0, 0);
+  mylcd.print("Sleeping");
   myPrintStatefunction("Sleeping");
   //initialize relevant pins with redundancy
   digitalWrite (battery_charger_signal_pin, HIGH);  //battery charger on
@@ -1222,7 +1239,7 @@ void myStateMachineInitWarmUpInverterStatefunction() {    //state 6
   digitalWrite (inverter_signal_pin, HIGH);         //inverter on
   digitalWrite(stage_one_inverter_relay, LOW);    // relay one off
   digitalWrite(stage_two_inverter_relay, LOW);    // relay two off
-  myTimer.Set(seconds_to_warm_up);
+  myTimer.set(seconds_to_warm_up);
   machine_state = 7;
 }
 
@@ -1250,7 +1267,7 @@ void myStateMachineInitStageOneInverterStatefunction() {    //state 8
   digitalWrite (inverter_signal_pin, HIGH);         //inverter on
   digitalWrite(stage_one_inverter_relay, HIGH);    // relay one on
   digitalWrite(stage_two_inverter_relay, LOW);    // relay two off
-  myTimer.Set(stage_two_switching_delay);
+  myTimer.set(stage_two_switching_delay);
   machine_state = 9;
 }
 
@@ -1347,7 +1364,7 @@ void myStateMachineInitInverterCooldownfunction() {    //state 14
   digitalWrite (inverter_signal_pin, LOW);         //inverter off
   digitalWrite(stage_one_inverter_relay, LOW);    // relay one off
   digitalWrite(stage_two_inverter_relay, LOW);    // relay two off
-  myTimer.Set(inverter_cooldown_time);
+  myTimer.set(inverter_cooldown_time);
   machine_state = 15;
 }
 
