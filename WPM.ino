@@ -4,14 +4,15 @@
 #include <DS1307RTC.h>
 #include <Wire.h>
 
-
-
 LiquidCrystal_I2C lcd(0x27, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);  
+
 class MyTimer
 {
+private:
+    byte mCounter;
   public:
     MyTimer();
-    byte counter;    // accessable from outside via (MyTimer).counter 
+    byte getCounter   ();
     void Update       ();
     void Set          (byte x); 
 };
@@ -19,17 +20,22 @@ class MyTimer
 MyTimer::MyTimer()
 {}
 
+byte MyTimer::getCounter()
+{
+    return mCounter;
+}
+
 void MyTimer::Update()
 {
     lcd.setCursor(8,0);
-    if(counter)
+    if(mCounter)
     {
-        if(counter <= 9)
+        if(mCounter <= 9)
         {
             lcd.print(" "); // clear the first space if a single digit
         }
-        lcd.print(counter);                 // print the counter
-        counter--;                          // counter decrements here
+        lcd.print(mCounter);                 // print the counter
+        mCounter--;                          // counter decrements here
     }
     else
     {
@@ -39,7 +45,7 @@ void MyTimer::Update()
 
 void MyTimer::Set(byte x)
 {
-    counter = x;
+    mCounter = x;
 }
 
 class MyLCD
@@ -51,10 +57,7 @@ class MyLCD
 void MyLCD::printDateSuffix(byte day_of_month)
 {
     //test if number is in range
-    if (day_of_month > 0 && day_of_month <= 31)
-    {
-    }
-    else
+    if (day_of_month < 0 || day_of_month > 31)
     {
         Serial.print(F("myLCD::printDateSuffix:  received parameter of "));
         Serial.print(day_of_month);
@@ -69,8 +72,7 @@ void MyLCD::printDateSuffix(byte day_of_month)
             day_of_month = day_of_month -10;
         }
     }
-    //day_of_month should be between 1 and 20
-    
+    //day_of_month should be between 1 and 10
     if (day_of_month == 1)
     {
         lcd.print("st");
@@ -95,8 +97,8 @@ class MyStateMachine
 
 };
 
-const byte QTY_IMPORTANT_DATES = 24;
 
+const byte QTY_IMPORTANT_DATES = 21;
 class MyImportantDates
 {
 public:
@@ -116,30 +118,32 @@ public:
         int         year;
         EventType   event_type; 
     };
+    
 private: //variables
-    ImportantDate importantdatelist[QTY_IMPORTANT_DATES] = 
+    //this compiler can't set array length so QTY_IMPORTANT_DATES must be manually counted and set.     
+    const ImportantDate importantdatelist[QTY_IMPORTANT_DATES] = 
     {
-        {"Kathy",         1,  7, 1967, EVENTTYPE_BIRTHDAY},
-        {"Jack(cat)",     2,  6, 2011, EVENTTYPE_BIRTHDAY},
-        {"Katrina",       2,  9, 2000, EVENTTYPE_BIRTHDAY},
-        {"Alan",          2, 10, 1993, EVENTTYPE_BIRTHDAY},
-        {"Jack(dog)",     2, 27, 2012, EVENTTYPE_BIRTHDAY},
-        {"Joshua",        3, 23, 1993, EVENTTYPE_BIRTHDAY},
-        {"Dad",           3, 30, 1943, EVENTTYPE_BIRTHDAY},
-        {"Christopher",   4,  3, 1990, EVENTTYPE_BIRTHDAY},
-        {"Jon",           4, 15, 1968, EVENTTYPE_BIRTHDAY},
-        {"Mena",          4, 24, 1972, EVENTTYPE_BIRTHDAY},
-        {"Jacob",         4, 26, 2005, EVENTTYPE_BIRTHDAY},
-        {"Elizabeth",     4, 29, 2000, EVENTTYPE_BIRTHDAY},
-        {"Aunt Julie",    5, 31, 1942, EVENTTYPE_BIRTHDAY},
-        {"Paul and Mena", 6, 29, 1991, EVENTTYPE_ANNIVERSARY},
-        {"Cersei",        6, 15, 2015, EVENTTYPE_BIRTHDAY},
-        {"Mom and Dad",   9,  7, 1963, EVENTTYPE_ANNIVERSARY},
-        {"Paul",          9, 24, 1969, EVENTTYPE_BIRTHDAY},
-        {"Mom",          10, 23, 1943, EVENTTYPE_BIRTHDAY},
-        {"Erik",         12,  4, 1999, EVENTTYPE_BIRTHDAY},
-        {"Mathew",       12, 17, 1995, EVENTTYPE_BIRTHDAY},
-        {"Christmas",    12, 25, 0,    EVENTTYPE_HOLIDAY}
+        {"Kathy",         1,  7, 1967, EVENTTYPE_BIRTHDAY},     //1
+        {"Jack(cat)",     2,  6, 2011, EVENTTYPE_BIRTHDAY},     //2
+        {"Katrina",       2,  9, 2000, EVENTTYPE_BIRTHDAY},     //3
+        {"Alan",          2, 10, 1993, EVENTTYPE_BIRTHDAY},     //4
+        {"Jack(dog)",     2, 27, 2012, EVENTTYPE_BIRTHDAY},     //5
+        {"Joshua",        3, 23, 1993, EVENTTYPE_BIRTHDAY},     //6
+        {"Dad",           3, 30, 1943, EVENTTYPE_BIRTHDAY},     //7
+        {"Christopher",   4,  3, 1990, EVENTTYPE_BIRTHDAY},     //8
+        {"Jon",           4, 15, 1968, EVENTTYPE_BIRTHDAY},     //9
+        {"Mena",          4, 24, 1972, EVENTTYPE_BIRTHDAY},     //10
+        {"Jacob",         4, 26, 2005, EVENTTYPE_BIRTHDAY},     //11
+        {"Elizabeth",     4, 29, 2000, EVENTTYPE_BIRTHDAY},     //12
+        {"Aunt Julie",    5, 31, 1942, EVENTTYPE_BIRTHDAY},     //13
+        {"Paul and Mena", 6, 29, 1991, EVENTTYPE_ANNIVERSARY},  //14
+        {"Cersei",        6, 15, 2015, EVENTTYPE_BIRTHDAY},     //15
+        {"Mom and Dad",   9,  7, 1963, EVENTTYPE_ANNIVERSARY},  //16
+        {"Paul",          9, 24, 1969, EVENTTYPE_BIRTHDAY},     //17
+        {"Mom",          10, 23, 1943, EVENTTYPE_BIRTHDAY},     //18
+        {"Erik",         12,  4, 1999, EVENTTYPE_BIRTHDAY},     //19
+        {"Mathew",       12, 17, 1995, EVENTTYPE_BIRTHDAY},     //20
+        {"Christmas",    12, 25, 0,    EVENTTYPE_HOLIDAY}       //21
     };        
 };
 //global
@@ -284,7 +288,6 @@ void myMessageUpcomingEventsfunction(byte n);
 void myMessageVoltageDailyHighfunction();
 void myMessageVoltageDailyLowfunction();
 void myMessageWeekNumberfunction();
-//const char* myNumericalSuffixCalculatorfunction(byte x);
 void myPrintDatetoLCDfunction(byte x, byte y);
 void myPrintLDRresultsToLCDfunction();
 void myPrintSerialTimestampfunction ();
@@ -453,10 +456,6 @@ void loop(){
 
         
     myTimer.Update();
-    
-    
-    Serial.print (" counter = "); 
-    Serial.print (myTimer.counter);
     myBacklightfunction();
     myPrintSerialTimestampfunction();
     myPrintTimetoLCDfunction((RTC_reading),13, 3,true);
@@ -645,7 +644,8 @@ void myLoadUpcomingEventsfunction(){
    record_date.Year = RTC_reading.Year - 30;        //*year error correction
    reference_date.Year = RTC_reading.Year - 30;
    // check for events ocurring from now till the end of the scan window
-   for (byte x=0; x<number_of_records_to_scan; x++){
+   for (byte x = 0; x < QTY_IMPORTANT_DATES; x++)
+   {
       record_date.Month = important_dates_month_array[x];
       record_date.Day = important_dates_day_array[x];      
       record_zipped_time = makeTime(record_date) / seconds_in_a_day;
@@ -1232,7 +1232,7 @@ void myStateMachineInitWarmUpInverterStatefunction() {    //state 6
 void myStateMachineWarmUpInverterStatefunction() {        //state 7
   //=======================================5.8.2018===
 
-  if (myTimer.counter) {    //warming up during countdown
+  if (myTimer.getCounter()) {    //warming up during countdown
     return;
   }
   machine_state = 8;
@@ -1268,7 +1268,7 @@ void myStateMachineStageOneInverterStatefunction() {        //state 9
     return;
   }
 
-  if (stable_voltage >= voltage_to_switch_to_stage_two && !myTimer.counter) {
+  if (stable_voltage >= voltage_to_switch_to_stage_two && !myTimer.getCounter()) {
     machine_state = 10;  //initiate stage two inverter
     return;
   }
@@ -1355,7 +1355,7 @@ void myStateMachineInitInverterCooldownfunction() {    //state 14
 void myStateMachineInverterCooldownfunction() {    //state 15
   //====================================5.11.2018===
 
-  if (!myTimer.counter) {
+  if (!myTimer.getCounter()) {
     machine_state = 4;  //init balanced
   }
 }
