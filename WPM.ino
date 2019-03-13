@@ -4,36 +4,85 @@
 #include <DS1307RTC.h>
 #include <Wire.h>
 
-LiquidCrystal_I2C lcd(0x27, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);  
+LiquidCrystal_I2C  liquidcrystali2c(0x27, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);  
+tmElements_t       RTC_reading;
+class MyStateMachine
+{
+
+}mystatemachine;
 
 class MySerial
 {
+private: //variables
+    //choose the serial output 
+    bool mPrintStateMachineChanges {true};
+    bool mPrintTimestamp           {true};
+
+    
+    
 public:
-  //void print
+    void printStatus(); //runs every 1000 milliseconds. Called by main()
+private: //methods
+    void printTimestamp();
+    //void print
 }myserial;
+
+void MySerial::printStatus()
+{
+    if (mPrintTimestamp)
+    {
+        printTimestamp();
+    }    
+}
+
+
+    ////***********************************************************
+void MySerial::printTimestamp()
+{
+}////***********************************************************
+   //if (hour() <= 9)
+   //{
+      //Serial.print("0");
+   //}
+   //Serial.print(hour());
+   //Serial.print(":");
+   //if (minute() <= 9) {
+      //Serial.print("0");
+   //}
+   //Serial.print(minute());
+   //Serial.print(":");
+   //if (second() <= 9) {
+      //Serial.print("0");
+   //}
+   //Serial.print(second());
+   //Serial.print(" "); 
+//}
+//}
+
+//=============================================================================================================
 
 class MyLCD
 {
-    public:
-        void setCursor(const byte column, const byte row);
-        void print(const char *string_ptr);
-        void print(const byte numeral);
-        void printDateSuffix(const byte day_of_month);
+public:
+    void setCursor(const byte column, const byte row);
+    void print(const char *string_ptr);
+    void print(const byte numeral);
+    void printDateSuffix(const byte day_of_month);
 }mylcd;
 
 void MyLCD::setCursor(const byte column, const byte row)
 {
-    lcd.setCursor(column, row);
+    liquidcrystali2c.setCursor(column, row);
 }
 
 void MyLCD::print(const char *string_ptr)
 {
-    lcd.print(string_ptr);   
+    liquidcrystali2c.print(string_ptr);   
 }
 
 void MyLCD::print(const byte numeral)
 {
-    lcd.print(numeral);   
+    liquidcrystali2c.print(numeral);   
 }
 
 void MyLCD::printDateSuffix(byte day_of_month)
@@ -57,20 +106,20 @@ void MyLCD::printDateSuffix(byte day_of_month)
     //day_of_month should be between 1 and 10
     if (day_of_month == 1)
     {
-        lcd.print("st");
+        liquidcrystali2c.print("st");
     }
     else if (day_of_month == 2)
     {
 
-        lcd.print("nd");
+        liquidcrystali2c.print("nd");
     }
     else if (day_of_month == 3)
     {
-        lcd.print("rd");
+        liquidcrystali2c.print("rd");
     }
     else
     {
-        lcd.print("th");
+        liquidcrystali2c.print("th");
     }
 }
 //=========================================================================================================
@@ -117,12 +166,9 @@ void MyTimer::set(byte x)
     mCounter = x;
 }
 
-class MyStateMachine
-{
 
-}mystatemachine;
 
-const byte QTY_IMPORTANT_DATES = 21;
+const byte QTY_IMPORTANT_DATES = 22;
 class MyImportantDates
 {
 public:
@@ -159,15 +205,16 @@ private: //variables
         {"Mena",          4, 24, 1972, EVENTTYPE_BIRTHDAY},     //10
         {"Jacob",         4, 26, 2005, EVENTTYPE_BIRTHDAY},     //11
         {"Elizabeth",     4, 29, 2000, EVENTTYPE_BIRTHDAY},     //12
-        {"Aunt Julie",    5, 31, 1942, EVENTTYPE_BIRTHDAY},     //13
-        {"Paul and Mena", 6, 29, 1991, EVENTTYPE_ANNIVERSARY},  //14
-        {"Cersei",        6, 15, 2015, EVENTTYPE_BIRTHDAY},     //15
-        {"Mom and Dad",   9,  7, 1963, EVENTTYPE_ANNIVERSARY},  //16
-        {"Paul",          9, 24, 1969, EVENTTYPE_BIRTHDAY},     //17
-        {"Mom",          10, 23, 1943, EVENTTYPE_BIRTHDAY},     //18
-        {"Erik",         12,  4, 1999, EVENTTYPE_BIRTHDAY},     //19
-        {"Mathew",       12, 17, 1995, EVENTTYPE_BIRTHDAY},     //20
-        {"Christmas",    12, 25, 0,    EVENTTYPE_HOLIDAY}       //21
+        {"Aunt Helen",    5, 23, 1946, EVENTTYPE_BIRTHDAY},     //13
+        {"Aunt Julie",    5, 31, 1942, EVENTTYPE_BIRTHDAY},     //14
+        {"Paul and Mena", 6, 29, 1991, EVENTTYPE_ANNIVERSARY},  //15
+        {"Cersei",        6, 15, 2015, EVENTTYPE_BIRTHDAY},     //16
+        {"Mom and Dad",   9,  7, 1963, EVENTTYPE_ANNIVERSARY},  //17
+        {"Paul",          9, 24, 1969, EVENTTYPE_BIRTHDAY},     //18
+        {"Mom",          10, 23, 1943, EVENTTYPE_BIRTHDAY},     //19
+        {"Erik",         12,  4, 1999, EVENTTYPE_BIRTHDAY},     //20
+        {"Mathew",       12, 17, 1995, EVENTTYPE_BIRTHDAY},     //21
+        {"Christmas",    12, 25, 0,    EVENTTYPE_HOLIDAY}       //22
     };        
 }myimportantdates;
 
@@ -216,7 +263,7 @@ float         voltage_daily_min = 15; // initial setting, a number higher than e
 int           voltage_trend                             = 0;
 byte          am_pm = 0;
 
-tmElements_t  RTC_reading;
+
 tmElements_t  todays_low_voltage_timestamp;
 tmElements_t  todays_high_voltage_timestamp;
 byte          solar_week_number = 1;
@@ -306,7 +353,7 @@ void myMessageVoltageDailyLowfunction();
 void myMessageWeekNumberfunction();
 void myPrintDatetoLCDfunction(byte x, byte y);
 void myPrintLDRresultsToLCDfunction();
-void myPrintSerialTimestampfunction ();
+//void myPrintSerialTimestampfunction ();
 void myPrintTimetoLCDfunction(TimeElements timestamp, byte x, byte y, boolean right_justify);
 void myPrintVoltagetoLCDfunction(int x,int y,float v);
 void myReadPotentiometerAndAdjustWorkbenchTrackLightsfunction();
@@ -335,7 +382,7 @@ void myStateMachineInverterCooldownfunction();
 void setup(){
    Serial.begin(250000);                // start the serial monitor
    Wire.begin();                      // start the Wire library
-   lcd.begin(20, 4);                  // start the LiquidCrystal_I2C library
+   liquidcrystali2c.begin(20, 4);                  // start the LiquidCrystal_I2C library
   
 
    // This code gets clock information from the external RTC module.  
@@ -373,11 +420,15 @@ void setup(){
 //                                      // MAIN LOOP  
 void loop(){
 //  //Run these functions as fast as possible
-  myReadPotentiometerAndAdjustWorkbenchTrackLightsfunction();
-  myVoltageCalculationfunction();
+    myReadPotentiometerAndAdjustWorkbenchTrackLightsfunction();
+    myVoltageCalculationfunction();
 //
   //This code runs approximately every 1000ms
-  if ((long unsigned)(millis() - a1000ms_timestamp) >= 1000){  a1000ms_timestamp = millis();
+    if ((long unsigned)(millis() - a1000ms_timestamp) >= 1000)
+    {
+        //set the timestamp for the next loop
+        a1000ms_timestamp = millis();
+        myserial.printStatus();
     //digitalWrite (battery_charger_signal_pin, LOW);
     //state_machine states
     //0 initiate sleep state
@@ -473,7 +524,7 @@ void loop(){
         
     myTimer.update();
     myBacklightfunction();
-    myPrintSerialTimestampfunction();
+    //myPrintSerialTimestampfunction();
     myPrintTimetoLCDfunction((RTC_reading),13, 3,true);
     myPrintDatetoLCDfunction(0, 3);
     myPrintLDRresultsToLCDfunction();
@@ -551,8 +602,8 @@ void myPrintStatefunction(char const * text){
 // This code handles the state of operation LCD printing in the upper left 8 characters of the 4x20 display   
   Serial.print("  state changed to: ");
   Serial.print(text);
-  lcd.setCursor (0,0);
-  lcd.print (text);
+  liquidcrystali2c.setCursor (0,0);
+  liquidcrystali2c.print (text);
   
 }
 
@@ -563,9 +614,9 @@ void myBacklightfunction() {
 //--------------------------   
 
   if (hour() >= hour_to_turn_on_backlight && hour() < hour_to_turn_off_backlight) { 
-    lcd.backlight();
+    liquidcrystali2c.backlight();
   } else {
-    lcd.noBacklight();
+    liquidcrystali2c.noBacklight();
   }
 }
 
@@ -598,8 +649,8 @@ byte myCalculateWeekNumberfunction(TimeElements sixpartdate) {
 void myClearMessageBoardfunction(){
 //---------------------------------
    //                              "12345678901234567890"   
-   lcd.setCursor (0,1); lcd.print (F("                    "));
-   lcd.setCursor (0,2); lcd.print (F("                    "));
+   liquidcrystali2c.setCursor (0,1); liquidcrystali2c.print (F("                    "));
+   liquidcrystali2c.setCursor (0,2); liquidcrystali2c.print (F("                    "));
 }
 
 //********************************
@@ -739,26 +790,26 @@ void myMessageManagerfunction() {
 void myMessageInverterRunTimefunction(){
 //-------------------------------   
   myClearMessageBoardfunction();
-  lcd.setCursor (0,1);
+  liquidcrystali2c.setCursor (0,1);
   if (inverter_run_time == 0) {
                //"12345678901234567890"
-     lcd.print(F("  Inverter Waiting"));
+     liquidcrystali2c.print(F("  Inverter Waiting"));
      return;  
   } 
   if (inverter_run_time > 0 && inverter_run_time < 60) {
                //"12345678901234567890"
-     lcd.print(F(" Inverter harvested"));
-     lcd.setCursor (8,2);
-     lcd.print(inverter_run_time);
-     lcd.print("s");
+     liquidcrystali2c.print(F(" Inverter harvested"));
+     liquidcrystali2c.setCursor (8,2);
+     liquidcrystali2c.print(inverter_run_time);
+     liquidcrystali2c.print("s");
      return;  
   }
   if (inverter_run_time >= 60) {
                //"12345678901234567890"
-     lcd.print(F(" Inverter harvested"));
-     lcd.setCursor (8,2);
-     lcd.print(inverter_run_time/60);
-     lcd.print("m");
+     liquidcrystali2c.print(F(" Inverter harvested"));
+     liquidcrystali2c.setCursor (8,2);
+     liquidcrystali2c.print(inverter_run_time/60);
+     liquidcrystali2c.print("m");
      return;  
   }
 }
@@ -767,37 +818,37 @@ void myMessageInverterRunTimefunction(){
 void myMessageReminderfunction(){
 //-------------------------------
    myClearMessageBoardfunction();
-   lcd.setCursor (0,1);
+   liquidcrystali2c.setCursor (0,1);
    //           "12345678901234567890"
-   lcd.print (F("   Did you MED-X?"));
-   lcd.setCursor (0,2);
-   //lcd.print (F("   eggs floss med-x?"));
+   liquidcrystali2c.print (F("   Did you MED-X?"));
+   liquidcrystali2c.setCursor (0,2);
+   //liquidcrystali2c.print (F("   eggs floss med-x?"));
    
 }
 //*******************************
 void myMessageSunrisefunction() {
 //*******************************
   myClearMessageBoardfunction();
-  lcd.setCursor (0,1);
+  liquidcrystali2c.setCursor (0,1);
   //           "12345678901234567890"
-  lcd.print (F("   Sunrise "));
-  lcd.print (today_sunrise_hour);
-  lcd.print (F(":"));
+  liquidcrystali2c.print (F("   Sunrise "));
+  liquidcrystali2c.print (today_sunrise_hour);
+  liquidcrystali2c.print (F(":"));
   if (today_sunrise_minute <= 9){
-   lcd.print(F("0"));
+   liquidcrystali2c.print(F("0"));
   }
-  lcd.print (today_sunrise_minute);
-  lcd.print (F("am"));
-  lcd.setCursor (0,2);
+  liquidcrystali2c.print (today_sunrise_minute);
+  liquidcrystali2c.print (F("am"));
+  liquidcrystali2c.setCursor (0,2);
   //           "12345678901234567890"
-  lcd.print (F("   Sunset  ")); 
-  lcd.print (today_sunset_hour - 12);
-  lcd.print (F(":"));
+  liquidcrystali2c.print (F("   Sunset  ")); 
+  liquidcrystali2c.print (today_sunset_hour - 12);
+  liquidcrystali2c.print (F(":"));
   if (today_sunset_minute <= 9){
-   lcd.print(F("0"));
+   liquidcrystali2c.print(F("0"));
   }
-  lcd.print (sunset_minute[solar_week_number-1]);
-  lcd.print (F("pm"));
+  liquidcrystali2c.print (sunset_minute[solar_week_number-1]);
+  liquidcrystali2c.print (F("pm"));
 }
 
 
@@ -822,35 +873,35 @@ void myMessageUpcomingEventsfunction(byte n){
     timex.Year++; 
   }
   if (message_loaded [n]){
-    lcd.setCursor (0,1);
+    liquidcrystali2c.setCursor (0,1);
     if (important_dates_yob_array[reminder_message_pointer [n]]) {
-    lcd.print (important_dates_string_array[reminder_message_pointer [n]]);
-    lcd.print ("'s ");
-    lcd.print (year() - important_dates_yob_array[reminder_message_pointer [n]]);
+    liquidcrystali2c.print (important_dates_string_array[reminder_message_pointer [n]]);
+    liquidcrystali2c.print ("'s ");
+    liquidcrystali2c.print (year() - important_dates_yob_array[reminder_message_pointer [n]]);
     const byte day_of_month = year() - important_dates_yob_array[reminder_message_pointer [n]];
     mylcd.printDateSuffix(day_of_month);
     if (event_type_to_print_array[reminder_message_pointer [n]] == 1) {
-      lcd.print (" B-day");  
+      liquidcrystali2c.print (" B-day");  
     }
     } else {
-    lcd.print (important_dates_string_array[reminder_message_pointer [n]]);
+    liquidcrystali2c.print (important_dates_string_array[reminder_message_pointer [n]]);
     }
-    lcd.setCursor (5,2);
+    liquidcrystali2c.setCursor (5,2);
     if (timex.Day == RTC_reading.Day || timex.Day == RTC_reading.Day + 1) {      
       if (timex.Day == RTC_reading.Day) {
         //         "12345678901234567890"
-        lcd.print ("   today.");  
+        liquidcrystali2c.print ("   today.");  
       }
       if (timex.Day == RTC_reading.Day+1) {
         //         "12345678901234567890"
-        lcd.print (" tomorrow");  
+        liquidcrystali2c.print (" tomorrow");  
       }
     } else {
-      lcd.print (myReturnDayofWeekFromUnixTimestampfunction(timex));
-      lcd.print (", ");
-      lcd.print (month_short_name[(important_dates_month_array[reminder_message_pointer [n]])-1]);
-      lcd.print (" ");
-      lcd.print (important_dates_day_array[reminder_message_pointer [n]]);
+      liquidcrystali2c.print (myReturnDayofWeekFromUnixTimestampfunction(timex));
+      liquidcrystali2c.print (", ");
+      liquidcrystali2c.print (month_short_name[(important_dates_month_array[reminder_message_pointer [n]])-1]);
+      liquidcrystali2c.print (" ");
+      liquidcrystali2c.print (important_dates_day_array[reminder_message_pointer [n]]);
     }  
   }
 }
@@ -862,13 +913,13 @@ void myMessageVoltageDailyHighfunction(){
 //-----------------------------------  
    
    myClearMessageBoardfunction();
-   lcd.setCursor (0,1);
+   liquidcrystali2c.setCursor (0,1);
    //         "12345678901234567890"
    myPrintVoltagetoLCDfunction(2,1,voltage_daily_max);
-   lcd.print (F(" @"));
+   liquidcrystali2c.print (F(" @"));
    myPrintTimetoLCDfunction(todays_high_voltage_timestamp,12,1,false);
    myPrintVoltagetoLCDfunction(2,2,voltage_daily_min);
-   lcd.print (F(" @")); myPrintTimetoLCDfunction(todays_low_voltage_timestamp,12,2,false);
+   liquidcrystali2c.print (F(" @")); myPrintTimetoLCDfunction(todays_low_voltage_timestamp,12,2,false);
    
 }
 
@@ -886,22 +937,22 @@ void myMessageVoltageDailyLowfunction(){
    //Serial.print (" volts at ");
    //myPrintSerialTimestampfunction (todays_low_voltage_timestamp);
    myClearMessageBoardfunction();
-   lcd.setCursor (0,1);
+   liquidcrystali2c.setCursor (0,1);
    //         "12345678901234567890"
-   lcd.print (F("  Today's low was")); myPrintVoltagetoLCDfunction(2,2,voltage_daily_min);
-   lcd.print (F(" at")); myPrintTimetoLCDfunction(todays_low_voltage_timestamp,12,2,false);
+   liquidcrystali2c.print (F("  Today's low was")); myPrintVoltagetoLCDfunction(2,2,voltage_daily_min);
+   liquidcrystali2c.print (F(" at")); myPrintTimetoLCDfunction(todays_low_voltage_timestamp,12,2,false);
 }
 //----------------------------------
 void myMessageWeekNumberfunction() {
 //----------------------------------
 
    myClearMessageBoardfunction();
-   lcd.setCursor (0,1);
+   liquidcrystali2c.setCursor (0,1);
    //         "12345678901234567890"
-   lcd.print (F("  Solar Week"));
-   lcd.setCursor (0,2);
-   lcd.print (F("        Number "));
-   lcd.print (solar_week_number);
+   liquidcrystali2c.print (F("  Solar Week"));
+   liquidcrystali2c.setCursor (0,2);
+   liquidcrystali2c.print (F("        Number "));
+   liquidcrystali2c.print (solar_week_number);
    
 }
 
@@ -911,51 +962,32 @@ void myMessageWeekNumberfunction() {
 //---------------------------------------------
 void myPrintDatetoLCDfunction(byte x, byte y) {
 //--------------------------------------------- 
-   lcd.setCursor (x,y);
-   lcd.print(myReturnDayofWeekfunction(weekday() - 1));
-   lcd.print (", ");
-   lcd.print (month_short_name[RTC_reading.Month-1]);    
-   lcd.print(" ");
-   lcd.print((RTC_reading.Day));
-   lcd.print(" ");  //this space to clear last digit when month rolls over (31 to 1) 
+   liquidcrystali2c.setCursor (x,y);
+   liquidcrystali2c.print(myReturnDayofWeekfunction(weekday() - 1));
+   liquidcrystali2c.print (", ");
+   liquidcrystali2c.print (month_short_name[RTC_reading.Month-1]);    
+   liquidcrystali2c.print(" ");
+   liquidcrystali2c.print((RTC_reading.Day));
+   liquidcrystali2c.print(" ");  //this space to clear last digit when month rolls over (31 to 1) 
 }
 //-------------------------------------
 void myPrintLDRresultsToLCDfunction() {
 //-------------------------------------
-   lcd.setCursor (11,0);
+   liquidcrystali2c.setCursor (11,0);
    //Serial.print("Summer: "); Serial.print(analogRead(the_pin_to_the_LDR2_circuit)); Serial.print(". ");
    if (digitalRead(the_pin_to_the_LDR2_circuit)) {
-      lcd.print("S");
+      liquidcrystali2c.print("S");
    } else {
-      lcd.print(" ");
+      liquidcrystali2c.print(" ");
    }     
    if (digitalRead(the_pin_to_the_LDR_circuit)) { 
-      lcd.print("A");
+      liquidcrystali2c.print("A");
    } else {
-      lcd.print(" ");
+      liquidcrystali2c.print(" ");
    }     
 }
 
-//***********************************************************
-void myPrintSerialTimestampfunction (){
-//***********************************************************
-   Serial.println();
-   if (hour() <= 9) {
-      Serial.print("0");
-   }
-   Serial.print(hour());
-   Serial.print(":");
-   if (minute() <= 9) {
-      Serial.print("0");
-   }
-   Serial.print(minute());
-   Serial.print(":");
-   if (second() <= 9) {
-      Serial.print("0");
-   }
-   Serial.print(second());
-   Serial.print(" "); 
-}
+
 
 //---------------------------------------------   
 void myPrintTimetoLCDfunction(TimeElements timestamp, byte x, byte y, boolean right_justify) {
@@ -963,37 +995,37 @@ void myPrintTimetoLCDfunction(TimeElements timestamp, byte x, byte y, boolean ri
                                       // x and y are the LCD coordinants where the time is to be printed
                                       // x can be 0 to 19
                                       // y can be 0 to 3
-   lcd.setCursor (x,y);                                      
+   liquidcrystali2c.setCursor (x,y);                                      
    if ((timestamp.Hour) >= 12) {      
       am_pm = 12;
    } else {                           // set am_pm variable
       am_pm = 0;
    } 
    if ((timestamp.Hour) == 12 || (timestamp.Hour) == 0) {
-      lcd.print ("12");
+      liquidcrystali2c.print ("12");
    } else {
       if ((timestamp.Hour)-am_pm < 10 && right_justify) {             
-         lcd.print (" ");
+         liquidcrystali2c.print (" ");
       }
-      lcd.print ((timestamp.Hour)-(am_pm));
+      liquidcrystali2c.print ((timestamp.Hour)-(am_pm));
    }   
-   lcd.print(":");
+   liquidcrystali2c.print(":");
    if ((timestamp.Minute) < 10 ) {  
-      lcd.print ("0");
+      liquidcrystali2c.print ("0");
    }  
-   lcd.print (timestamp.Minute);
+   liquidcrystali2c.print (timestamp.Minute);
    if ((timestamp.Hour) >= 12) {
-      lcd.print("pm");
+      liquidcrystali2c.print("pm");
    } else {                          
-      lcd.print("am");
+      liquidcrystali2c.print("am");
    }                                      
 }
 //----------------------------------------------------
 void myPrintVoltagetoLCDfunction(int x,int y,float v){
 //----------------------------------------------------
-   lcd.setCursor (x,y);
-   lcd.print (v);
-   lcd.print ("v");      
+   liquidcrystali2c.setCursor (x,y);
+   liquidcrystali2c.print (v);
+   liquidcrystali2c.print ("v");      
 }
 
 

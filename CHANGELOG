@@ -82,3 +82,4 @@ idea:  a function that takes these parameters (min/max voltage allowable time mi
 03-12-19-18:26 removed library version numbers from folders for compatibility with Linux Arduino
 03-12-19-18:55 rebuilt important dates array
 03-13-19-12:03 added access control and made mCounter private
+03-13-19-19:09 mySerial construction
