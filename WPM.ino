@@ -1,7 +1,7 @@
 #include <Time.h>
 #include <TimeLib.h>
 #include <LiquidCrystal_I2C.h>
-#include <DS1307RTC.h> //pre-initialized as 'RTC' in header file 
+#include <DS1307RTC.h> //object pre-initialized as 'RTC' in header file 
 #include <Wire.h>
 
 LiquidCrystal_I2C  liquidcrystali2c(0x27, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);  
@@ -22,6 +22,7 @@ private: //variables
     
 public:
     void printStatus(); //runs every 1000 milliseconds. Called by main()
+    void testClock();
 private: //methods
     void printTimestamp();
     //void print
@@ -32,7 +33,29 @@ void MySerial::printStatus()
     if (mPrintTimestamp)
     {
         printTimestamp();
-    }    
+    }
+    Serial.println();
+}
+
+void MySerial::testClock()
+{
+    if (RTC.read(RTC_reading))
+    {
+        //setTime to be removed after all references deleted     
+        setTime (RTC_reading.Hour,RTC_reading.Minute,RTC_reading.Second,RTC_reading.Day,RTC_reading.Month,RTC_reading.Year-30); // -30 years correction WTF?
+    }
+    else
+    {
+        //if the time cannot be found.
+        if (RTC.chipPresent())
+        {
+            Serial.println(F("Time not set.  Possible RTC clock battery issue. Battery is LIR2032."));
+        }
+        else
+        {
+            Serial.println(F("I can't find the clock through the I2C connection, check wiring."));
+        } 
+    }
 }
 
 void MySerial::printTimestamp()
@@ -331,8 +354,6 @@ byte dimmer_reference_number = 0;
 
 const unsigned long seconds_in_a_week = 604800;  
 
-//initialize my objects
-
 
 void myPrintStatefunction(char const * text);
 void myBacklightfunction();
@@ -377,42 +398,26 @@ void myStateMachineDaytimeChargingfunction();
 void myStateMachineInitInverterCooldownfunction();
 void myStateMachineInverterCooldownfunction();
 // SETUP 
-void setup(){
-   Serial.begin(250000);                // start the serial monitor
-   Wire.begin();                      // start the Wire library
-   liquidcrystali2c.begin(20, 4);                  // start the LiquidCrystal_I2C library
-  
-
-   // This code gets clock information from the external RTC module.  
-   if (RTC.read(RTC_reading)){
-     // This code sets the time and week number.
-     setTime (RTC_reading.Hour,RTC_reading.Minute,RTC_reading.Second,RTC_reading.Day,RTC_reading.Month,RTC_reading.Year-30); // -30 years correction WTF?
-     solar_week_number = myCalculateWeekNumberfunction(RTC_reading);
-     myLoadUpcomingEventsfunction();
-     mysetSunriseSunsetTimesfunction();
-   } else {
-     // This code handles errors if the time cannot be found.
-     if (RTC.chipPresent()) {
-         Serial.println();
-         Serial.print(F("Time not set.  Possible RTC clock battery issue. Battery is LIR2032.  Battery pin on RTC clock usually reads 2.4v to GND when system is powered up.  Battery usually reads < 2.27v when detached."));
-      } else {
-         Serial.println();
-         Serial.print(F("I can't find the clock through the I2C connection.  Investigate wiring A4,A5,5V,GND to RTC module."));
-      } 
-   }
-   pinMode (inverter_signal_pin, OUTPUT);
-   pinMode (battery_charger_signal_pin, OUTPUT);
-   pinMode (the_analog_pin_to_the_voltage_divider, INPUT);
-   pinMode (the_pin_to_the_LDR_circuit, INPUT);
-   pinMode (the_pin_to_the_LDR2_circuit, INPUT);
-   pinMode (workbench_lighting_MOSFET_signal_pin, OUTPUT);
-   pinMode (stage_one_inverter_relay, OUTPUT);
-   pinMode (stage_two_inverter_relay, OUTPUT);
-
-//   
-//
-//   
-//   
+void setup()
+{
+    Serial.begin(250000);              // start the serial monitor
+    Wire.begin();                      // start the Wire library
+    liquidcrystali2c.begin(20, 4);     // start the LiquidCrystal_I2C library
+    myserial.testClock();
+    solar_week_number = myCalculateWeekNumberfunction(RTC_reading);
+    myLoadUpcomingEventsfunction();
+    mysetSunriseSunsetTimesfunction();
+       
+       
+    //set pins  
+    pinMode (inverter_signal_pin, OUTPUT);
+    pinMode (battery_charger_signal_pin, OUTPUT);
+    pinMode (the_analog_pin_to_the_voltage_divider, INPUT);
+    pinMode (the_pin_to_the_LDR_circuit, INPUT);
+    pinMode (the_pin_to_the_LDR2_circuit, INPUT);
+    pinMode (workbench_lighting_MOSFET_signal_pin, OUTPUT);
+    pinMode (stage_one_inverter_relay, OUTPUT);
+    pinMode (stage_two_inverter_relay, OUTPUT);
 }
 //
 //                    
