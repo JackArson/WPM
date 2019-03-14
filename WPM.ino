@@ -6,9 +6,33 @@
 
 LiquidCrystal_I2C  liquidcrystali2c(0x27, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);  
 tmElements_t       RTC_reading;
+//==================================================================================================================
+
 class MyStateMachine
 {
-
+public:
+    enum State
+    {
+        STATE_INIT_SLEEP, //0
+        STATE_SLEEP, //1
+        STATE_INIT_WAKE, //2
+        STATE_WAKE, //3
+        STATE_INIT_BALANCED, //4
+        STATE_BALANCED, //5
+        STATE_INIT_INVERTER_WARM_UP, //6
+        STATE_INVERTER_WARM_UP, //7
+        STATE_INIT_INVERTER_STAGE_ONE, //8
+        STATE_INVERTER_STAGE_ONE, //9
+        STATE_INIT_INVERTER_STAGE_TWO, //10
+        STATE_INVERTER_STAGE_TWO, //11
+        STATE_INIT_DAY_CHARGE, //12
+        STATE_DAY_CHARGE, //13
+        STATE_INIT_INVERTER_COOL_DOWN, //14
+        STATE_INVERTER_COOL_DOWN, //15
+        STATE_ERROR,
+        MAX_STATE
+    };
+    
 }mystatemachine;
 
 class MySerial
