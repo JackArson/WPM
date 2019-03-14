@@ -84,3 +84,4 @@ idea:  a function that takes these parameters (min/max voltage allowable time mi
 03-13-19-12:03 added access control and made mCounter private
 03-13-19-19:09 mySerial construction
 03-14-19-09:44 RTC refactoring
+03-14-19-09:57 MySerial::printTimestamp()

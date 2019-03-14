@@ -35,29 +35,27 @@ void MySerial::printStatus()
     }    
 }
 
-
-    ////***********************************************************
 void MySerial::printTimestamp()
-{
-}////***********************************************************
-   //if (hour() <= 9)
-   //{
-      //Serial.print("0");
-   //}
-   //Serial.print(hour());
-   //Serial.print(":");
-   //if (minute() <= 9) {
-      //Serial.print("0");
-   //}
-   //Serial.print(minute());
-   //Serial.print(":");
-   //if (second() <= 9) {
-      //Serial.print("0");
-   //}
-   //Serial.print(second());
-   //Serial.print(" "); 
-//}
-//}
+{    
+    if (RTC_reading.Hour <= 9)
+    {
+        Serial.print("0");
+    }
+    Serial.print(RTC_reading.Hour);
+    Serial.print(":");
+    if (RTC_reading.Minute <= 9)
+    {
+        Serial.print("0");
+    }
+    Serial.print(RTC_reading.Minute);
+    Serial.print(":");
+    if (RTC_reading.Second <= 9)
+    {
+        Serial.print("0");
+   }
+   Serial.print(RTC_reading.Second);
+   Serial.print("  ");
+}
 
 //=============================================================================================================
 
@@ -429,8 +427,9 @@ void loop(){
         //set the timestamp for the next loop
         a1000ms_timestamp = millis();
         //get RealTimeClock reading
-        if (RTC.read(RTC_reading))
+        if (RTC.read(RTC_reading)) //gathered by reference
         {
+            //to be removed along with time lib
             setTime(RTC_reading.Hour,RTC_reading.Minute,RTC_reading.Second,RTC_reading.Day,RTC_reading.Month,RTC_reading.Year-30);
         }
         myserial.printStatus();
