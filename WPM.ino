@@ -32,8 +32,16 @@ public:
         STATE_ERROR,
         MAX_STATE
     };
-    
+private: //variables
+    State mState {STATE_INIT_BALANCED}; //start balanced
+public:  //methods
+    State getState();
 }mystatemachine;
+
+MyStateMachine::State MyStateMachine::getState()
+{
+    return mState;
+}
 
 class MySerial
 {
