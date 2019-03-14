@@ -523,9 +523,7 @@ void loop()
             gAllowOvernightMaintenance)
         {
             gAllowOvernightMaintenance = false; //necessary to prevent running twice on rare occasions 
-
-
-            //power_manager_mode = 0; //r
+            mystatemachine.setState(MyStateMachine::STATE_INIT_SLEEP);  //make sure machine is sleeping (redundant)
             inverter_run_time  = 0;
             voltage_daily_max = stable_voltage; 
             todays_high_voltage_timestamp = RTC_reading;
@@ -1131,7 +1129,7 @@ void myStateMachineInitSleepStatefunction() {               //state 0
   digitalWrite (inverter_signal_pin, LOW);         //inverter off
   digitalWrite(stage_one_inverter_relay, LOW);    // relay one off
   digitalWrite(stage_two_inverter_relay, LOW);    // relay two off
-  machine_state = 1; //go to sleep state
+  mystatemachine.setState(MyStateMachine::STATE_SLEEP);
   return;
 }
 
@@ -1139,7 +1137,7 @@ void myStateMachineInitSleepStatefunction() {               //state 0
 void myStateMachineSleepStatefunction() {                   //state 1
   //============================5.8.2018===
   if (myIsItDaylightfunction() == true) {        //switch to initiate wake state if light
-    machine_state = 2; //initiate wake state
+    mystatemachine.setState(MyStateMachine::STATE_INIT_WAKE);
     return;
   }
 
@@ -1155,7 +1153,7 @@ void myStateMachineInitWakeStatefunction() {                //state 2
   digitalWrite (inverter_signal_pin, LOW);          // inverter off
   digitalWrite(stage_one_inverter_relay, LOW);      // relay one off
   digitalWrite(stage_two_inverter_relay, LOW);      // relay two off
-  machine_state = 3;
+  mystatemachine.setState(MyStateMachine::STATE_WAKE);
 }
 
 //======================================
@@ -1168,11 +1166,11 @@ void myStateMachineWakeStatefunction() {                    //state 3
   //Time of day used here so the machine can begin inverting quickly if reset mid-day
   //I'm planning on starting in balanced mode however, so should never come up
   if (myIsItDaylightfunction() == false) {        //return to initiate sleep mode if dark, unlikely
-    machine_state = 0; //initiate sleep state
+    mystatemachine.setState(MyStateMachine::STATE_INIT_SLEEP); //initiate sleep state
     return;
   }
   if (myIsItDeltaTimePastDawnfunction() == true) {
-    machine_state = 4;  //initiate balanced
+    mystatemachine.setState(MyStateMachine::STATE_INIT_BALANCED);  //initiate balanced
     return;
   }
 }
@@ -1189,7 +1187,7 @@ void myStateMachineInitBalancedStatefunction() {            //state 4
   digitalWrite(stage_one_inverter_relay, LOW);    // relay one off
   digitalWrite(stage_two_inverter_relay, LOW);    // relay two off
   //
-  machine_state = 5;                               // balanced initialization complete
+  mystatemachine.setState(MyStateMachine::STATE_BALANCED);                               // balanced initialization complete
   return;
 }
 
@@ -1201,15 +1199,15 @@ void myStateMachineBalancedStatefunction() {                //state 5
   const float voltage_to_start_daytime_charging = 12.60;
 
   if (myIsItDaylightfunction() == false) {        //switch to initiate sleep mode if dark
-    machine_state = 0; //initiate sleep state
+    mystatemachine.setState(MyStateMachine::STATE_INIT_SLEEP); //initiate sleep state
     return;
   }
   if (stable_voltage >= voltage_to_start_inverter) {
-    machine_state = 6;     //init warm up inverter
+    mystatemachine.setState(MyStateMachine::STATE_INIT_INVERTER_WARM_UP);     //init warm up inverter
     return;
   }
   if (stable_voltage <= voltage_to_start_daytime_charging) {
-    machine_state = 12;    //init daytime charging
+    mystatemachine.setState(MyStateMachine::STATE_INIT_DAY_CHARGE);    //init daytime charging
     return;
   }
 
@@ -1229,7 +1227,7 @@ void myStateMachineInitWarmUpInverterStatefunction() {    //state 6
   digitalWrite(stage_one_inverter_relay, LOW);    // relay one off
   digitalWrite(stage_two_inverter_relay, LOW);    // relay two off
   myTimer.set(seconds_to_warm_up);
-  machine_state = 7;
+  mystatemachine.setState(MyStateMachine::STATE_INVERTER_WARM_UP);
 }
 
 
@@ -1241,7 +1239,7 @@ void myStateMachineWarmUpInverterStatefunction() {        //state 7
   if (myTimer.getCounter()) {    //warming up during countdown
     return;
   }
-  machine_state = 8;
+  mystatemachine.setState(MyStateMachine::STATE_INIT_INVERTER_STAGE_ONE);
 
 }
 //======================================================
@@ -1257,7 +1255,7 @@ void myStateMachineInitStageOneInverterStatefunction() {    //state 8
   digitalWrite(stage_one_inverter_relay, HIGH);    // relay one on
   digitalWrite(stage_two_inverter_relay, LOW);    // relay two off
   myTimer.set(stage_two_switching_delay);
-  machine_state = 9;
+  mystatemachine.setState(MyStateMachine::STATE_INVERTER_STAGE_ONE);
 }
 
 //==================================================
@@ -1270,17 +1268,17 @@ void myStateMachineStageOneInverterStatefunction() {        //state 9
   inverter_run_time++;
 
   if (myIsItDaylightfunction() == false) {        //switch to initiate sleep mode if dark
-    machine_state = 0; //initiate sleep state -   //might be helpful for a charger stuck in "on" state
+    mystatemachine.setState(MyStateMachine::STATE_INIT_SLEEP); //initiate sleep state -   //might be helpful for a charger stuck in "on" state
     return;
   }
 
   if (stable_voltage >= voltage_to_switch_to_stage_two && !myTimer.getCounter()) {
-    machine_state = 10;  //initiate stage two inverter
+    mystatemachine.setState(MyStateMachine::STATE_INIT_INVERTER_STAGE_TWO);  //initiate stage two inverter
     return;
   }
 
   if (stable_voltage <= voltage_to_turn_inverter_off) {
-    machine_state = 14; //initiate inverter cooldown state, so a burst of solar energy does not short
+    mystatemachine.setState(MyStateMachine::STATE_INIT_INVERTER_COOL_DOWN); //initiate inverter cooldown state, so a burst of solar energy does not short
     //cycle the inverter
     return;
   }
@@ -1295,7 +1293,7 @@ void myStateMachineInitStageTwoInverterStatefunction() {    //state 10
   digitalWrite (inverter_signal_pin, HIGH);         //inverter on
   digitalWrite(stage_one_inverter_relay, HIGH);    // relay one on
   digitalWrite(stage_two_inverter_relay, HIGH);    // relay two on
-  machine_state = 11;
+  mystatemachine.setState(MyStateMachine::STATE_INIT_INVERTER_STAGE_TWO);
 }
 
 //==================================================
@@ -1305,14 +1303,14 @@ void myStateMachineStageTwoInverterStatefunction() {        //state 11
   const float voltage_to_drop_back_to_stage_one = 12.70;
 
   if (myIsItDaylightfunction() == false) {        //switch to initiate sleep mode if dark
-    machine_state = 0; //initiate sleep state -   //might be helpful for a charger stuck in "on" state
+    mystatemachine.setState(MyStateMachine::STATE_INIT_SLEEP); //initiate sleep state -   //might be helpful for a charger stuck in "on" state
     return;
   }
 
   inverter_run_time++;
 
   if (stable_voltage <= voltage_to_drop_back_to_stage_one) {
-    machine_state = 8;
+    mystatemachine.setState(MyStateMachine::STATE_INIT_INVERTER_STAGE_ONE);
     return;
   }
 
@@ -1327,7 +1325,7 @@ void myStateMachineInitDaytimeChargingfunction() {    //state 12
   digitalWrite (inverter_signal_pin, LOW);         //inverter off
   digitalWrite(stage_one_inverter_relay, LOW);    // relay one off
   digitalWrite(stage_two_inverter_relay, LOW);    // relay two off
-  machine_state = 13;
+  mystatemachine.setState(MyStateMachine::STATE_DAY_CHARGE);
 }
 //============================================
 void myStateMachineDaytimeChargingfunction() {  //state 13
@@ -1336,7 +1334,7 @@ void myStateMachineDaytimeChargingfunction() {  //state 13
   const float voltage_to_switch_off_charger = 13.40;
 
   if (stable_voltage >= voltage_to_switch_off_charger) {
-    machine_state = 4;  //switch to initbalanced
+    mystatemachine.setState(MyStateMachine::STATE_INIT_BALANCED); //switch to initbalanced
     return;
   }
 }
@@ -1354,7 +1352,7 @@ void myStateMachineInitInverterCooldownfunction() {    //state 14
   digitalWrite(stage_one_inverter_relay, LOW);    // relay one off
   digitalWrite(stage_two_inverter_relay, LOW);    // relay two off
   myTimer.set(inverter_cooldown_time);
-  machine_state = 15;
+  mystatemachine.setState(MyStateMachine::STATE_INVERTER_COOL_DOWN);
 }
 
 //================================================
@@ -1362,6 +1360,6 @@ void myStateMachineInverterCooldownfunction() {    //state 15
   //====================================5.11.2018===
 
   if (!myTimer.getCounter()) {
-    machine_state = 4;  //init balanced
+    mystatemachine.setState(MyStateMachine::STATE_INIT_BALANCED);  //init balanced
   }
 }
