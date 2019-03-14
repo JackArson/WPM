@@ -299,7 +299,7 @@ byte sunset_hour[53]    = {18,18,18,18,18,18,18,19,19,19,19,19,19,19,19,20,20,20
 byte sunset_minute[53]  = {13,19,26,34,43,51,59, 7,15,23,30,37,44,51,58, 5,12,19,26,33,39,45,50,54,57,58,58,56,53,48,42,34,26,16,06,55,44,32,21, 9,58,48,38,29,21,14, 8, 4, 2, 2, 4, 7,13 };
 
 boolean daylight_savings_time = true; // was false from fall to spring, now trying true for 
-bool gAllowOvernightMaintenance {false};                                       // spring to fall
+                                      // spring to fall
 
 int  inverter_run_time  = 0;
 //byte power_manager_mode = 0; // 0 = night time, or before first charge
@@ -345,7 +345,6 @@ byte          the_analog_pin_to_the_voltage_divider                = A0; //green
 byte          potentiometer_input_pin                              = A1; //yellow wire
 
 
-long unsigned a1000ms_timestamp   = millis();
 long unsigned message_manager_timestamp    = millis();
 
 //initializations: do not adjust
@@ -444,24 +443,20 @@ void loop()
     myReadPotentiometerAndAdjustWorkbenchTrackLightsfunction();
     myVoltageCalculationfunction();
     myVoltagePrintingAndRecordingfunction();
-
-
-    //tmElements_t
-    //This code runs every 1000ms
-    //if ((long unsigned)(millis() - a1000ms_timestamp) >= 1000)
-    RTC.read(gRTC_reading);  //gathered by reference
+    //This code runs every second (1000ms)
+    RTC.read(gRTC_reading);  //gathered from library by reference
     if (gLast_RTC_reading.Second != gRTC_reading.Second) 
     {
         gLast_RTC_reading = gRTC_reading;  //set up delay for the next loop
-        a1000ms_timestamp = millis();
-        //get RealTimeClock reading
+        //--------------to remove-------------------------------------------
         if (RTC.read(gRTC_reading)) //gathered by reference
         {
             //to be removed along with time lib
             setTime(gRTC_reading.Hour,gRTC_reading.Minute,gRTC_reading.Second,gRTC_reading.Day,gRTC_reading.Month,gRTC_reading.Year-30);
         }
+        //--------------end of to remove-------------------------------------------
         myserial.printStatus();
-        myTimer.update();
+        myTimer.update(); 
         myBacklightfunction();
         myPrintTimetoLCDfunction((gRTC_reading),13, 3,true);
         myPrintDatetoLCDfunction(0, 3);
@@ -524,10 +519,8 @@ void loop()
         // This code runs at 2:00am 
         if (gRTC_reading.Hour   == 2 &&
             gRTC_reading.Minute == 0 &&
-            gRTC_reading.Second == 0 &&
-            gAllowOvernightMaintenance)
+            gRTC_reading.Second == 0)
         {
-            gAllowOvernightMaintenance = false; //necessary to prevent running twice on rare occasions 
             mystatemachine.setState(MyStateMachine::STATE_INIT_SLEEP);  //make sure machine is sleeping (redundant)
             inverter_run_time  = 0;
             voltage_daily_max = stable_voltage; 
@@ -537,14 +530,6 @@ void loop()
             solar_week_number = myCalculateWeekNumberfunction(gRTC_reading); //to read duskdawn data tables
             myLoadUpcomingEventsfunction();
             mysetSunriseSunsetTimesfunction();  
-        }
-        // This code runs at 2:00:05am, it may run twice on rare occasions 
-        if (gRTC_reading.Hour   == 2 &&
-            gRTC_reading.Minute == 0 &&
-            gRTC_reading.Second == 5)
-        {
-            //enough time has passed to unlock overnight maintenance again
-            gAllowOvernightMaintenance = true;
         }
         //This code only runs if MessageManager sets the message_manager_timestamp 
         if ((long unsigned)(message_manager_timestamp) <= millis())
