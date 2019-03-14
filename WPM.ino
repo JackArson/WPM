@@ -59,8 +59,8 @@ private: //variables
     bool  mPrintStateMachineChanges {true};
     bool  mPrintTimestamp           {true};
 public:
-    void print(const char *string_ptr);
-    void print(const byte numeral);
+    void sprint(const char *string_ptr);
+    void sprint(const byte numeral);
     void printLinefeed();
     void printStatus(); //runs every 1000 milliseconds. Called by main()
     void printTimestamp();
@@ -70,12 +70,12 @@ private: //methods
     //void print
 }myserial;
 
-void MySerial::print(const char *string_ptr)
+void MySerial::sprint(const char *string_ptr)
 {
     Serial.print(string_ptr);   
 }
 
-void MySerial::print(const byte numeral)
+void MySerial::sprint(const byte numeral)
 {
     Serial.print(numeral);   
 }
@@ -309,8 +309,8 @@ void MyInfo::printState(char const *text)
     mylcd.setCursor (0,0);
     mylcd.print (text);
     myserial.printTimestamp();
-    myserial.print(" state changed to: ");
-    myserial.print(text);
+    myserial.sprint(" state changed to: ");
+    myserial.sprint(text);
     myserial.printLinefeed();
 }
 
