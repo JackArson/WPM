@@ -56,18 +56,34 @@ class MySerial
 {
 private: //variables
     //choose the serial output 
-    bool mPrintStateMachineChanges {true};
-    bool mPrintTimestamp           {true};
-
-    
-    
+    bool  mPrintStateMachineChanges {true};
+    bool  mPrintTimestamp           {true};
 public:
+    void print(const char *string_ptr);
+    void print(const byte numeral);
+    void printLinefeed();
     void printStatus(); //runs every 1000 milliseconds. Called by main()
+    void printTimestamp();
     void testClock();
 private: //methods
-    void printTimestamp();
+    
     //void print
 }myserial;
+
+void MySerial::print(const char *string_ptr)
+{
+    Serial.print(string_ptr);   
+}
+
+void MySerial::print(const byte numeral)
+{
+    Serial.print(numeral);   
+}
+
+void MySerial::printLinefeed()
+{
+    Serial.println();
+}
 
 void MySerial::printStatus()
 {
@@ -76,27 +92,6 @@ void MySerial::printStatus()
         printTimestamp();
     }
     Serial.println();
-}
-
-void MySerial::testClock()
-{
-    if (RTC.read(gRTC_reading))
-    {
-        //setTime to be removed after all references deleted     
-        setTime (gRTC_reading.Hour,gRTC_reading.Minute,gRTC_reading.Second,gRTC_reading.Day,gRTC_reading.Month,gRTC_reading.Year-30); // -30 years correction WTF?
-    }
-    else
-    {
-        //if the time cannot be found.
-        if (RTC.chipPresent())
-        {
-            Serial.println(F("Time not set.  Possible RTC clock battery issue. Battery is LIR2032."));
-        }
-        else
-        {
-            Serial.println(F("I can't find the clock through the I2C connection, check wiring."));
-        } 
-    }
 }
 
 void MySerial::printTimestamp()
@@ -120,6 +115,28 @@ void MySerial::printTimestamp()
    Serial.print(gRTC_reading.Second);
    Serial.print("  ");
 }
+
+void MySerial::testClock()
+{
+    if (RTC.read(gRTC_reading))
+    {
+        //setTime to be removed after all references deleted     
+        setTime (gRTC_reading.Hour,gRTC_reading.Minute,gRTC_reading.Second,gRTC_reading.Day,gRTC_reading.Month,gRTC_reading.Year-30); // -30 years correction WTF?
+    }
+    else
+    {
+        //if the time cannot be found.
+        if (RTC.chipPresent())
+        {
+            Serial.println(F("Time not set.  Possible RTC clock battery issue. Battery is LIR2032."));
+        }
+        else
+        {
+            Serial.println(F("I can't find the clock through the I2C connection, check wiring."));
+        } 
+    }
+}
+
 
 //=============================================================================================================
 
@@ -280,6 +297,23 @@ private: //variables
     };        
 }myimportantdates;
 
+class MyInfo //gains information and sends it to LCD and serial
+{
+public: //methods
+    void printState(char const *text);   
+}myinfo;
+
+void MyInfo::printState(char const *text)
+{
+    //LCD printing in the upper left 8 characters of the 4x20 display   
+    mylcd.setCursor (0,0);
+    mylcd.print (text);
+    myserial.printTimestamp();
+    myserial.print(" state changed to: ");
+    myserial.print(text);
+    myserial.printLinefeed();
+}
+
 // 2                      3                      4                     5                       6                       7                      8                     9                      10                     11                     12                     13                     14                     15                     16                     17                      18                     19                     20                      21                     22
 byte  number_of_records_to_scan = 23;      // "12345678901234567890","12345678901234567890","12345678901234567890","12345678901234567890","12345678901234567890",,"12345678901234567890","12345678901234567890","12345678901234567890","12345678901234567890","12345678901234567890","12345678901234567890","12345678901234567890","12345678901234567890","12345678901234567890","12345678901234567890","12345678901234567890","12345678901234567890","12345678901234567890","12345678901234567890","12345678901234567890","12345678901234567890","12345678901234567890"     
 const char* important_dates_string_array[] = {" Kathy"               ,"Jack(cat)"           ,"Katrina"             ,"  Alan"              ,"  Jack"              ," Joshua"              ,"  Dad"               ,"Christopher"         ,"  Jon"                ,"  Mena"              ," Jacob"              ,"Elizabeth"           ,"Aunt Julie"          ," Dentist 8:00AM"     ,"Paul and Mena"       ,"Empty"               ," Cersei"             ," Mom and Dad"        ,"  Paul"              ,"  Mom"               ," Erik"               ,"Mathew"              ,"      Christmas"};
@@ -374,7 +408,7 @@ byte dimmer_reference_number = 0;
 const unsigned long seconds_in_a_week = 604800;  
 
 
-void myPrintStatefunction(char const * text);
+//void myPrintStatefunction(char const * text);
 void myBacklightfunction();
 byte myCalculateWeekNumberfunction(TimeElements sixpartdate);
 void myClearMessageBoardfunction();
@@ -539,17 +573,7 @@ void loop()
     }
 }
 
-//===============================
-void myPrintStatefunction(char const * text){
-//========2.27.2018==============
 
-// This code handles the state of operation LCD printing in the upper left 8 characters of the 4x20 display   
-  Serial.print("  state changed to: ");
-  Serial.print(text);
-  liquidcrystali2c.setCursor (0,0);
-  liquidcrystali2c.print (text);
-  
-}
 
 
 
@@ -1111,9 +1135,9 @@ void myVoltageCalculationfunction() {
 //===========================================
 void myStateMachineInitSleepStatefunction() {               //state 0
   //================================5.8.2018===
-  mylcd.setCursor(0, 0);
-  mylcd.print("Sleeping");
-  myPrintStatefunction("Sleeping");
+  //mylcd.setCursor(0, 0);
+  //mylcd.print("Sleeping");
+  myinfo.printState("Sleeping");
   //initialize relevant pins with redundancy
   digitalWrite (battery_charger_signal_pin, HIGH);  //battery charger on
   digitalWrite (inverter_signal_pin, LOW);         //inverter off
@@ -1137,7 +1161,7 @@ void myStateMachineSleepStatefunction() {                   //state 1
 //==========================================
 void myStateMachineInitWakeStatefunction() {                //state 2
   //==============================5.8.2018====
-  myPrintStatefunction("Waking  ");
+  myinfo.printState("Waking  ");
   //initialize relevant pins with redundancy
   digitalWrite (battery_charger_signal_pin, LOW);   // battery charger off
   digitalWrite (inverter_signal_pin, LOW);          // inverter off
@@ -1170,7 +1194,7 @@ void myStateMachineInitBalancedStatefunction() {            //state 4
   //===================================5.8.2018===
 
 
-  myPrintStatefunction("Balanced");
+  myinfo.printState("Balanced");
   //initialize relevant pins with redundancy
   digitalWrite (battery_charger_signal_pin, LOW);  //battery charger off
   digitalWrite (inverter_signal_pin, LOW);         //inverter off
@@ -1210,7 +1234,7 @@ void myStateMachineInitWarmUpInverterStatefunction() {    //state 6
   //===========================================5.8.2018===
   const byte seconds_to_warm_up = 4;
 
-  myPrintStatefunction("Warm Up ");
+  myinfo.printState("Warm Up ");
   //initialize relevant pins with redundancy
   digitalWrite (battery_charger_signal_pin, LOW);  //battery charger off
   digitalWrite (inverter_signal_pin, HIGH);         //inverter on
@@ -1238,7 +1262,7 @@ void myStateMachineInitStageOneInverterStatefunction() {    //state 8
 
   const byte  stage_two_switching_delay = 15;  //seconds.  this prevents stage two from engaging too soon
 
-  myPrintStatefunction("Invert1 ");
+  myinfo.printState("Invert1 ");
   //initialize relevant pins with redundancy
   digitalWrite (battery_charger_signal_pin, LOW);  //battery charger off
   digitalWrite (inverter_signal_pin, HIGH);         //inverter on
@@ -1277,7 +1301,7 @@ void myStateMachineStageOneInverterStatefunction() {        //state 9
 //======================================================
 void myStateMachineInitStageTwoInverterStatefunction() {    //state 10
   //==============================5.8.2018================
-  myPrintStatefunction("Invert2 ");
+  myinfo.printState("Invert2 ");
   //initialize relevant pins with redundancy
   digitalWrite (battery_charger_signal_pin, LOW);  //battery charger off
   digitalWrite (inverter_signal_pin, HIGH);         //inverter on
@@ -1309,7 +1333,7 @@ void myStateMachineStageTwoInverterStatefunction() {        //state 11
 //================================================
 void myStateMachineInitDaytimeChargingfunction() {    //state 12
   //====================================5.11.2018===
-  myPrintStatefunction("Charging");
+  myinfo.printState("Charging");
   //initialize relevant pins with redundancy
   digitalWrite (battery_charger_signal_pin, HIGH);  //battery charger on
   digitalWrite (inverter_signal_pin, LOW);         //inverter off
@@ -1335,7 +1359,7 @@ void myStateMachineInitInverterCooldownfunction() {    //state 14
 
   byte inverter_cooldown_time = 30;  //seconds
 
-  myPrintStatefunction("Cooldown");
+  myinfo.printState("Cooldown");
   //initialize relevant pins with redundancy
   digitalWrite (battery_charger_signal_pin, LOW);  //battery charger off
   digitalWrite (inverter_signal_pin, LOW);         //inverter off
