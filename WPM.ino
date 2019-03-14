@@ -290,7 +290,7 @@ byte sunset_hour[53]    = {18,18,18,18,18,18,18,19,19,19,19,19,19,19,19,20,20,20
 byte sunset_minute[53]  = {13,19,26,34,43,51,59, 7,15,23,30,37,44,51,58, 5,12,19,26,33,39,45,50,54,57,58,58,56,53,48,42,34,26,16,06,55,44,32,21, 9,58,48,38,29,21,14, 8, 4, 2, 2, 4, 7,13 };
 
 boolean daylight_savings_time = true; // was false from fall to spring, now trying true for 
-                                       // spring to fall
+bool gAllowOvernightMaintenance {false};                                       // spring to fall
 
 int  inverter_run_time  = 0;
 byte power_manager_mode = 0; // 0 = night time, or before first charge
@@ -321,29 +321,9 @@ tmElements_t  todays_low_voltage_timestamp;
 tmElements_t  todays_high_voltage_timestamp;
 byte          solar_week_number = 1;
 
-
-
-                                      //  Mega wiring
-                                      //  black eight wire cable (old ethernet cable)
-                                      //  solid brown to digital #2 
-                                      //  digital #3 to solid orange to (orange lead of 8 wire....
-                                      //  digital #4 to solid green to (white lead of 5 wire brown tstat cable in local box) to (fuse e through h box -add wire color here-)
-                                      //  digital #5 to solid blue to (yellow lead of 8 wire brown t-stat cable....
-                                      //  digital #6 purple to striped blue to yellow lead of 5 wire tstat cable
-                                      //  digital #8 green to striped green of black ethernet cable to light green wire in the brown 8 wire tstat cable
-                                      //             From light green wire in metal box above back door to green striped wire in the gray 8 wire ethernet cable
-                                      //             From handy box with light controls: striped green to white in the black 4 wire USB cable.
-                                      //                          
-                                      //  digital #9 orange to striped orange of black ethernet cable to dark green wire in the brown 5 wire tstat cable
-                                      //             From dark green wire in metal box above back door to green solid in the gray 8 wire ethernet cable -
-                                      //             From handy box with light controls: solid green to the solid green in the black 4 wire USB cable.
-                                      //              
-                                      // analog #1 yellow to striped brown
-
-                                      // PIN ASSIGNMENT HERE
-                                      
-                                      // DIGITAL
-                                      // Pins 0 and 1 are reserved for the USB
+// PIN ASSIGNMENT HERE                                      
+// DIGITAL
+// Pins 0 and 1 are reserved for the USB
 byte          the_pin_to_the_LDR_circuit                           = 2; //brown   wire lower cable              
 byte          the_pin_to_the_LDR2_circuit                          = 3; //orange wire lower cable
 byte          battery_charger_signal_pin                           = 11; //green wire upper cable  
@@ -356,7 +336,6 @@ byte          the_analog_pin_to_the_voltage_divider                = A0; //green
 byte          potentiometer_input_pin                              = A1; //yellow wire
 
 
-long unsigned a500ms_timestamp   = millis();
 long unsigned a1000ms_timestamp   = millis();
 long unsigned message_manager_timestamp    = millis();
 
@@ -439,8 +418,6 @@ void setup()
     solar_week_number = myCalculateWeekNumberfunction(RTC_reading);
     myLoadUpcomingEventsfunction();
     mysetSunriseSunsetTimesfunction();
-       
-       
     //set pins  
     pinMode (inverter_signal_pin, OUTPUT);
     pinMode (battery_charger_signal_pin, OUTPUT);
@@ -531,9 +508,13 @@ void loop()
         default:
             break;
         }
-        // This code runs once or twice at 2am
-        if (hour() == 0 && minute() == 0 && second() <= 1 )
+        // This code runs at 2:00am 
+        if (RTC_reading.Hour   == 2 &&
+            RTC_reading.Minute == 0 &&
+            RTC_reading.Second == 0 &&
+            gAllowOvernightMaintenance)
         {
+            gAllowOvernightMaintenance = false; //necessary to prevent running twice on rare occasions 
             power_manager_mode = 0; //r
             inverter_run_time  = 0;
             voltage_daily_max = stable_voltage; 
@@ -543,15 +524,21 @@ void loop()
             solar_week_number = myCalculateWeekNumberfunction(RTC_reading); //to read duskdawn data tables
             myLoadUpcomingEventsfunction();
             mysetSunriseSunsetTimesfunction();  
-        }       
+        }
+        // This code runs at 2:00:05am, it may run twice on rare occasions 
+        if (RTC_reading.Hour   == 2 &&
+            RTC_reading.Minute == 0 &&
+            RTC_reading.Second == 5)
+        {
+            //enough time has passed to unlock overnight maintenance again
+            gAllowOvernightMaintenance = true;
+        }
+        //This code only runs if MessageManager sets the message_manager_timestamp 
+        if ((long unsigned)(message_manager_timestamp) <= millis())
+        { 
+            myMessageManagerfunction(); 
+        }              
     }
-    //This code only runs if MessageManager sets the message_manager_timestamp 
-    if ((long unsigned)(message_manager_timestamp) <= millis())
-    { 
-        myMessageManagerfunction(); 
-    }
-  
-  
 }
 
 //===============================

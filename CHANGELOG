@@ -106,3 +106,4 @@ idea:  a function that takes these parameters (min/max voltage allowable time mi
 03-14-19-10:54 MyStateMachine::State MyStateMachine::getState()
 03-14-19-11:11 main loop states enumerated
 03-14-19-11:24 old wiring comments moved to CHANGELOG
+03-14-19-11:39 gAllowOvernightMaintenance safeguard added
