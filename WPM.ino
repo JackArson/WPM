@@ -5,7 +5,8 @@
 #include <Wire.h>
 
 LiquidCrystal_I2C  liquidcrystali2c(0x27, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);  
-tmElements_t       RTC_reading;
+tmElements_t       gRTC_reading;
+tmElements_t       gLast_RTC_reading;
 //==================================================================================================================
 
 class MyStateMachine
@@ -79,10 +80,10 @@ void MySerial::printStatus()
 
 void MySerial::testClock()
 {
-    if (RTC.read(RTC_reading))
+    if (RTC.read(gRTC_reading))
     {
         //setTime to be removed after all references deleted     
-        setTime (RTC_reading.Hour,RTC_reading.Minute,RTC_reading.Second,RTC_reading.Day,RTC_reading.Month,RTC_reading.Year-30); // -30 years correction WTF?
+        setTime (gRTC_reading.Hour,gRTC_reading.Minute,gRTC_reading.Second,gRTC_reading.Day,gRTC_reading.Month,gRTC_reading.Year-30); // -30 years correction WTF?
     }
     else
     {
@@ -100,23 +101,23 @@ void MySerial::testClock()
 
 void MySerial::printTimestamp()
 {    
-    if (RTC_reading.Hour <= 9)
+    if (gRTC_reading.Hour <= 9)
     {
         Serial.print("0");
     }
-    Serial.print(RTC_reading.Hour);
+    Serial.print(gRTC_reading.Hour);
     Serial.print(":");
-    if (RTC_reading.Minute <= 9)
+    if (gRTC_reading.Minute <= 9)
     {
         Serial.print("0");
     }
-    Serial.print(RTC_reading.Minute);
+    Serial.print(gRTC_reading.Minute);
     Serial.print(":");
-    if (RTC_reading.Second <= 9)
+    if (gRTC_reading.Second <= 9)
     {
         Serial.print("0");
    }
-   Serial.print(RTC_reading.Second);
+   Serial.print(gRTC_reading.Second);
    Serial.print("  ");
 }
 
@@ -423,7 +424,7 @@ void setup()
     Wire.begin();                      // start the Wire library
     liquidcrystali2c.begin(20, 4);     // start the LiquidCrystal_I2C library
     myserial.testClock();
-    solar_week_number = myCalculateWeekNumberfunction(RTC_reading);
+    solar_week_number = myCalculateWeekNumberfunction(gRTC_reading);
     myLoadUpcomingEventsfunction();
     mysetSunriseSunsetTimesfunction();
     //set pins  
@@ -443,22 +444,26 @@ void loop()
     myReadPotentiometerAndAdjustWorkbenchTrackLightsfunction();
     myVoltageCalculationfunction();
     myVoltagePrintingAndRecordingfunction();
-    
+
+
+    //tmElements_t
     //This code runs every 1000ms
-    if ((long unsigned)(millis() - a1000ms_timestamp) >= 1000)
+    //if ((long unsigned)(millis() - a1000ms_timestamp) >= 1000)
+    RTC.read(gRTC_reading);  //gathered by reference
+    if (gLast_RTC_reading.Second != gRTC_reading.Second) 
     {
-        //set the timestamp for the next loop
+        gLast_RTC_reading = gRTC_reading;  //set up delay for the next loop
         a1000ms_timestamp = millis();
         //get RealTimeClock reading
-        if (RTC.read(RTC_reading)) //gathered by reference
+        if (RTC.read(gRTC_reading)) //gathered by reference
         {
             //to be removed along with time lib
-            setTime(RTC_reading.Hour,RTC_reading.Minute,RTC_reading.Second,RTC_reading.Day,RTC_reading.Month,RTC_reading.Year-30);
+            setTime(gRTC_reading.Hour,gRTC_reading.Minute,gRTC_reading.Second,gRTC_reading.Day,gRTC_reading.Month,gRTC_reading.Year-30);
         }
         myserial.printStatus();
         myTimer.update();
         myBacklightfunction();
-        myPrintTimetoLCDfunction((RTC_reading),13, 3,true);
+        myPrintTimetoLCDfunction((gRTC_reading),13, 3,true);
         myPrintDatetoLCDfunction(0, 3);
         myPrintLDRresultsToLCDfunction();
         switch (mystatemachine.getState())
@@ -517,26 +522,26 @@ void loop()
             break;
         }
         // This code runs at 2:00am 
-        if (RTC_reading.Hour   == 2 &&
-            RTC_reading.Minute == 0 &&
-            RTC_reading.Second == 0 &&
+        if (gRTC_reading.Hour   == 2 &&
+            gRTC_reading.Minute == 0 &&
+            gRTC_reading.Second == 0 &&
             gAllowOvernightMaintenance)
         {
             gAllowOvernightMaintenance = false; //necessary to prevent running twice on rare occasions 
             mystatemachine.setState(MyStateMachine::STATE_INIT_SLEEP);  //make sure machine is sleeping (redundant)
             inverter_run_time  = 0;
             voltage_daily_max = stable_voltage; 
-            todays_high_voltage_timestamp = RTC_reading;
+            todays_high_voltage_timestamp = gRTC_reading;
             voltage_daily_min = stable_voltage;
-            todays_low_voltage_timestamp = RTC_reading;
-            solar_week_number = myCalculateWeekNumberfunction(RTC_reading); //to read duskdawn data tables
+            todays_low_voltage_timestamp = gRTC_reading;
+            solar_week_number = myCalculateWeekNumberfunction(gRTC_reading); //to read duskdawn data tables
             myLoadUpcomingEventsfunction();
             mysetSunriseSunsetTimesfunction();  
         }
         // This code runs at 2:00:05am, it may run twice on rare occasions 
-        if (RTC_reading.Hour   == 2 &&
-            RTC_reading.Minute == 0 &&
-            RTC_reading.Second == 5)
+        if (gRTC_reading.Hour   == 2 &&
+            gRTC_reading.Minute == 0 &&
+            gRTC_reading.Second == 5)
         {
             //enough time has passed to unlock overnight maintenance again
             gAllowOvernightMaintenance = true;
@@ -660,10 +665,10 @@ void myLoadUpcomingEventsfunction(){
    message_loaded [1] = false;
    message_loaded [2] = false;
    
-   TimeElements  record_date = RTC_reading;
-   TimeElements  reference_date = RTC_reading;
-   record_date.Year = RTC_reading.Year - 30;        //*year error correction
-   reference_date.Year = RTC_reading.Year - 30;
+   TimeElements  record_date = gRTC_reading;
+   TimeElements  reference_date = gRTC_reading;
+   record_date.Year = gRTC_reading.Year - 30;        //*year error correction
+   reference_date.Year = gRTC_reading.Year - 30;
    // check for events ocurring from now till the end of the scan window
    for (byte x = 0; x < QTY_IMPORTANT_DATES; x++)
    {
@@ -810,7 +815,7 @@ void myMessageSunrisefunction() {
 //----------------------------------------
 void myMessageUpcomingEventsfunction(byte n){
 //----------------------------------------  
-  TimeElements timex = RTC_reading;
+  TimeElements timex = gRTC_reading;
   myClearMessageBoardfunction();
   timex.Day = important_dates_day_array[reminder_message_pointer [n]];
   //Serial.print ("reminder_message_pointer [n]");
@@ -822,7 +827,7 @@ void myMessageUpcomingEventsfunction(byte n){
   //Serial.println (reminder_message_pointer [n]);
   //Serial.print ("timex.Month");
   //Serial.println (timex.Month);
-  if(RTC_reading.Month == 12 && timex.Month == 1) {    //to protect myReturnDayofWeekFromUnixTimestampfunction
+  if(gRTC_reading.Month == 12 && timex.Month == 1) {    //to protect myReturnDayofWeekFromUnixTimestampfunction
                                                         //from end of year rollover
     timex.Year++; 
   }
@@ -841,12 +846,12 @@ void myMessageUpcomingEventsfunction(byte n){
     liquidcrystali2c.print (important_dates_string_array[reminder_message_pointer [n]]);
     }
     liquidcrystali2c.setCursor (5,2);
-    if (timex.Day == RTC_reading.Day || timex.Day == RTC_reading.Day + 1) {      
-      if (timex.Day == RTC_reading.Day) {
+    if (timex.Day == gRTC_reading.Day || timex.Day == gRTC_reading.Day + 1) {      
+      if (timex.Day == gRTC_reading.Day) {
         //         "12345678901234567890"
         liquidcrystali2c.print ("   today.");  
       }
-      if (timex.Day == RTC_reading.Day+1) {
+      if (timex.Day == gRTC_reading.Day+1) {
         //         "12345678901234567890"
         liquidcrystali2c.print (" tomorrow");  
       }
@@ -919,9 +924,9 @@ void myPrintDatetoLCDfunction(byte x, byte y) {
    liquidcrystali2c.setCursor (x,y);
    liquidcrystali2c.print(myReturnDayofWeekfunction(weekday() - 1));
    liquidcrystali2c.print (", ");
-   liquidcrystali2c.print (month_short_name[RTC_reading.Month-1]);    
+   liquidcrystali2c.print (month_short_name[gRTC_reading.Month-1]);    
    liquidcrystali2c.print(" ");
-   liquidcrystali2c.print((RTC_reading.Day));
+   liquidcrystali2c.print((gRTC_reading.Day));
    liquidcrystali2c.print(" ");  //this space to clear last digit when month rolls over (31 to 1) 
 }
 //-------------------------------------
@@ -1067,11 +1072,11 @@ void myVoltagePrintingAndRecordingfunction() {
    //Serial.print (stable_voltage); Serial.print ("V "); 
    if (stable_voltage > voltage_daily_max) { 
     voltage_daily_max = stable_voltage;
-    todays_high_voltage_timestamp = RTC_reading;
+    todays_high_voltage_timestamp = gRTC_reading;
    }
    if (stable_voltage < voltage_daily_min) {
      voltage_daily_min = stable_voltage; 
-     todays_low_voltage_timestamp = RTC_reading;
+     todays_low_voltage_timestamp = gRTC_reading;
    }
 }
 
