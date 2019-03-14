@@ -13,7 +13,7 @@ class MyStateMachine
 public:
     enum State
     {
-        STATE_INIT_SLEEP, //0
+        STATE_INIT_SLEEP, //this is always selected at 2am from the main loop
         STATE_SLEEP, //1
         STATE_INIT_WAKE, //2
         STATE_WAKE, //3
@@ -36,12 +36,20 @@ private: //variables
     State mState {STATE_INIT_BALANCED}; //start balanced
 public:  //methods
     State getState();
+    void  setState(State);
 }mystatemachine;
 
 MyStateMachine::State MyStateMachine::getState()
 {
     return mState;
 }
+
+void  MyStateMachine::setState(State state)
+{
+    mState = state;
+}
+
+//==================================================================================================================
 
 class MySerial
 {
@@ -293,7 +301,7 @@ boolean daylight_savings_time = true; // was false from fall to spring, now tryi
 bool gAllowOvernightMaintenance {false};                                       // spring to fall
 
 int  inverter_run_time  = 0;
-byte power_manager_mode = 0; // 0 = night time, or before first charge
+//byte power_manager_mode = 0; // 0 = night time, or before first charge
                              // 1 = balance mode first 14v charge complete, gomode 2 if power drops below 12.6 60s
                          //                                  gomode 3 if power rises above 13.5 60s
                          // 2 = aux charger trying to get us to 12.6                                  
@@ -515,7 +523,9 @@ void loop()
             gAllowOvernightMaintenance)
         {
             gAllowOvernightMaintenance = false; //necessary to prevent running twice on rare occasions 
-            power_manager_mode = 0; //r
+
+
+            //power_manager_mode = 0; //r
             inverter_run_time  = 0;
             voltage_daily_max = stable_voltage; 
             todays_high_voltage_timestamp = RTC_reading;
