@@ -4,8 +4,24 @@ to striped blue to yellow lead of 5 wire tstat cable
 the yellow wire then goes to the wooden fuse box above the doorway (fuses e - h .) and connects to the whiteorange wire of the 12wire gray data cable.
 the whiteorange wire then goes to the power source switch box where it connects to the gate wire of the MOSFET circuit.
 
- 11.24.2017
- Begining the rewrite of "Workbench_Mega"
+some existing wiring info
+Mega wiring:
+black eight wire cable (old ethernet cable)
+solid brown to digital #2 
+digital #3 to solid orange to (orange lead of 8 wire....
+digital #4 to solid green to (white lead of 5 wire brown tstat cable in local box) to 
+	   (fuse e through h box -add wire color here-)
+digital #5 to solid blue to (yellow lead of 8 wire brown t-stat cable....
+digital #6 purple to striped blue to yellow lead of 5 wire tstat cable
+digital #8 green to striped green of black ethernet cable to light green wire in the brown 8 wire tstat cable
+           From light green wire in metal box above back door to green striped wire in the gray 8 wire
+	   ethernet cable.  From handy box with light controls: striped green to white in the black 4 wire
+	   USB cable.
+digital #9 orange to striped orange of black ethernet cable to dark green wire in the brown 5 wire tstat 	    cable. From dark green wire in metal box above back door to green solid in the gray 8 wire 		   ethernet cable - From handy box with light controls: solid green to the solid green in the black 		   4 wire USB cable.               
+           analog #1 yellow to striped brown
+
+11.24.2017
+Begining the rewrite of "Workbench_Mega"
 
 11.27.2017
 Repaired Main Loop to allow for rollover safe function for my500msLoopfunction()
@@ -66,8 +82,8 @@ idea:  a function that takes these parameters (min/max voltage allowable time mi
 5.11.2018  Success!  a machine with 16 states of being.  I'll be able to cut out a whole lot of
            spaghetti code now.
            
-03-11-19 created GitLab Repository.  I had trouble with my daylight savings time change this year.  I will now
-    apply my new knowledge of C++ to refactor this code.
+03-11-19 created GitLab Repository.  I had trouble with my daylight savings time change this year.  I will now apply my new knowledge of C++ to refactor this code.
+
 03-11-19-10:28 create changelog, added update script
 03-11-19-11:02 combined old project files
 03-11-19-11:17 moving workbench_lighting_MOSFET_signal_pin to pin 10 due to a broken pin in the Arduino Mega pin 6 slot
@@ -89,3 +105,4 @@ idea:  a function that takes these parameters (min/max voltage allowable time mi
 03-14-19-10:46 machine states enumerated
 03-14-19-10:54 MyStateMachine::State MyStateMachine::getState()
 03-14-19-11:11 main loop states enumerated
+03-14-19-11:24 old wiring comments moved to CHANGELOG
