@@ -1,7 +1,7 @@
 #include <Time.h>
 #include <TimeLib.h>
 #include <LiquidCrystal_I2C.h>
-#include <DS1307RTC.h>
+#include <DS1307RTC.h> //pre-initialized as 'RTC' in header file 
 #include <Wire.h>
 
 LiquidCrystal_I2C  liquidcrystali2c(0x27, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);  
@@ -417,17 +417,22 @@ void setup(){
 //   
 }
 //
-//                                      // MAIN LOOP  
+//                    
 void loop(){
-//  //Run these functions as fast as possible
+    //This code runs as fast as possible
     myReadPotentiometerAndAdjustWorkbenchTrackLightsfunction();
     myVoltageCalculationfunction();
-//
-  //This code runs approximately every 1000ms
+    myVoltagePrintingAndRecordingfunction();
+    //This code runs approximately every 1000ms
     if ((long unsigned)(millis() - a1000ms_timestamp) >= 1000)
     {
         //set the timestamp for the next loop
         a1000ms_timestamp = millis();
+        //get RealTimeClock reading
+        if (RTC.read(RTC_reading))
+        {
+            setTime(RTC_reading.Hour,RTC_reading.Minute,RTC_reading.Second,RTC_reading.Day,RTC_reading.Month,RTC_reading.Year-30);
+        }
         myserial.printStatus();
     //digitalWrite (battery_charger_signal_pin, LOW);
     //state_machine states
@@ -543,15 +548,7 @@ void loop(){
     }       
   }
 //
-//  //This code runs every 500ms
-  if ((long unsigned)(millis() - a500ms_timestamp) >= 500){  //millis rollover safe    
-    a500ms_timestamp = millis();
-    if (RTC.read(RTC_reading)){
-      setTime(RTC_reading.Hour,RTC_reading.Minute,RTC_reading.Second,RTC_reading.Day,RTC_reading.Month,RTC_reading.Year-30);
-      //sync RTC with system clock every 500ms.
-    }  
-    myVoltagePrintingAndRecordingfunction();
-  }
+//
 
   //This code runs if MessageManager sets the message_manager_timestamp 
   if ((long unsigned)(message_manager_timestamp) <= millis()){ 
