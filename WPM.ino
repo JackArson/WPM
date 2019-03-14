@@ -451,14 +451,15 @@ void setup()
     pinMode (stage_one_inverter_relay, OUTPUT);
     pinMode (stage_two_inverter_relay, OUTPUT);
 }
-//
-//                    
-void loop(){
+               
+void loop()
+{
     //This code runs as fast as possible
     myReadPotentiometerAndAdjustWorkbenchTrackLightsfunction();
     myVoltageCalculationfunction();
     myVoltagePrintingAndRecordingfunction();
-    //This code runs approximately every 1000ms
+    
+    //This code runs every 1000ms
     if ((long unsigned)(millis() - a1000ms_timestamp) >= 1000)
     {
         //set the timestamp for the next loop
@@ -470,163 +471,88 @@ void loop(){
             setTime(RTC_reading.Hour,RTC_reading.Minute,RTC_reading.Second,RTC_reading.Day,RTC_reading.Month,RTC_reading.Year-30);
         }
         myserial.printStatus();
-    //digitalWrite (battery_charger_signal_pin, LOW);
-    //state_machine states
-    //0 initiate sleep state
-    //1 sleep state (the battery charger is always on
-    //2 initiate wake state
-    //3 wake state
-    //4 initiate balanced state
-    //5 balanced state
-    //6 initiate inverter warm up state
-    //7 inverter warm up state 
-    //8 initiate stage one inverter state
-    //9 stage one inverter state
-    //10 initiate stage two inverter state
-    //11 stage two inverter state
-    //12 initiate daytime charging
-    //13 daytime charging
-    //14 initiate inverter cool down
-    //15 inverter cool down 
-
-    switch (machine_state) {
-      case 0:
-        myStateMachineInitSleepStatefunction();
-        break;
-      case 1:
-        myStateMachineSleepStatefunction();
-        break;
-      case 2:
-        myStateMachineInitWakeStatefunction();
-        break;
-      case 3:
-        myStateMachineWakeStatefunction();
-        break;
-      case 4:
-        myStateMachineInitBalancedStatefunction();
-        break;
-      case 5:
-        myStateMachineBalancedStatefunction();
-        break;
-      case 6:
-        myStateMachineInitWarmUpInverterStatefunction();
-        break;
-      case 7:
-        myStateMachineWarmUpInverterStatefunction();
-        break;
-      case 8:
-        myStateMachineInitStageOneInverterStatefunction();
-        break;
-      case 9:
-        myStateMachineStageOneInverterStatefunction();
-        break;
-      case 10:
-        myStateMachineInitStageTwoInverterStatefunction();
-        break;
-      case 11:
-        myStateMachineStageTwoInverterStatefunction();
-        break;
-      case 12:
-        myStateMachineInitDaytimeChargingfunction();
-        break;
-      case 13:
-        myStateMachineDaytimeChargingfunction();
-        break;
-      case 14:
-        myStateMachineInitInverterCooldownfunction();
-        break;
-      case 15:
-        myStateMachineInverterCooldownfunction();
-        break;    
+        myTimer.update();
+        myBacklightfunction();
+        myPrintTimetoLCDfunction((RTC_reading),13, 3,true);
+        myPrintDatetoLCDfunction(0, 3);
+        myPrintLDRresultsToLCDfunction();
+        switch (mystatemachine.getState())
+        {
+        case MyStateMachine::STATE_INIT_SLEEP:
+            myStateMachineInitSleepStatefunction();
+            break;
+        case MyStateMachine::STATE_SLEEP:
+            myStateMachineSleepStatefunction();
+            break;
+        case MyStateMachine::STATE_INIT_WAKE:
+            myStateMachineInitWakeStatefunction();
+            break;
+        case MyStateMachine::STATE_WAKE:
+            myStateMachineWakeStatefunction();
+            break;
+        case MyStateMachine::STATE_INIT_BALANCED:
+            myStateMachineInitBalancedStatefunction();
+            break;
+        case MyStateMachine::STATE_BALANCED:
+            myStateMachineBalancedStatefunction();
+            break;
+        case MyStateMachine::STATE_INIT_INVERTER_WARM_UP:
+            myStateMachineInitWarmUpInverterStatefunction();
+            break;
+        case MyStateMachine::STATE_INVERTER_WARM_UP:
+            myStateMachineWarmUpInverterStatefunction();
+            break;
+        case MyStateMachine::STATE_INIT_INVERTER_STAGE_ONE:
+            myStateMachineInitStageOneInverterStatefunction();
+            break;
+        case MyStateMachine::STATE_INVERTER_STAGE_ONE:
+            myStateMachineStageOneInverterStatefunction();
+            break;
+        case MyStateMachine::STATE_INIT_INVERTER_STAGE_TWO:
+            myStateMachineInitStageTwoInverterStatefunction();
+            break;
+        case MyStateMachine::STATE_INVERTER_STAGE_TWO:
+            myStateMachineStageTwoInverterStatefunction();
+            break;
+        case MyStateMachine::STATE_INIT_DAY_CHARGE:
+            myStateMachineInitDaytimeChargingfunction();
+            break;
+        case MyStateMachine::STATE_DAY_CHARGE:
+            myStateMachineDaytimeChargingfunction();
+            break;
+        case MyStateMachine::STATE_INIT_INVERTER_COOL_DOWN:
+            myStateMachineInitInverterCooldownfunction();
+            break;
+        case MyStateMachine::STATE_INVERTER_COOL_DOWN:
+            myStateMachineInverterCooldownfunction();
+            break;
+        case MyStateMachine::STATE_ERROR:
+        case MyStateMachine::MAX_STATE:
+        default:
+            break;
         }
-////    
-//    if (myIsItDaylightfunction() == true) {
-//      switch (power_manager_mode) {
-//      case 0:
-//        myAuxPowerfunction(13.20,30); 
-//        break;
-//      case 1:
-//        myBalancePowerBetweenChargerAndInverterfunction(); 
-//        break;  
-//      case 2:
-//        myAuxPowerfunction(13.20,5);
-//        break;
-//      case 3:
-//        myStage01Inverterfunction();
-//        break;
-//      case 4:
-//        myStage02Inverterfunction();
-//        break;
-//      }
-//    } else {    //if it is not daytime
-//      mySwitchPowerManagerModesfunction(0);
-//    }
-
-        
-    myTimer.update();
-    myBacklightfunction();
-    //myPrintSerialTimestampfunction();
-    myPrintTimetoLCDfunction((RTC_reading),13, 3,true);
-    myPrintDatetoLCDfunction(0, 3);
-    myPrintLDRresultsToLCDfunction();
-     
-    // This code runs once or twice at 2am
-    if (hour() == 0 && minute() == 0 && second() <= 1 ) {
-      power_manager_mode = 0; //r
-      inverter_run_time  = 0;
-      voltage_daily_max = stable_voltage; 
-      todays_high_voltage_timestamp = RTC_reading;
-      voltage_daily_min = stable_voltage;
-      todays_low_voltage_timestamp = RTC_reading;
-      solar_week_number = myCalculateWeekNumberfunction(RTC_reading); //to read duskdawn data tables
-      myLoadUpcomingEventsfunction();
-      mysetSunriseSunsetTimesfunction();  
-    }       
-  }
-//
-//
-
-  //This code runs if MessageManager sets the message_manager_timestamp 
-  if ((long unsigned)(message_manager_timestamp) <= millis()){ 
-    myMessageManagerfunction(); 
-  }
+        // This code runs once or twice at 2am
+        if (hour() == 0 && minute() == 0 && second() <= 1 )
+        {
+            power_manager_mode = 0; //r
+            inverter_run_time  = 0;
+            voltage_daily_max = stable_voltage; 
+            todays_high_voltage_timestamp = RTC_reading;
+            voltage_daily_min = stable_voltage;
+            todays_low_voltage_timestamp = RTC_reading;
+            solar_week_number = myCalculateWeekNumberfunction(RTC_reading); //to read duskdawn data tables
+            myLoadUpcomingEventsfunction();
+            mysetSunriseSunsetTimesfunction();  
+        }       
+    }
+    //This code only runs if MessageManager sets the message_manager_timestamp 
+    if ((long unsigned)(message_manager_timestamp) <= millis())
+    { 
+        myMessageManagerfunction(); 
+    }
   
   
 }
-
-//*********************FUNCTION DIRECTORY IN ALPHABETICAL ORDER
-//*************************************************************************************************************
-//myAuxPowerfunction
-//myBacklightfunction
-//myBalancePowerBetweenChargerAndInverterfunction
-//myCalculateWeekNumberfunction
-//myClearMessageBoardfunction
-//myIsItDaylightfunction
-//myLoadUpcomingEventsfunction
-//myMessageManagerfunction
-//myMessageInverterRunTimefunction
-//myMessageReminderfunction
-//myMessageSunrisefunction()
-//myMessageUpcomingEventsfunction()
-//myMessageVoltageDailyHighfunction
-//myMessageVoltageDailyLowfunction
-//myMessageWeekNumberfunction
-//myNumericalSuffixCalculatorfunction
-//myPrintStatefunction
-//myPrintDatetoLCDfunction
-//myPrintLDRresultsToLCDfunction
-//myPrintSerialTimestampfunction 
-//myPrintTimetoLCDfunction
-//myPrintVoltagetoLCDfunction
-//myPulseGeneratorfunction
-//myReadPotentiometerAndAdjustWorkbenchTrackLightsfunction
-//myReturnDayofWeekFromUnixTimestampfunction
-//myReturnDayofWeekfunction
-//mysetSunriseSunsetTimesfunction()
-//mySwitchPowerManagerModesfunction()
-//myTestForChargeFunction()
-//myVoltageCalculationfunction
-//myVoltagePrintingAndRecordingfunction
 
 //===============================
 void myPrintStatefunction(char const * text){

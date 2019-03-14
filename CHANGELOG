@@ -88,3 +88,4 @@ idea:  a function that takes these parameters (min/max voltage allowable time mi
 03-14-19-10:20 MySerial::testClock()
 03-14-19-10:46 machine states enumerated
 03-14-19-10:54 MyStateMachine::State MyStateMachine::getState()
+03-14-19-11:11 main loop states enumerated
