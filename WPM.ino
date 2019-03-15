@@ -137,17 +137,46 @@ void MySerial::testClock()
     }
 }
 
+struct Coordinant
+{
+    byte x;
+    byte y;
+};
 
 //=============================================================================================================
+//  01234567890123456789 20 x 4
+//0|<STATE >
+//1|
+//2|
+//3|
+
 
 class MyLCD
 {
+
+private: //variables
+    
 public:
-    void setCursor(const byte column, const byte row);
-    void print(const char *string_ptr);
-    void print(const byte numeral);
-    void printDateSuffix(const byte day_of_month);
+    void drawDisplay     (); 
+    void setCursor       (const byte         column,
+                          const byte         row);
+    void print           (const char        *string_ptr);
+    void print           (const byte         numeral);
+    void printDateSuffix (const byte         day_of_month);
+public:  // <-make this private when old public references are removed
+    void printClock      (const TimeElements time,
+                          const Coordinant   coordinant,
+                          const bool         right_justify);
+    void updateBacklight ();
 }mylcd;
+
+void MyLCD::drawDisplay()
+{
+    updateBacklight();
+    const Coordinant clock_coordinant {13, 3};
+    const bool       right_justify    {true};
+    printClock(gRTC_reading, clock_coordinant, right_justify);
+}
 
 void MyLCD::setCursor(const byte column, const byte row)
 {
@@ -201,6 +230,62 @@ void MyLCD::printDateSuffix(byte day_of_month)
         liquidcrystali2c.print("th");
     }
 }
+
+//MyLCD private methods start here
+
+void MyLCD::updateBacklight()
+{
+    byte hour_to_turn_on_backlight  {4};
+    byte hour_to_turn_off_backlight {21};
+    if (gRTC_reading.Hour >= hour_to_turn_on_backlight &&
+        gRTC_reading.Hour < hour_to_turn_off_backlight)
+    { 
+        liquidcrystali2c.backlight();
+    }
+    else
+    {
+        liquidcrystali2c.noBacklight();
+    }
+}
+
+void MyLCD::printClock(const TimeElements time, const Coordinant coordinant, const bool right_justify)
+{
+    setCursor (coordinant.x, coordinant.y);                                      
+    byte am_pm  {0};
+    int  format {0};
+    //change to 12 hour format
+    if ((time.Hour) >= 12)
+    {      
+        format = 12;
+    }
+    if ((time.Hour) == 12 || (time.Hour) == 0)
+    {
+        print("12");
+    }
+    else
+    {
+        if (time.Hour - format < 10 && right_justify == true)
+        {             
+            print (" ");
+        }
+        print (time.Hour - format);
+    }   
+    print(":");
+    if (time.Minute < 10)
+    {  
+        print ("0");
+    }  
+    print(time.Minute);
+    if (time.Hour >= 12)
+    {
+        print("pm");
+    }
+    else
+    {                          
+        print("am");
+    }                                      
+}
+
 //=========================================================================================================
 
 class MyTimer
@@ -396,8 +481,7 @@ int           reusable_countdown_variable = 0;
 int           balance_falling_countdown = 0;
 int           balance_rising_countdown = 0;
 
-byte          hour_to_turn_off_backlight = 21;
-byte          hour_to_turn_on_backlight = 4;
+
 boolean       LDR_data = false;
 boolean       LDR2_data = false;
 boolean       DST = true;
@@ -421,12 +505,12 @@ void myMessageReminderfunction();
 void myMessageSunrisefunction();
 void myMessageUpcomingEventsfunction(byte n);
 void myMessageVoltageDailyHighfunction();
-void myMessageVoltageDailyLowfunction();
+//void myMessageVoltageDailyLowfunction();
 void myMessageWeekNumberfunction();
 void myPrintDatetoLCDfunction(byte x, byte y);
 void myPrintLDRresultsToLCDfunction();
 //void myPrintSerialTimestampfunction ();
-void myPrintTimetoLCDfunction(TimeElements timestamp, byte x, byte y, boolean right_justify);
+//void myPrintTimetoLCDfunction(TimeElements timestamp, byte x, byte y, boolean right_justify);
 void myPrintVoltagetoLCDfunction(int x,int y,float v);
 void myReadPotentiometerAndAdjustWorkbenchTrackLightsfunction();
 char const * myReturnDayofWeekfunction (byte x);
@@ -490,9 +574,10 @@ void loop()
         }
         //--------------end of to remove-------------------------------------------
         myserial.printStatus();
-        myTimer.update(); 
-        myBacklightfunction();
-        myPrintTimetoLCDfunction((gRTC_reading),13, 3,true);
+        myTimer.update();
+        mylcd.drawDisplay(); 
+        
+        //myPrintTimetoLCDfunction((gRTC_reading),13, 3,true);
         myPrintDatetoLCDfunction(0, 3);
         myPrintLDRresultsToLCDfunction();
         switch (mystatemachine.getState())
@@ -577,16 +662,6 @@ void loop()
 
 
 
-//--------------------------
-void myBacklightfunction() {
-//--------------------------   
-
-  if (hour() >= hour_to_turn_on_backlight && hour() < hour_to_turn_off_backlight) { 
-    liquidcrystali2c.backlight();
-  } else {
-    liquidcrystali2c.noBacklight();
-  }
-}
 
 
 //==============================================================
@@ -885,9 +960,13 @@ void myMessageVoltageDailyHighfunction(){
    //         "12345678901234567890"
    myPrintVoltagetoLCDfunction(2,1,voltage_daily_max);
    liquidcrystali2c.print (F(" @"));
-   myPrintTimetoLCDfunction(todays_high_voltage_timestamp,12,1,false);
+   Coordinant coordinant {12, 1};
+   const bool right_justify {false};
+   mylcd.printClock(todays_high_voltage_timestamp, coordinant, right_justify);
    myPrintVoltagetoLCDfunction(2,2,voltage_daily_min);
-   liquidcrystali2c.print (F(" @")); myPrintTimetoLCDfunction(todays_low_voltage_timestamp,12,2,false);
+   liquidcrystali2c.print (F(" @"));
+   coordinant = {12, 2};
+   mylcd.printClock(todays_low_voltage_timestamp, coordinant, right_justify);
    
 }
 
@@ -895,21 +974,21 @@ void myMessageVoltageDailyHighfunction(){
 //
 
 
-//-----------------------------------
-void myMessageVoltageDailyLowfunction(){
-//-----------------------------------  
-   //Serial.print (" ");
-   //Serial.print (message_manager_current_message);
-   //Serial.print ("Todays lowest voltage was ");
-   //Serial.print (voltage_daily_min);
-   //Serial.print (" volts at ");
-   //myPrintSerialTimestampfunction (todays_low_voltage_timestamp);
-   myClearMessageBoardfunction();
-   liquidcrystali2c.setCursor (0,1);
-   //         "12345678901234567890"
-   liquidcrystali2c.print (F("  Today's low was")); myPrintVoltagetoLCDfunction(2,2,voltage_daily_min);
-   liquidcrystali2c.print (F(" at")); myPrintTimetoLCDfunction(todays_low_voltage_timestamp,12,2,false);
-}
+////-----------------------------------
+//void myMessageVoltageDailyLowfunction(){
+////-----------------------------------  
+   ////Serial.print (" ");
+   ////Serial.print (message_manager_current_message);
+   ////Serial.print ("Todays lowest voltage was ");
+   ////Serial.print (voltage_daily_min);
+   ////Serial.print (" volts at ");
+   ////myPrintSerialTimestampfunction (todays_low_voltage_timestamp);
+   //myClearMessageBoardfunction();
+   //liquidcrystali2c.setCursor (0,1);
+   ////         "12345678901234567890"
+   //liquidcrystali2c.print (F("  Today's low was")); myPrintVoltagetoLCDfunction(2,2,voltage_daily_min);
+   //liquidcrystali2c.print (F(" at")); //myPrintTimetoLCDfunction(todays_low_voltage_timestamp,12,2,false);
+//}
 //----------------------------------
 void myMessageWeekNumberfunction() {
 //----------------------------------
@@ -957,37 +1036,37 @@ void myPrintLDRresultsToLCDfunction() {
 
 
 
-//---------------------------------------------   
-void myPrintTimetoLCDfunction(TimeElements timestamp, byte x, byte y, boolean right_justify) {
-//---------------------------------------------  
-                                      // x and y are the LCD coordinants where the time is to be printed
-                                      // x can be 0 to 19
-                                      // y can be 0 to 3
-   liquidcrystali2c.setCursor (x,y);                                      
-   if ((timestamp.Hour) >= 12) {      
-      am_pm = 12;
-   } else {                           // set am_pm variable
-      am_pm = 0;
-   } 
-   if ((timestamp.Hour) == 12 || (timestamp.Hour) == 0) {
-      liquidcrystali2c.print ("12");
-   } else {
-      if ((timestamp.Hour)-am_pm < 10 && right_justify) {             
-         liquidcrystali2c.print (" ");
-      }
-      liquidcrystali2c.print ((timestamp.Hour)-(am_pm));
-   }   
-   liquidcrystali2c.print(":");
-   if ((timestamp.Minute) < 10 ) {  
-      liquidcrystali2c.print ("0");
-   }  
-   liquidcrystali2c.print (timestamp.Minute);
-   if ((timestamp.Hour) >= 12) {
-      liquidcrystali2c.print("pm");
-   } else {                          
-      liquidcrystali2c.print("am");
-   }                                      
-}
+////---------------------------------------------   
+//void myPrintTimetoLCDfunction(TimeElements timestamp, byte x, byte y, boolean right_justify) {
+////---------------------------------------------  
+                                      //// x and y are the LCD coordinants where the time is to be printed
+                                      //// x can be 0 to 19
+                                      //// y can be 0 to 3
+   //liquidcrystali2c.setCursor (x,y);                                      
+   //if ((timestamp.Hour) >= 12) {      
+      //am_pm = 12;
+   //} else {                           // set am_pm variable
+      //am_pm = 0;
+   //} 
+   //if ((timestamp.Hour) == 12 || (timestamp.Hour) == 0) {
+      //liquidcrystali2c.print ("12");
+   //} else {
+      //if ((timestamp.Hour)-am_pm < 10 && right_justify) {             
+         //liquidcrystali2c.print (" ");
+      //}
+      //liquidcrystali2c.print ((timestamp.Hour)-(am_pm));
+   //}   
+   //liquidcrystali2c.print(":");
+   //if ((timestamp.Minute) < 10 ) {  
+      //liquidcrystali2c.print ("0");
+   //}  
+   //liquidcrystali2c.print (timestamp.Minute);
+   //if ((timestamp.Hour) >= 12) {
+      //liquidcrystali2c.print("pm");
+   //} else {                          
+      //liquidcrystali2c.print("am");
+   //}                                      
+//}
 //----------------------------------------------------
 void myPrintVoltagetoLCDfunction(int x,int y,float v){
 //----------------------------------------------------

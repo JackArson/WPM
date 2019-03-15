@@ -112,3 +112,4 @@ idea:  a function that takes these parameters (min/max voltage allowable time mi
 03-14-19-17:50 added experimental code to time loop more accuratly
 03-14-19-18:06 new timing allowed some safety hacks to be removed
 03-14-19-18:51 add MyInfo and rebuilt printState there
+03-15-19-10:41 moved printClock and updateBacklight into MyLCD and refactored.
