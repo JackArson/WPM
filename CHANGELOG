@@ -117,3 +117,4 @@ idea:  a function that takes these parameters (min/max voltage allowable time mi
 03-15-19-11:46 crash fix attempt
 03-15-19-12:00 crash isolated, send fix
 03-15-19-12:09 crash isolated, send fix2
+03-15-19-12:37 noted voltmeter response too slow, raising initial voltage to above battery charger cut in point to avoid high voltage cut out until volt sensor code is rebuilt
