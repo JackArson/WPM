@@ -145,10 +145,10 @@ struct Coordinant
 
 //=============================================================================================================
 //  01234567890123456789 20 x 4
-//0|ssssssss             ssssssss = machine state
+//0|Charging 
 //1|
 //2|
-//3|dddddddd?            ddddddd  = date
+//3|Wed, Mar 15  11:53am
 
 
 class MyLCD
@@ -991,10 +991,11 @@ void myMessageUpcomingEventsfunction(byte n){
         liquidcrystali2c.print (" tomorrow");  
       }
     } else {
-      //time_t t_time {makeTime(timex)};
-      //int myday {day(t_time)};
-      
-      //mylcd.print(dayStr(myday));
+
+//causes crash
+      time_t long_int_time {makeTime(timex)};
+      int myday {weekday(long_int_time)};
+      mylcd.print(dayStr(myday));
       liquidcrystali2c.print (", ");
       liquidcrystali2c.print (month_short_name[(important_dates_month_array[reminder_message_pointer [n]])-1]);
       liquidcrystali2c.print (" ");
