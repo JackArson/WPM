@@ -145,10 +145,10 @@ struct Coordinant
 
 //=============================================================================================================
 //  01234567890123456789 20 x 4
-//0|<STATE >
+//0|ssssssss             ssssssss = machine state
 //1|
 //2|
-//3|
+//3|dddddddd?            ddddddd  = date
 
 
 class MyLCD
@@ -157,7 +157,8 @@ class MyLCD
 private: //variables
     
 public:
-    void drawDisplay     (); 
+    void drawDisplay     ();
+    void setCursor       (const Coordinant coordinant);
     void setCursor       (const byte         column,
                           const byte         row);
     void print           (const char        *string_ptr);
@@ -167,15 +168,24 @@ public:  // <-make this private when old public references are removed
     void printClock      (const TimeElements time,
                           const Coordinant   coordinant,
                           const bool         right_justify);
+    void printDate       (const Coordinant   coordinant);
+    //void printDay
     void updateBacklight ();
 }mylcd;
 
 void MyLCD::drawDisplay()
 {
     updateBacklight();
-    const Coordinant clock_coordinant {13, 3};
-    const bool       right_justify    {true};
-    printClock(gRTC_reading, clock_coordinant, right_justify);
+    Coordinant coordinant {13, 3};
+    const bool right_justify    {true};
+    printClock(gRTC_reading, coordinant, right_justify);
+    coordinant = {0, 3};
+    printDate(coordinant);
+}
+
+void MyLCD::setCursor(const Coordinant coordinant)
+{
+    liquidcrystali2c.setCursor(coordinant.x, coordinant.y);
 }
 
 void MyLCD::setCursor(const byte column, const byte row)
@@ -250,7 +260,7 @@ void MyLCD::updateBacklight()
 
 void MyLCD::printClock(const TimeElements time, const Coordinant coordinant, const bool right_justify)
 {
-    setCursor (coordinant.x, coordinant.y);                                      
+    setCursor(coordinant);                                   
     byte am_pm  {0};
     int  format {0};
     //change to 12 hour format
@@ -284,6 +294,48 @@ void MyLCD::printClock(const TimeElements time, const Coordinant coordinant, con
     {                          
         print("am");
     }                                      
+}
+
+
+////***************************************
+//char const * myReturnDayofWeekfunction (byte x){
+////***************************************  
+//char const * weekday_array[] = {"Sun","Mon","Tue","Wed","Thu","Fri","Sat"};
+//return weekday_array[x];  
+//}
+////*********************************************************************************
+//char const * getDayofWeek (TimeElements time) {
+////*********************************************************************************
+  //const long unsigned seconds_in_a_day {86400};
+  //const long unsigned unix_time        {makeTime(unzipped_time) / seconds_in_a_day ;
+  //int x = 0;
+  ////Serial.print (" - "); 
+  ////Serial.print (zipped_time);
+  //x = (zipped_time - (zipped_time / 7) * 7);  //detecting remainder with my integer math trick
+  ////align week number with my array, because 4 <> Monday
+  //x = x - 3;
+  //if (x < 0){
+    //x=x+7;
+  //}
+  ////Serial.print (x);
+  ////Serial.print (" - ");
+  ////Serial.print(myReturnDayofWeekfunction(x));
+  //return myReturnDayofWeekfunction(x);  
+//}
+
+
+void MyLCD::printDate(const Coordinant coordinant)
+{
+    setCursor(coordinant); 
+    print(dayShortStr(weekday() - 1));
+    print (", ");
+    const char* month_short_name[12] = {"Jan", "Feb", "Mar", "Apr",
+                                        "May", "Jun", "Jul", "Aug",
+                                        "Sep", "Oct", "Nov", "Dec"};
+    print (month_short_name[gRTC_reading.Month-1]);    
+    print(" ");
+    print((gRTC_reading.Day));
+    print(" ");  //this space to clear last digit when month rolls over (31 to 1) 
 }
 
 //=========================================================================================================
@@ -513,8 +565,8 @@ void myPrintLDRresultsToLCDfunction();
 //void myPrintTimetoLCDfunction(TimeElements timestamp, byte x, byte y, boolean right_justify);
 void myPrintVoltagetoLCDfunction(int x,int y,float v);
 void myReadPotentiometerAndAdjustWorkbenchTrackLightsfunction();
-char const * myReturnDayofWeekfunction (byte x);
-char const * myReturnDayofWeekFromUnixTimestampfunction (TimeElements unzipped_time);
+//char const * myReturnDayofWeekfunction (byte x);
+//char const * myReturnDayofWeekFromUnixTimestampfunction (TimeElements unzipped_time);
 void mysetSunriseSunsetTimesfunction();
 void myVoltagePrintingAndRecordingfunction();
 void myVoltageCalculationfunction();
@@ -577,8 +629,7 @@ void loop()
         myTimer.update();
         mylcd.drawDisplay(); 
         
-        //myPrintTimetoLCDfunction((gRTC_reading),13, 3,true);
-        myPrintDatetoLCDfunction(0, 3);
+        //myPrintDatetoLCDfunction(0, 3);
         myPrintLDRresultsToLCDfunction();
         switch (mystatemachine.getState())
         {
@@ -940,7 +991,10 @@ void myMessageUpcomingEventsfunction(byte n){
         liquidcrystali2c.print (" tomorrow");  
       }
     } else {
-      liquidcrystali2c.print (myReturnDayofWeekFromUnixTimestampfunction(timex));
+      time_t t_time {makeTime(timex)};
+      int myday {day(t_time)};
+      
+      mylcd.print(dayStr(myday));
       liquidcrystali2c.print (", ");
       liquidcrystali2c.print (month_short_name[(important_dates_month_array[reminder_message_pointer [n]])-1]);
       liquidcrystali2c.print (" ");
@@ -960,36 +1014,15 @@ void myMessageVoltageDailyHighfunction(){
    //         "12345678901234567890"
    myPrintVoltagetoLCDfunction(2,1,voltage_daily_max);
    liquidcrystali2c.print (F(" @"));
-   Coordinant coordinant {12, 1};
+   Coordinant coordinant {11, 1};
    const bool right_justify {false};
    mylcd.printClock(todays_high_voltage_timestamp, coordinant, right_justify);
    myPrintVoltagetoLCDfunction(2,2,voltage_daily_min);
    liquidcrystali2c.print (F(" @"));
-   coordinant = {12, 2};
-   mylcd.printClock(todays_low_voltage_timestamp, coordinant, right_justify);
-   
+   coordinant = {11, 2};
+   mylcd.printClock(todays_low_voltage_timestamp, coordinant, right_justify);   
 }
 
-
-//
-
-
-////-----------------------------------
-//void myMessageVoltageDailyLowfunction(){
-////-----------------------------------  
-   ////Serial.print (" ");
-   ////Serial.print (message_manager_current_message);
-   ////Serial.print ("Todays lowest voltage was ");
-   ////Serial.print (voltage_daily_min);
-   ////Serial.print (" volts at ");
-   ////myPrintSerialTimestampfunction (todays_low_voltage_timestamp);
-   //myClearMessageBoardfunction();
-   //liquidcrystali2c.setCursor (0,1);
-   ////         "12345678901234567890"
-   //liquidcrystali2c.print (F("  Today's low was")); myPrintVoltagetoLCDfunction(2,2,voltage_daily_min);
-   //liquidcrystali2c.print (F(" at")); //myPrintTimetoLCDfunction(todays_low_voltage_timestamp,12,2,false);
-//}
-//----------------------------------
 void myMessageWeekNumberfunction() {
 //----------------------------------
 
@@ -999,24 +1032,20 @@ void myMessageWeekNumberfunction() {
    liquidcrystali2c.print (F("  Solar Week"));
    liquidcrystali2c.setCursor (0,2);
    liquidcrystali2c.print (F("        Number "));
-   liquidcrystali2c.print (solar_week_number);
-   
+   liquidcrystali2c.print (solar_week_number);   
 }
 
-
-
-
-//---------------------------------------------
-void myPrintDatetoLCDfunction(byte x, byte y) {
-//--------------------------------------------- 
-   liquidcrystali2c.setCursor (x,y);
-   liquidcrystali2c.print(myReturnDayofWeekfunction(weekday() - 1));
-   liquidcrystali2c.print (", ");
-   liquidcrystali2c.print (month_short_name[gRTC_reading.Month-1]);    
-   liquidcrystali2c.print(" ");
-   liquidcrystali2c.print((gRTC_reading.Day));
-   liquidcrystali2c.print(" ");  //this space to clear last digit when month rolls over (31 to 1) 
-}
+////---------------------------------------------
+//void myPrintDatetoLCDfunction(byte x, byte y) {
+////--------------------------------------------- 
+   //liquidcrystali2c.setCursor (x,y);
+   //liquidcrystali2c.print(myReturnDayofWeekfunction(weekday() - 1));
+   //liquidcrystali2c.print (", ");
+   //liquidcrystali2c.print (month_short_name[gRTC_reading.Month-1]);    
+   //liquidcrystali2c.print(" ");
+   //liquidcrystali2c.print((gRTC_reading.Day));
+   //liquidcrystali2c.print(" ");  //this space to clear last digit when month rolls over (31 to 1) 
+//}
 //-------------------------------------
 void myPrintLDRresultsToLCDfunction() {
 //-------------------------------------
@@ -1115,31 +1144,31 @@ void myReadPotentiometerAndAdjustWorkbenchTrackLightsfunction(){
   }
 
 
-//***************************************
-char const * myReturnDayofWeekfunction (byte x){
-//***************************************  
-char const * weekday_array[] = {"Sun","Mon","Tue","Wed","Thu","Fri","Sat"};
-return weekday_array[x];  
-}
-//*********************************************************************************
-char const * myReturnDayofWeekFromUnixTimestampfunction (TimeElements unzipped_time){
-//*********************************************************************************
-  long unsigned seconds_in_a_day = 86400;
-  long unsigned zipped_time      = makeTime(unzipped_time) / seconds_in_a_day ;
-  int x = 0;
-  //Serial.print (" - "); 
-  //Serial.print (zipped_time);
-  x = (zipped_time - (zipped_time / 7) * 7);  //detecting remainder with my integer math trick
-  //align week number with my array, because 4 <> Monday
-  x = x - 3;
-  if (x < 0){
-    x=x+7;
-  }
-  //Serial.print (x);
-  //Serial.print (" - ");
-  //Serial.print(myReturnDayofWeekfunction(x));
-  return myReturnDayofWeekfunction(x);  
-}
+////***************************************
+//char const * myReturnDayofWeekfunction (byte x){
+////***************************************  
+//char const * weekday_array[] = {"Sun","Mon","Tue","Wed","Thu","Fri","Sat"};
+//return weekday_array[x];  
+//}
+////*********************************************************************************
+//char const * myReturnDayofWeekFromUnixTimestampfunction (TimeElements unzipped_time){
+////*********************************************************************************
+  //long unsigned seconds_in_a_day = 86400;
+  //long unsigned zipped_time      = makeTime(unzipped_time) / seconds_in_a_day ;
+  //int x = 0;
+  ////Serial.print (" - "); 
+  ////Serial.print (zipped_time);
+  //x = (zipped_time - (zipped_time / 7) * 7);  //detecting remainder with my integer math trick
+  ////align week number with my array, because 4 <> Monday
+  //x = x - 3;
+  //if (x < 0){
+    //x=x+7;
+  //}
+  ////Serial.print (x);
+  ////Serial.print (" - ");
+  ////Serial.print(myReturnDayofWeekfunction(x));
+  //return myReturnDayofWeekfunction(x);  
+//}
 
 //======================================
 void mysetSunriseSunsetTimesfunction() {
