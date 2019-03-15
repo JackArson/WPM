@@ -327,7 +327,7 @@ void MyLCD::printClock(const TimeElements time, const Coordinant coordinant, con
 void MyLCD::printDate(const Coordinant coordinant)
 {
     setCursor(coordinant); 
-    print(dayShortStr(weekday() - 1));
+    print(dayShortStr(weekday()));
     print (", ");
     const char* month_short_name[12] = {"Jan", "Feb", "Mar", "Apr",
                                         "May", "Jun", "Jul", "Aug",
@@ -991,10 +991,10 @@ void myMessageUpcomingEventsfunction(byte n){
         liquidcrystali2c.print (" tomorrow");  
       }
     } else {
-      time_t t_time {makeTime(timex)};
-      int myday {day(t_time)};
+      //time_t t_time {makeTime(timex)};
+      //int myday {day(t_time)};
       
-      mylcd.print(dayStr(myday));
+      //mylcd.print(dayStr(myday));
       liquidcrystali2c.print (", ");
       liquidcrystali2c.print (month_short_name[(important_dates_month_array[reminder_message_pointer [n]])-1]);
       liquidcrystali2c.print (" ");
