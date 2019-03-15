@@ -296,34 +296,6 @@ void MyLCD::printClock(const TimeElements time, const Coordinant coordinant, con
     }                                      
 }
 
-
-////***************************************
-//char const * myReturnDayofWeekfunction (byte x){
-////***************************************  
-//char const * weekday_array[] = {"Sun","Mon","Tue","Wed","Thu","Fri","Sat"};
-//return weekday_array[x];  
-//}
-////*********************************************************************************
-//char const * getDayofWeek (TimeElements time) {
-////*********************************************************************************
-  //const long unsigned seconds_in_a_day {86400};
-  //const long unsigned unix_time        {makeTime(unzipped_time) / seconds_in_a_day ;
-  //int x = 0;
-  ////Serial.print (" - "); 
-  ////Serial.print (zipped_time);
-  //x = (zipped_time - (zipped_time / 7) * 7);  //detecting remainder with my integer math trick
-  ////align week number with my array, because 4 <> Monday
-  //x = x - 3;
-  //if (x < 0){
-    //x=x+7;
-  //}
-  ////Serial.print (x);
-  ////Serial.print (" - ");
-  ////Serial.print(myReturnDayofWeekfunction(x));
-  //return myReturnDayofWeekfunction(x);  
-//}
-
-
 void MyLCD::printDate(const Coordinant coordinant)
 {
     setCursor(coordinant); 
@@ -451,6 +423,85 @@ void MyInfo::printState(char const *text)
     myserial.printLinefeed();
 }
 
+// PIN ASSIGNMENT HERE                                      
+// Pins 0 and 1 are reserved for the USB
+byte          the_pin_to_the_LDR_circuit                           = 2; //brown   wire lower cable              
+byte          the_pin_to_the_LDR2_circuit                          = 3; //orange wire lower cable
+byte          battery_charger_signal_pin                           = 11; //green wire upper cable  
+byte          inverter_signal_pin                                  = 5; //blue wire upper cable
+byte          workbench_lighting_MOSFET_signal_pin                 = 10; //purple wire upper cable* too fast PWM
+byte          stage_one_inverter_relay                             = 8; //A
+byte          stage_two_inverter_relay                             = 9; //S                                   
+                                      // ANALOG
+byte          the_analog_pin_to_the_voltage_divider                = A0; //green  wire lower cable
+byte          potentiometer_input_pin                              = A1; //yellow wire
+
+
+class Voltmeter
+{
+private: //variables
+    float mVoltage {13.4};
+    int           voltage_trend = 0;
+public:  //methods
+    void  main       ();
+    float getVoltage ();
+private: //methods
+    void readVoltage();
+}voltmeter;
+
+void Voltmeter::main()
+{
+    readVoltage();
+}
+
+float Voltmeter::getVoltage()
+{
+    return mVoltage;
+}
+
+void Voltmeter::readVoltage()
+{
+    float         reference_voltage {5.0}; //using the default operating voltage reference.
+                                           //which is measured between 5V pin and Ground
+
+    //The controller cannot read voltage above 5 volts.
+    //Instead, it measures a smaller voltage from a voltage divider and then multiplies that
+    //result by a voltage ratio.
+    //To establish the voltage ratio:
+    //take two measurements with a portable voltmeter                                        
+    //do not take these readings with the USB cable attached, they won't be accurate.
+    //my battery reading  12.28
+    //my divider reading    2.9
+    //go ahead and use a calculator to get this number.
+    //Since it is a constant, there is need to make the controller calculate it every time.   
+    const float   voltage_ratio     {4.31};  // 12.28 / 2.9
+    //my voltage divider is constructed as:  
+    //150k resistor from positive battery terminal to voltage divider intersection.
+    // 47k resistor from negative battery terminal to voltage divider intersection.
+    
+    const byte    range_of_voltage_trend {100};
+    const int     pinValue {analogRead(the_analog_pin_to_the_voltage_divider)};  
+    float raw_voltage = pinValue * voltage_ratio * reference_voltage / 1024;
+   
+
+
+                                      // convert analog reading to the useable voltage number
+  //voltage = voltage + (USB_mode * 0.20);  // this line to correct voltage (add .2) when usb plugged in 
+  //stabilizer alpha
+
+  if (raw_voltage > mVoltage){  voltage_trend ++;  }
+  if (raw_voltage < mVoltage){  voltage_trend --;  }
+  if (voltage_trend >= range_of_voltage_trend){
+     mVoltage = mVoltage + 0.01;
+     voltage_trend = 0;
+  }
+  if (voltage_trend <= (0 - range_of_voltage_trend)){
+     mVoltage = mVoltage - 0.01;
+     voltage_trend = 0;
+  }
+}    
+  
+
 // 2                      3                      4                     5                       6                       7                      8                     9                      10                     11                     12                     13                     14                     15                     16                     17                      18                     19                     20                      21                     22
 byte  number_of_records_to_scan = 23;      // "12345678901234567890","12345678901234567890","12345678901234567890","12345678901234567890","12345678901234567890",,"12345678901234567890","12345678901234567890","12345678901234567890","12345678901234567890","12345678901234567890","12345678901234567890","12345678901234567890","12345678901234567890","12345678901234567890","12345678901234567890","12345678901234567890","12345678901234567890","12345678901234567890","12345678901234567890","12345678901234567890","12345678901234567890","12345678901234567890"     
 const char* important_dates_string_array[] = {" Kathy"               ,"Jack(cat)"           ,"Katrina"             ,"  Alan"              ,"  Jack"              ," Joshua"              ,"  Dad"               ,"Christopher"         ,"  Jon"                ,"  Mena"              ," Jacob"              ,"Elizabeth"           ,"Aunt Julie"          ," Dentist 8:00AM"     ,"Paul and Mena"       ,"Empty"               ," Cersei"             ," Mom and Dad"        ,"  Paul"              ,"  Mom"               ," Erik"               ,"Mathew"              ,"      Christmas"};
@@ -478,22 +529,13 @@ int  inverter_run_time  = 0;
                          //                                  gomode 3 if power rises above 13.5 60s
                          // 2 = aux charger trying to get us to 12.6                                  
                          // 3 = inverter cycling
-float       reference_voltage = 5; // using the default operating voltage reference.  Measured between 5V pin and Ground
-const float voltage_measurement_divided_by_voltage_divider_measurement = 4.31;  
-                                      // Paul's pro tip:  Unplug the USB cable when tuning 
-                                      //                  because the USB changes it.
-                                      // Adjust displayed voltage by fine tuning this number             
-                                      // the full voltage to be measured / the reduced voltage at voltage divider. 
-                                      // My resistors:  positive terminal to divider intersection 150K 
-                                      // from divider intersection to negative terminal 47k
-                                      // My voltage measurement from pos to ground = 14
-                                      // My measurement from ground to voltage divider intersection = 3.22
-                                      // 12.28 / 2.90 = 4.355
-float         stable_voltage = 13.4;  // the usable number to be displayed on LCD screen                     
-float         voltage = 0;            
+
+
+//float         stable_voltage = 13.4;  // the usable number to be displayed on LCD screen                     
+//float         raw_voltage = 0;            
 float         voltage_daily_max = 0;
 float         voltage_daily_min = 15; // initial setting, a number higher than expected nominal voltage
-int           voltage_trend                             = 0;
+                            
 byte          am_pm = 0;
 
 
@@ -501,19 +543,6 @@ tmElements_t  todays_low_voltage_timestamp;
 tmElements_t  todays_high_voltage_timestamp;
 byte          solar_week_number = 1;
 
-// PIN ASSIGNMENT HERE                                      
-// DIGITAL
-// Pins 0 and 1 are reserved for the USB
-byte          the_pin_to_the_LDR_circuit                           = 2; //brown   wire lower cable              
-byte          the_pin_to_the_LDR2_circuit                          = 3; //orange wire lower cable
-byte          battery_charger_signal_pin                           = 11; //green wire upper cable  
-byte          inverter_signal_pin                                  = 5; //blue wire upper cable
-byte          workbench_lighting_MOSFET_signal_pin                 = 10; //purple wire upper cable* too fast PWM
-byte          stage_one_inverter_relay                             = 8; //A
-byte          stage_two_inverter_relay                             = 9; //S                                   
-                                      // ANALOG
-byte          the_analog_pin_to_the_voltage_divider                = A0; //green  wire lower cable
-byte          potentiometer_input_pin                              = A1; //yellow wire
 
 
 long unsigned message_manager_timestamp    = millis();
@@ -611,7 +640,8 @@ void loop()
 {
     //This code runs as fast as possible
     myReadPotentiometerAndAdjustWorkbenchTrackLightsfunction();
-    myVoltageCalculationfunction();
+    voltmeter.main();
+    
     myVoltagePrintingAndRecordingfunction();
     //This code runs every second (1000ms)
     RTC.read(gRTC_reading);  //gathered from library by reference
@@ -693,9 +723,9 @@ void loop()
         {
             mystatemachine.setState(MyStateMachine::STATE_INIT_SLEEP);  //make sure machine is sleeping (redundant)
             inverter_run_time  = 0;
-            voltage_daily_max = stable_voltage; 
+            voltage_daily_max = voltmeter.getVoltage(); 
             todays_high_voltage_timestamp = gRTC_reading;
-            voltage_daily_min = stable_voltage;
+            voltage_daily_min = voltmeter.getVoltage();
             todays_low_voltage_timestamp = gRTC_reading;
             solar_week_number = myCalculateWeekNumberfunction(gRTC_reading); //to read duskdawn data tables
             myLoadUpcomingEventsfunction();
@@ -992,11 +1022,10 @@ void myMessageUpcomingEventsfunction(byte n){
       }
     } else {
 
-//causes crash
-    //mylcd.setCursor (5,2);
+
       time_t long_int_time {makeTime(timex)};
       int myday {weekday(long_int_time)};
-      const char *dayString {dayStr(myday)};
+      const char *dayString {dayShortStr(myday)};
       mylcd.print(dayString);
       liquidcrystali2c.print (", ");
       liquidcrystali2c.print (month_short_name[(important_dates_month_array[reminder_message_pointer [n]])-1]);
@@ -1116,10 +1145,10 @@ void myReadPotentiometerAndAdjustWorkbenchTrackLightsfunction(){
   const float maximum_voltage = 12.00 + correction; // do not allow the bulbs more voltage than this number.
   
   float scaling_ratio = 1;
-  if (stable_voltage > maximum_voltage) {
+  if (voltmeter.getVoltage() > maximum_voltage) {
     //Serial.print ("stable voltage: ");
     //Serial.print (stable_voltage);
-    scaling_ratio = maximum_voltage / stable_voltage;  
+    scaling_ratio = maximum_voltage / voltmeter.getVoltage();  
   }
   
   int potentiometer_reading = 0;
@@ -1188,61 +1217,43 @@ void mysetSunriseSunsetTimesfunction() {
 //-----------------------------------------
 void myVoltagePrintingAndRecordingfunction() {
 //-----------------------------------------  
-   myPrintVoltagetoLCDfunction(14,0,stable_voltage);                      
+   myPrintVoltagetoLCDfunction(14,0,voltmeter.getVoltage());                      
    //Serial.print (stable_voltage); Serial.print ("V "); 
-   if (stable_voltage > voltage_daily_max) { 
-    voltage_daily_max = stable_voltage;
+   if (voltmeter.getVoltage() > voltage_daily_max) { 
+    voltage_daily_max = voltmeter.getVoltage();
     todays_high_voltage_timestamp = gRTC_reading;
    }
-   if (stable_voltage < voltage_daily_min) {
-     voltage_daily_min = stable_voltage; 
+   if (voltmeter.getVoltage() < voltage_daily_min) {
+     voltage_daily_min = voltmeter.getVoltage(); 
      todays_low_voltage_timestamp = gRTC_reading;
    }
 }
 
 //===================================
-void myVoltageCalculationfunction() {
-//===================================  
-  const byte    range_of_voltage_trend                    = 100;
-  voltage = analogRead(the_analog_pin_to_the_voltage_divider) * voltage_measurement_divided_by_voltage_divider_measurement * reference_voltage / 1024;
-                                      // convert analog reading to the useable voltage number
-  //voltage = voltage + (USB_mode * 0.20);  // this line to correct voltage (add .2) when usb plugged in 
-  //stabilizer alpha
+//void myVoltageCalculationfunction() {
+////===================================  
+  //const byte    range_of_voltage_trend                    = 100;
+  //raw_voltage = analogRead(the_analog_pin_to_the_voltage_divider) * voltage_measurement_divided_by_voltage_divider_measurement * reference_voltage / 1024;
+                                      //// convert analog reading to the useable voltage number
+  ////voltage = voltage + (USB_mode * 0.20);  // this line to correct voltage (add .2) when usb plugged in 
+  ////stabilizer alpha
 
-  if (voltage > stable_voltage){  voltage_trend ++;  }
-  if (voltage < stable_voltage){  voltage_trend --;  }
-  if (voltage_trend >= range_of_voltage_trend){
-     stable_voltage = stable_voltage + 0.01;
-     voltage_trend = 0;
-  }
-  if (voltage_trend <= (0 - range_of_voltage_trend)){
-     stable_voltage = stable_voltage - 0.01;
-     voltage_trend = 0;
-  }
+  //if (raw_voltage > stable_voltage){  voltage_trend ++;  }
+  //if (raw_voltage < stable_voltage){  voltage_trend --;  }
+  //if (voltage_trend >= range_of_voltage_trend){
+     //stable_voltage = stable_voltage + 0.01;
+     //voltage_trend = 0;
+  //}
+  //if (voltage_trend <= (0 - range_of_voltage_trend)){
+     //stable_voltage = stable_voltage - 0.01;
+     //voltage_trend = 0;
+  //}
     
   
 
-  //end of stabilizer alpha 
-}
+  ////end of stabilizer alpha 
+//}
 
-
-//state_machine states
-//0 initiate sleep state
-//1 sleep state (the battery charger is always on)
-//2 initiate wake state
-//3 wake state
-//4 initiate balanced state
-//5 balanced state
-//6 initiate inverter warm up state
-//7 inverter warm up state
-//8 initiate stage one inverter state
-//9 stage one inverter state
-//10 initiate stage two inverter state
-//11 stage two inverter state
-//12 initiate daytime charging
-//13 daytime charging
-//14 initiate inverter cool down
-//15 inverter cool down
 //===========================================
 void myStateMachineInitSleepStatefunction() {               //state 0
   //================================5.8.2018===
@@ -1327,11 +1338,11 @@ void myStateMachineBalancedStatefunction() {                //state 5
     mystatemachine.setState(MyStateMachine::STATE_INIT_SLEEP); //initiate sleep state
     return;
   }
-  if (stable_voltage >= voltage_to_start_inverter) {
+  if (voltmeter.getVoltage() >= voltage_to_start_inverter) {
     mystatemachine.setState(MyStateMachine::STATE_INIT_INVERTER_WARM_UP);     //init warm up inverter
     return;
   }
-  if (stable_voltage <= voltage_to_start_daytime_charging) {
+  if (voltmeter.getVoltage() <= voltage_to_start_daytime_charging) {
     mystatemachine.setState(MyStateMachine::STATE_INIT_DAY_CHARGE);    //init daytime charging
     return;
   }
@@ -1397,12 +1408,12 @@ void myStateMachineStageOneInverterStatefunction() {        //state 9
     return;
   }
 
-  if (stable_voltage >= voltage_to_switch_to_stage_two && !myTimer.getCounter()) {
+  if (voltmeter.getVoltage() >= voltage_to_switch_to_stage_two && !myTimer.getCounter()) {
     mystatemachine.setState(MyStateMachine::STATE_INIT_INVERTER_STAGE_TWO);  //initiate stage two inverter
     return;
   }
 
-  if (stable_voltage <= voltage_to_turn_inverter_off) {
+  if (voltmeter.getVoltage() <= voltage_to_turn_inverter_off) {
     mystatemachine.setState(MyStateMachine::STATE_INIT_INVERTER_COOL_DOWN); //initiate inverter cooldown state, so a burst of solar energy does not short
     //cycle the inverter
     return;
@@ -1434,7 +1445,7 @@ void myStateMachineStageTwoInverterStatefunction() {        //state 11
 
   inverter_run_time++;
 
-  if (stable_voltage <= voltage_to_drop_back_to_stage_one) {
+  if (voltmeter.getVoltage() <= voltage_to_drop_back_to_stage_one) {
     mystatemachine.setState(MyStateMachine::STATE_INIT_INVERTER_STAGE_ONE);
     return;
   }
@@ -1458,7 +1469,7 @@ void myStateMachineDaytimeChargingfunction() {  //state 13
 
   const float voltage_to_switch_off_charger = 13.40;
 
-  if (stable_voltage >= voltage_to_switch_off_charger) {
+  if (voltmeter.getVoltage() >= voltage_to_switch_off_charger) {
     mystatemachine.setState(MyStateMachine::STATE_INIT_BALANCED); //switch to initbalanced
     return;
   }
