@@ -144,11 +144,11 @@ struct Coordinant
 };
 
 //=============================================================================================================
-//  01234567890123456789 20 x 4
-//0|Charging 
-//1|
-//2|
-//3|Wed, Mar 15  11:53am
+//  01234567890123456789 20 x 4        LCD Display
+//0|Charging15 SA 13.02v               The number next to 'Charging' is a state change timer
+//1|  message display                  'S' indicates 'S'ummer sensor is detecting light
+//2|       box                         'A' indicates 'A'utumn sensor is detecting light
+//3|Wed, Mar 15 *11:53am               '*' before clock indicates daylight savings time active
 
 
 class MyLCD
