@@ -993,9 +993,11 @@ void myMessageUpcomingEventsfunction(byte n){
     } else {
 
 //causes crash
+    //mylcd.setCursor (5,2);
       time_t long_int_time {makeTime(timex)};
       int myday {weekday(long_int_time)};
-      mylcd.print(dayStr(myday));
+      const char *dayString {dayStr(myday)};
+      mylcd.print(dayString);
       liquidcrystali2c.print (", ");
       liquidcrystali2c.print (month_short_name[(important_dates_month_array[reminder_message_pointer [n]])-1]);
       liquidcrystali2c.print (" ");
