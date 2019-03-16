@@ -433,7 +433,7 @@ byte          workbench_lighting_MOSFET_signal_pin                 = 10; //purpl
 byte          stage_one_inverter_relay                             = 8; //A
 byte          stage_two_inverter_relay                             = 9; //S                                   
                                       // ANALOG
-byte          the_analog_pin_to_the_voltage_divider                = A0; //green  wire lower cable
+byte          the_analog_pin_connected_to_the_voltage_divider      = A0; //green  wire lower cable
 byte          potentiometer_input_pin                              = A1; //yellow wire
 
 
@@ -461,34 +461,45 @@ float Voltmeter::getVoltage()
 
 void Voltmeter::readVoltage()
 {
-    float         reference_voltage {5.0}; //using the default operating voltage reference.
-                                           //which is measured between 5V pin and Ground
-
-    //The controller cannot read voltage above 5 volts.
-    //Instead, it measures a smaller voltage from a voltage divider and then multiplies that
+    //The 5 volt Arduino controller cannot read voltage above 5 volts.
+    //If you put more than 5 volts on an analog input pin, you will probably
+    //ruin your controller. 
+    //Instead, measure a smaller voltage from a voltage divider and then multiply that
     //result by a voltage ratio.
-    //To establish the voltage ratio:
-    //take two measurements with a portable voltmeter                                        
-    //do not take these readings with the USB cable attached, they won't be accurate.
-    //my battery reading  12.28
-    //my divider reading    2.9
-    //go ahead and use a calculator to get this number.
-    //Since it is a constant, there is need to make the controller calculate it every time.   
-    const float   voltage_ratio     {4.31};  // 12.28 / 2.9
+
     //my voltage divider is constructed as:  
     //150k resistor from positive battery terminal to voltage divider intersection.
     // 47k resistor from negative battery terminal to voltage divider intersection.
+    // a wire from the voltage divider intersection to a controller analog pin
+
+    //To establish the voltage ratio:
+    //take two measurements with a portable voltmeter                                        
+    //DO NOT TAKE THESE READINGS WITH THE USB CABLE ATTACHED, THEY WON'T BE ACCURATE.
+    //my battery reading  12.28volts
+    //my divider reading    2.9volts
+    //Use a calculator to get this number. 12.28 / 2.84 = 4.32
+    //Since it is a constant, there is no need to make the controller calculate it every time.
+    const float   voltage_ratio {4.3};  // 12.28 / 2.9
     
-    const byte    range_of_voltage_trend {100};
-    const int     pinValue {analogRead(the_analog_pin_to_the_voltage_divider)};  
-    float raw_voltage = pinValue * voltage_ratio * reference_voltage / 1024;
+    //the range of pin values starts at 0 for 0.0 volts and top out
+    //at 1024 when the pin is at full reference voltage
+    const int   pin_reading     {analogRead(the_analog_pin_connected_to_the_voltage_divider)};
+    //change the integer reading to a floating point for consistency.  The compiler may
+    //do this 'implicitly' when multiplying this number, but I like to be sure.
+    const float pin_value       {static_cast<float>(pin_reading)};
+    const float max_pin_value   {1024.0};
+    const float pin_value_ratio {pin_value / max_pin_value};
+    //the pin value ratio is a number between 0.0 and 1.0  It is a decimal percentage
+    //of the controller's reference_voltage. 
+    const float reference_voltage {5.0}; //using the default operating voltage reference.
+                                         //which is measured between 5V pin and Ground
+    //there is enough information for the micro-controller to read the voltage at the pin
+    const float pin_voltage       {pin_value_ratio * reference_voltage};
+    //the 'real' voltage is the pin voltage multiplied by the voltage ratio.  
+    const float raw_voltage       {pin_voltage * voltage_ratio};
    
 
-
-                                      // convert analog reading to the useable voltage number
-  //voltage = voltage + (USB_mode * 0.20);  // this line to correct voltage (add .2) when usb plugged in 
-  //stabilizer alpha
-
+const byte    range_of_voltage_trend {100};
   if (raw_voltage > mVoltage){  voltage_trend ++;  }
   if (raw_voltage < mVoltage){  voltage_trend --;  }
   if (voltage_trend >= range_of_voltage_trend){
@@ -628,7 +639,7 @@ void setup()
     //set pins  
     pinMode (inverter_signal_pin, OUTPUT);
     pinMode (battery_charger_signal_pin, OUTPUT);
-    pinMode (the_analog_pin_to_the_voltage_divider, INPUT);
+    pinMode (the_analog_pin_connected_to_the_voltage_divider, INPUT);
     pinMode (the_pin_to_the_LDR_circuit, INPUT);
     pinMode (the_pin_to_the_LDR2_circuit, INPUT);
     pinMode (workbench_lighting_MOSFET_signal_pin, OUTPUT);

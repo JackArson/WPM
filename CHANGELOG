@@ -119,3 +119,4 @@ idea:  a function that takes these parameters (min/max voltage allowable time mi
 03-15-19-12:09 crash isolated, send fix2
 03-15-19-12:37 noted voltmeter response too slow, raising initial voltage to above battery charger cut in point to avoid high voltage cut out until volt sensor code is rebuilt
 03-15-19-18:57 add class Voltmeter and began refactoring old functions
+03-16-19-18:47 voltmeter math commentary and expansion
