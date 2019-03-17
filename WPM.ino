@@ -364,9 +364,12 @@ void MyTimer::set(byte x)
 }
 
 
-
-const byte QTY_IMPORTANT_DATES = 22;
-class MyImportantDates
+//all caps indicate a COMPILE TIME CONSTANT 
+const byte QTY_IMPORTANT_DATES = 22;  //this must be initialized in global space instead
+                                      //of inside Calendar.  Also compiler won't allow
+                                      //constexpr here.  That would have been a better,
+                                      //more specific description
+class Calendar
 {
 public:
     enum EventType
@@ -387,7 +390,8 @@ public:
     };
     
 private: //variables
-    //this compiler can't set array length so QTY_IMPORTANT_DATES must be manually counted and set.     
+    //this compiler can't set array length so QTY_IMPORTANT_DATES (right above
+    //this class) must be manually counted and set.     
     const ImportantDate importantdatelist[QTY_IMPORTANT_DATES] = 
     {
         {"Kathy",         1,  7, 1967, EVENTTYPE_BIRTHDAY},     //1
@@ -412,15 +416,29 @@ private: //variables
         {"Erik",         12,  4, 1999, EVENTTYPE_BIRTHDAY},     //20
         {"Mathew",       12, 17, 1995, EVENTTYPE_BIRTHDAY},     //21
         {"Christmas",    12, 25, 0,    EVENTTYPE_HOLIDAY}       //22
-    };        
-}myimportantdates;
+    };
+public:  //methods
+        byte getWeekNumber (tmElements_t date);
 
-//class MyInfo //gains information and sends it to LCD and serial
-//{
-//public: //methods
-    //void printState(char const *text);   
-//}myinfo;
+}calendar;
 
+byte Calendar::getWeekNumber(tmElements_t date)
+{
+    //convert date to the first moment of the year
+    date.Hour   = 0;
+    date.Minute = 0;
+    date.Second = 0;
+    date.Day    = 0;
+    date.Month  = 0;
+    //convert first moment of the year to unix time
+    const time_t year_start {makeTime(date)};
+    //how many seconds have elapsed since the year began?
+    const time_t seconds_since_start_of_year {now() - year_start};
+    //divide by seconds in a week to compute week number
+    const time_t seconds_in_a_week {604800};
+    const time_t week_number {seconds_since_start_of_year / seconds_in_a_week};
+    return static_cast<byte>(week_number);
+}
 
 namespace Pin
 {                              
@@ -441,7 +459,6 @@ class Voltmeter
 {
 private: //variables
     float mVoltage                 {0.0}; 
-    int   voltage_trend            {0};
     bool  mIsFirstReadingCompleted {false};
 public:  //methods
     void  main       ();
@@ -504,31 +521,28 @@ void Voltmeter::readVoltage()
         mVoltage = raw_voltage;
         mIsFirstReadingCompleted = true;
     }
-    myserial.sprint(mVoltage);
-    myserial.printLinefeed();
-    //const byte    range_of_voltage_trend {100};
+
+    //use this code helps to stabilize a jumpy reading
+    //my system runs well with a max deviation of 0.01
+    //a lower number produces a more consistent reading, at the
+    //expense of reaction time.
+    //Explained another way, with a small max_deviation
+    //the reading would take longer to drop to 0.0 volts if
+    //the battery was disconnected.
+    
+    //I am not an electronics expert, but my experiments to stabilize
+    //my voltage divider reading by using capacitors were ineffective.
+    
+    const float max_deviation {0.01};
+    
     if (raw_voltage > mVoltage)
     {
-        mVoltage += 0.01;
+        mVoltage += max_deviation;
     }
     else if (raw_voltage < mVoltage)
     {
-        mVoltage -= 0.01;
+        mVoltage -= max_deviation;
     }
-    //if (raw_voltage < mVoltage)
-    //{
-        //voltage_trend --;
-    //}
-    //if (voltage_trend >= range_of_voltage_trend)
-    //{
-        //mVoltage = mVoltage + 0.01;
-        //voltage_trend = 0;
-    //}
-    //if (voltage_trend <= (0 - range_of_voltage_trend))
-    //{
-        //mVoltage = mVoltage - 0.01;
-        //voltage_trend = 0;
-    //}
 }    
   
 
@@ -566,12 +580,11 @@ int  inverter_run_time  = 0;
 float         voltage_daily_max = 0;
 float         voltage_daily_min = 15; // initial setting, a number higher than expected nominal voltage
                             
-byte          am_pm = 0;
-
+//byte          am_pm = 0;
 
 tmElements_t  todays_low_voltage_timestamp;
 tmElements_t  todays_high_voltage_timestamp;
-byte          solar_week_number = 1;
+//byte          solar_week_number = 1;
 
 
 
@@ -605,7 +618,7 @@ const unsigned long seconds_in_a_week = 604800;
 
 //void myPrintStatefunction(char const * text);
 //void myBacklightfunction();
-byte myCalculateWeekNumberfunction(TimeElements sixpartdate);
+//byte myCalculateWeekNumberfunction(TimeElements sixpartdate);
 void myClearMessageBoardfunction();
 boolean myIsItDaylightfunction();
 boolean myIsItDeltaTimePastDawnfunction();
@@ -653,7 +666,7 @@ void setup()
     liquidcrystali2c.begin(20, 4);     // start the LiquidCrystal_I2C library
     myserial.testClock();
     voltmeter.getVoltage();
-    solar_week_number = myCalculateWeekNumberfunction(gRTC_reading);
+    //solar_week_number = myCalculateWeekNumberfunction(gRTC_reading);
     myLoadUpcomingEventsfunction();
     mysetSunriseSunsetTimesfunction();
     //set pins  
@@ -755,7 +768,7 @@ void loop()
             todays_high_voltage_timestamp = gRTC_reading;
             voltage_daily_min = voltmeter.getVoltage();
             todays_low_voltage_timestamp = gRTC_reading;
-            solar_week_number = myCalculateWeekNumberfunction(gRTC_reading); //to read duskdawn data tables
+            //solar_week_number = myCalculateWeekNumberfunction(gRTC_reading); //to read duskdawn data tables
             myLoadUpcomingEventsfunction();
             mysetSunriseSunsetTimesfunction();  
         }
@@ -989,7 +1002,8 @@ void myMessageSunrisefunction() {
   if (today_sunset_minute <= 9){
    liquidcrystali2c.print(F("0"));
   }
-  liquidcrystali2c.print (sunset_minute[solar_week_number-1]);
+  
+  liquidcrystali2c.print (sunset_minute[calendar.getWeekNumber(gRTC_reading)]);
   liquidcrystali2c.print (F("pm"));
 }
 
@@ -1082,7 +1096,7 @@ void myMessageWeekNumberfunction() {
    liquidcrystali2c.print (F("  Solar Week"));
    liquidcrystali2c.setCursor (0,2);
    liquidcrystali2c.print (F("        Number "));
-   liquidcrystali2c.print (solar_week_number);   
+   liquidcrystali2c.print (calendar.getWeekNumber(gRTC_reading));   
 }
 
 ////---------------------------------------------
@@ -1224,11 +1238,11 @@ void myReadPotentiometerAndAdjustWorkbenchTrackLightsfunction(){
 void mysetSunriseSunsetTimesfunction() {
 //==================12.4.2017===========
 
-  
-  today_sunrise_hour = sunrise_hour[solar_week_number-1]-1+daylight_savings_time;
-  today_sunrise_minute = sunrise_minute[solar_week_number-1];
-  today_sunset_hour = sunset_hour[solar_week_number-1]-1+daylight_savings_time;
-  today_sunset_minute = sunset_minute[solar_week_number-1];
+  const byte week_number {calendar.getWeekNumber(gRTC_reading)};
+  today_sunrise_hour = sunrise_hour[week_number]-1+daylight_savings_time;
+  today_sunrise_minute = sunrise_minute[week_number];
+  today_sunset_hour = sunset_hour[week_number]-1+daylight_savings_time;
+  today_sunset_minute = sunset_minute[week_number];
 }
 
 

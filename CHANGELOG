@@ -127,3 +127,4 @@ idea:  a function that takes these parameters (min/max voltage allowable time mi
 03-17-19-12:03 added overloaded sprint (float) to MySerial
 03-17-19-16:45 moved pin variables to Pin namespace, renamed
 03-17-19-17:06 described Voltmeter stabilizing code
+03-17-19-19:03 add Calendar::getWeekNumber
