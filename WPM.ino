@@ -505,6 +505,7 @@ void Voltmeter::readVoltage()
         mIsFirstReadingCompleted = true;
     }
     myserial.sprint(mVoltage);
+    myserial.printLinefeed();
     //const byte    range_of_voltage_trend {100};
     if (raw_voltage > mVoltage)
     {
