@@ -440,8 +440,9 @@ byte          potentiometer_input_pin                              = A1; //yello
 class Voltmeter
 {
 private: //variables
-    float mVoltage {13.4};
-    int           voltage_trend = 0;
+    float mVoltage                 {0.0}; 
+    int   voltage_trend            {0};
+    bool  mIsFirstReadingCompleted {false};
 public:  //methods
     void  main       ();
     float getVoltage ();
@@ -479,7 +480,7 @@ void Voltmeter::readVoltage()
     //my divider reading    2.9volts
     //Use a calculator to get this number. 12.28 / 2.84 = 4.32
     //Since it is a constant, there is no need to make the controller calculate it every time.
-    const float   voltage_ratio {4.3};  // 12.28 / 2.9
+    const float   voltage_ratio {4.25};  
     
     //the range of pin values starts at 0 for 0.0 volts and top out
     //at 1024 when the pin is at full reference voltage
@@ -497,19 +498,36 @@ void Voltmeter::readVoltage()
     const float pin_voltage       {pin_value_ratio * reference_voltage};
     //the 'real' voltage is the pin voltage multiplied by the voltage ratio.  
     const float raw_voltage       {pin_voltage * voltage_ratio};
-   
-
-const byte    range_of_voltage_trend {100};
-  if (raw_voltage > mVoltage){  voltage_trend ++;  }
-  if (raw_voltage < mVoltage){  voltage_trend --;  }
-  if (voltage_trend >= range_of_voltage_trend){
-     mVoltage = mVoltage + 0.01;
-     voltage_trend = 0;
-  }
-  if (voltage_trend <= (0 - range_of_voltage_trend)){
-     mVoltage = mVoltage - 0.01;
-     voltage_trend = 0;
-  }
+    //set the mVoltage value to raw_voltage if this is the first run.
+    if (mIsFirstReadingCompleted == false);
+    {
+        mVoltage = raw_voltage;
+        mIsFirstReadingCompleted = true;
+    }
+    myserial.sprint(mVoltage);
+    //const byte    range_of_voltage_trend {100};
+    if (raw_voltage > mVoltage)
+    {
+        mVoltage += 0.01;
+    }
+    else if (raw_voltage < mVoltage)
+    {
+        mVoltage -= 0.01;
+    }
+    //if (raw_voltage < mVoltage)
+    //{
+        //voltage_trend --;
+    //}
+    //if (voltage_trend >= range_of_voltage_trend)
+    //{
+        //mVoltage = mVoltage + 0.01;
+        //voltage_trend = 0;
+    //}
+    //if (voltage_trend <= (0 - range_of_voltage_trend))
+    //{
+        //mVoltage = mVoltage - 0.01;
+        //voltage_trend = 0;
+    //}
 }    
   
 
@@ -633,6 +651,7 @@ void setup()
     Wire.begin();                      // start the Wire library
     liquidcrystali2c.begin(20, 4);     // start the LiquidCrystal_I2C library
     myserial.testClock();
+    voltmeter.getVoltage();
     solar_week_number = myCalculateWeekNumberfunction(gRTC_reading);
     myLoadUpcomingEventsfunction();
     mysetSunriseSunsetTimesfunction();
