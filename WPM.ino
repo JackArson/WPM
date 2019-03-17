@@ -62,6 +62,7 @@ public:
     void sprint(const char *string_ptr);
     void sprint(const byte numeral);
     void printLinefeed();
+    void printState(char const *text);
     void printStatus(); //runs every 1000 milliseconds. Called by main()
     void printTimestamp();
     void testClock();
@@ -83,6 +84,14 @@ void MySerial::sprint(const byte numeral)
 void MySerial::printLinefeed()
 {
     Serial.println();
+}
+
+void MySerial::printState(char const *text)
+{
+    printTimestamp();
+    sprint(" state changed to: ");
+    sprint(text);
+    printLinefeed();
 }
 
 void MySerial::printStatus()
@@ -158,9 +167,6 @@ private: //variables
     
 public:
     void drawDisplay     ();
-    void setCursor       (const Coordinant coordinant);
-    void setCursor       (const byte         column,
-                          const byte         row);
     void print           (const char        *string_ptr);
     void print           (const byte         numeral);
     void printDateSuffix (const byte         day_of_month);
@@ -169,7 +175,7 @@ public:  // <-make this private when old public references are removed
                           const Coordinant   coordinant,
                           const bool         right_justify);
     void printDate       (const Coordinant   coordinant);
-    //void printDay
+    void printState      (char const        *text);
     void updateBacklight ();
 }mylcd;
 
@@ -181,16 +187,6 @@ void MyLCD::drawDisplay()
     printClock(gRTC_reading, coordinant, right_justify);
     coordinant = {0, 3};
     printDate(coordinant);
-}
-
-void MyLCD::setCursor(const Coordinant coordinant)
-{
-    liquidcrystali2c.setCursor(coordinant.x, coordinant.y);
-}
-
-void MyLCD::setCursor(const byte column, const byte row)
-{
-    liquidcrystali2c.setCursor(column, row);
 }
 
 void MyLCD::print(const char *string_ptr)
@@ -243,6 +239,13 @@ void MyLCD::printDateSuffix(byte day_of_month)
 
 //MyLCD private methods start here
 
+void MyLCD::printState(char const *text)
+{
+    //LCD printing in the upper left 8 characters of the 4x20 display   
+    liquidcrystali2c.setCursor (0,0);
+    print (text);
+}
+
 void MyLCD::updateBacklight()
 {
     byte hour_to_turn_on_backlight  {4};
@@ -260,7 +263,7 @@ void MyLCD::updateBacklight()
 
 void MyLCD::printClock(const TimeElements time, const Coordinant coordinant, const bool right_justify)
 {
-    setCursor(coordinant);                                   
+    liquidcrystali2c.setCursor(coordinant.x, coordinant.y);                                   
     byte am_pm  {0};
     int  format {0};
     //change to 12 hour format
@@ -298,7 +301,7 @@ void MyLCD::printClock(const TimeElements time, const Coordinant coordinant, con
 
 void MyLCD::printDate(const Coordinant coordinant)
 {
-    setCursor(coordinant); 
+    liquidcrystali2c.setCursor(coordinant.x, coordinant.y); 
     print(dayShortStr(weekday()));
     print (", ");
     const char* month_short_name[12] = {"Jan", "Feb", "Mar", "Apr",
@@ -333,7 +336,7 @@ byte MyTimer::getCounter()
 
 void MyTimer::update()
 {
-    mylcd.setCursor(8, 0);
+    liquidcrystali2c.setCursor(8, 0);
     if(mCounter) //if a countdown is running
     {
         if(mCounter <= 9)
@@ -406,22 +409,13 @@ private: //variables
     };        
 }myimportantdates;
 
-class MyInfo //gains information and sends it to LCD and serial
-{
-public: //methods
-    void printState(char const *text);   
-}myinfo;
+//class MyInfo //gains information and sends it to LCD and serial
+//{
+//public: //methods
+    //void printState(char const *text);   
+//}myinfo;
 
-void MyInfo::printState(char const *text)
-{
-    //LCD printing in the upper left 8 characters of the 4x20 display   
-    mylcd.setCursor (0,0);
-    mylcd.print (text);
-    myserial.printTimestamp();
-    myserial.sprint(" state changed to: ");
-    myserial.sprint(text);
-    myserial.printLinefeed();
-}
+
 
 // PIN ASSIGNMENT HERE                                      
 // Pins 0 and 1 are reserved for the USB
@@ -499,7 +493,7 @@ void Voltmeter::readVoltage()
     //the 'real' voltage is the pin voltage multiplied by the voltage ratio.  
     const float raw_voltage       {pin_voltage * voltage_ratio};
     //set the mVoltage value to raw_voltage if this is the first run.
-    if (mIsFirstReadingCompleted == false);
+    if (mIsFirstReadingCompleted == false)
     {
         mVoltage = raw_voltage;
         mIsFirstReadingCompleted = true;
@@ -604,7 +598,7 @@ const unsigned long seconds_in_a_week = 604800;
 
 
 //void myPrintStatefunction(char const * text);
-void myBacklightfunction();
+//void myBacklightfunction();
 byte myCalculateWeekNumberfunction(TimeElements sixpartdate);
 void myClearMessageBoardfunction();
 boolean myIsItDaylightfunction();
@@ -679,13 +673,11 @@ void loop()
     if (gLast_RTC_reading.Second != gRTC_reading.Second) 
     {
         gLast_RTC_reading = gRTC_reading;  //set up delay for the next loop
-        //--------------to remove-------------------------------------------
         if (RTC.read(gRTC_reading)) //gathered by reference
         {
-            //to be removed along with time lib
             setTime(gRTC_reading.Hour,gRTC_reading.Minute,gRTC_reading.Second,gRTC_reading.Day,gRTC_reading.Month,gRTC_reading.Year-30);
         }
-        //--------------end of to remove-------------------------------------------
+        myVoltagePrintingAndRecordingfunction();
         myserial.printStatus();
         myTimer.update();
         mylcd.drawDisplay(); 
@@ -831,16 +823,6 @@ boolean myIsItDeltaTimePastDawnfunction() {
   const int sunrise_in_minutes = today_sunrise_hour * 60 + today_sunrise_minute;
   const int delta_t = 15;  //minutes 
   const int now_in_minutes = hour() * 60 + minute();
-  /*Serial.println();
-  Serial.print("now: ");
-  Serial.print(now_in_minutes);
-  Serial.print(" sunrise: ");
-  Serial.print(sunrise_in_minutes);
-  Serial.print(" deltaT: ");
-  Serial.print(delta_t);
-  Serial.print(" -- ");
-  */
-  
   
   if (now_in_minutes >= sunrise_in_minutes + delta_t) {
     return true; 
@@ -1288,9 +1270,10 @@ void myVoltagePrintingAndRecordingfunction() {
 //===========================================
 void myStateMachineInitSleepStatefunction() {               //state 0
   //================================5.8.2018===
-  //mylcd.setCursor(0, 0);
+  //liquidcrystali2c.setCursor(0, 0);
   //mylcd.print("Sleeping");
-  myinfo.printState("Sleeping");
+  mylcd.printState("Sleeping");
+  myserial.printState("Sleeping");
   //initialize relevant pins with redundancy
   digitalWrite (battery_charger_signal_pin, HIGH);  //battery charger on
   digitalWrite (inverter_signal_pin, LOW);         //inverter off
@@ -1314,7 +1297,8 @@ void myStateMachineSleepStatefunction() {                   //state 1
 //==========================================
 void myStateMachineInitWakeStatefunction() {                //state 2
   //==============================5.8.2018====
-  myinfo.printState("Waking  ");
+  mylcd.printState("Waking  ");
+  myserial.printState("Waking  ");
   //initialize relevant pins with redundancy
   digitalWrite (battery_charger_signal_pin, LOW);   // battery charger off
   digitalWrite (inverter_signal_pin, LOW);          // inverter off
@@ -1346,8 +1330,8 @@ void myStateMachineWakeStatefunction() {                    //state 3
 void myStateMachineInitBalancedStatefunction() {            //state 4
   //===================================5.8.2018===
 
-
-  myinfo.printState("Balanced");
+  mylcd.printState("Balanced");
+  myserial.printState("Balanced");
   //initialize relevant pins with redundancy
   digitalWrite (battery_charger_signal_pin, LOW);  //battery charger off
   digitalWrite (inverter_signal_pin, LOW);         //inverter off
@@ -1386,8 +1370,8 @@ void myStateMachineBalancedStatefunction() {                //state 5
 void myStateMachineInitWarmUpInverterStatefunction() {    //state 6
   //===========================================5.8.2018===
   const byte seconds_to_warm_up = 4;
-
-  myinfo.printState("Warm Up ");
+  mylcd.printState("Warm Up ");
+  myserial.printState("Warm Up ");
   //initialize relevant pins with redundancy
   digitalWrite (battery_charger_signal_pin, LOW);  //battery charger off
   digitalWrite (inverter_signal_pin, HIGH);         //inverter on
@@ -1414,8 +1398,8 @@ void myStateMachineInitStageOneInverterStatefunction() {    //state 8
   //===========================================5.8.2018===
 
   const byte  stage_two_switching_delay = 15;  //seconds.  this prevents stage two from engaging too soon
-
-  myinfo.printState("Invert1 ");
+    mylcd.printState("Invert1 ");
+  myserial.printState("Invert1 ");
   //initialize relevant pins with redundancy
   digitalWrite (battery_charger_signal_pin, LOW);  //battery charger off
   digitalWrite (inverter_signal_pin, HIGH);         //inverter on
@@ -1454,7 +1438,8 @@ void myStateMachineStageOneInverterStatefunction() {        //state 9
 //======================================================
 void myStateMachineInitStageTwoInverterStatefunction() {    //state 10
   //==============================5.8.2018================
-  myinfo.printState("Invert2 ");
+  mylcd.printState("Invert2 ");
+  myserial.printState("Invert2 ");
   //initialize relevant pins with redundancy
   digitalWrite (battery_charger_signal_pin, LOW);  //battery charger off
   digitalWrite (inverter_signal_pin, HIGH);         //inverter on
@@ -1486,7 +1471,8 @@ void myStateMachineStageTwoInverterStatefunction() {        //state 11
 //================================================
 void myStateMachineInitDaytimeChargingfunction() {    //state 12
   //====================================5.11.2018===
-  myinfo.printState("Charging");
+  mylcd.printState("Charging");
+  myserial.printState("Charging");
   //initialize relevant pins with redundancy
   digitalWrite (battery_charger_signal_pin, HIGH);  //battery charger on
   digitalWrite (inverter_signal_pin, LOW);         //inverter off
@@ -1512,7 +1498,8 @@ void myStateMachineInitInverterCooldownfunction() {    //state 14
 
   byte inverter_cooldown_time = 30;  //seconds
 
-  myinfo.printState("Cooldown");
+  mylcd.printState("Cooldown");
+  myserial.printState("Cooldown");
   //initialize relevant pins with redundancy
   digitalWrite (battery_charger_signal_pin, LOW);  //battery charger off
   digitalWrite (inverter_signal_pin, LOW);         //inverter off
