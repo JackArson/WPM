@@ -422,20 +422,20 @@ private: //variables
 //}myinfo;
 
 
-
-// PIN ASSIGNMENT HERE                                      
-// Pins 0 and 1 are reserved for the USB
-byte          the_pin_to_the_LDR_circuit                           = 2; //brown   wire lower cable              
-byte          the_pin_to_the_LDR2_circuit                          = 3; //orange wire lower cable
-byte          battery_charger_signal_pin                           = 11; //green wire upper cable  
-byte          inverter_signal_pin                                  = 5; //blue wire upper cable
-byte          workbench_lighting_MOSFET_signal_pin                 = 10; //purple wire upper cable* too fast PWM
-byte          stage_one_inverter_relay                             = 8; //A
-byte          stage_two_inverter_relay                             = 9; //S                                   
-                                      // ANALOG
-byte          the_analog_pin_connected_to_the_voltage_divider      = A0; //green  wire lower cable
-byte          potentiometer_input_pin                              = A1; //yellow wire
-
+namespace Pin
+{                              
+    //digital pins
+    const byte light_sensor_one         {2};  //brown   wire lower cable              
+    const byte light_sensor_two         {3};  //orange wire lower cable
+    const byte battery_charger          {11}; //green wire upper cable  
+    const byte inverter                 {5};  //blue wire upper cable
+    const byte workbench_lighting       {10}; //purple wire upper cable* too fast PWM
+    const byte stage_one_inverter_relay {8};  //A
+    const byte stage_two_inverter_relay {9};  //S
+    //analog pins
+    const byte voltage_divider          {A0}; //green  wire lower cable
+    const byte potentiometer            {A1}; //yellow wire
+}
 
 class Voltmeter
 {
@@ -484,7 +484,7 @@ void Voltmeter::readVoltage()
     
     //the range of pin values starts at 0 for 0.0 volts and top out
     //at 1024 when the pin is at full reference voltage
-    const int   pin_reading     {analogRead(the_analog_pin_connected_to_the_voltage_divider)};
+    const int   pin_reading     {analogRead(Pin::voltage_divider)};
     //change the integer reading to a floating point for consistency.  The compiler may
     //do this 'implicitly' when multiplying this number, but I like to be sure.
     const float pin_value       {static_cast<float>(pin_reading)};
@@ -657,14 +657,14 @@ void setup()
     myLoadUpcomingEventsfunction();
     mysetSunriseSunsetTimesfunction();
     //set pins  
-    pinMode (inverter_signal_pin, OUTPUT);
-    pinMode (battery_charger_signal_pin, OUTPUT);
-    pinMode (the_analog_pin_connected_to_the_voltage_divider, INPUT);
-    pinMode (the_pin_to_the_LDR_circuit, INPUT);
-    pinMode (the_pin_to_the_LDR2_circuit, INPUT);
-    pinMode (workbench_lighting_MOSFET_signal_pin, OUTPUT);
-    pinMode (stage_one_inverter_relay, OUTPUT);
-    pinMode (stage_two_inverter_relay, OUTPUT);
+    pinMode (Pin::inverter, OUTPUT);
+    pinMode (Pin::battery_charger, OUTPUT);
+    pinMode (Pin::voltage_divider, INPUT);
+    pinMode (Pin::light_sensor_one, INPUT);
+    pinMode (Pin::light_sensor_two, INPUT);
+    pinMode (Pin::workbench_lighting, OUTPUT);
+    pinMode (Pin::stage_one_inverter_relay, OUTPUT);
+    pinMode (Pin::stage_two_inverter_relay, OUTPUT);
 }
                
 void loop()
@@ -1100,13 +1100,13 @@ void myMessageWeekNumberfunction() {
 void myPrintLDRresultsToLCDfunction() {
 //-------------------------------------
    liquidcrystali2c.setCursor (11,0);
-   //Serial.print("Summer: "); Serial.print(analogRead(the_pin_to_the_LDR2_circuit)); Serial.print(". ");
-   if (digitalRead(the_pin_to_the_LDR2_circuit)) {
+   //Serial.print("Summer: "); Serial.print(analogRead(light_sensor_two)); Serial.print(". ");
+   if (digitalRead(Pin::light_sensor_two)) {
       liquidcrystali2c.print("S");
    } else {
       liquidcrystali2c.print(" ");
    }     
-   if (digitalRead(the_pin_to_the_LDR_circuit)) { 
+   if (digitalRead(Pin::light_sensor_one)) { 
       liquidcrystali2c.print("A");
    } else {
       liquidcrystali2c.print(" ");
@@ -1173,7 +1173,7 @@ void myReadPotentiometerAndAdjustWorkbenchTrackLightsfunction(){
   const byte stray_distance = 3; // increase to prevent flicker from potentiometer attenuation, 
                                  // decrease for smoother transition 
   for (byte x = 0; x <=9; x++){
-     potentiometer_reading = potentiometer_reading + (analogRead (potentiometer_input_pin));
+     potentiometer_reading = potentiometer_reading + (analogRead (Pin::potentiometer));
   }
   potentiometer_reading = potentiometer_reading / 40;
   if (potentiometer_reading <= dimmer_reference_number - stray_distance) {
@@ -1182,7 +1182,7 @@ void myReadPotentiometerAndAdjustWorkbenchTrackLightsfunction(){
   if (potentiometer_reading >= dimmer_reference_number + stray_distance) {
     dimmer_reference_number = potentiometer_reading; 
   }
-  analogWrite (workbench_lighting_MOSFET_signal_pin, (255 - dimmer_reference_number) * scaling_ratio);  
+  analogWrite (Pin::workbench_lighting, (255 - dimmer_reference_number) * scaling_ratio);  
   //diagnostic
   //Serial.println ();
   //Serial.print ("potentiometer_reading ");
@@ -1280,10 +1280,10 @@ void myStateMachineInitSleepStatefunction() {               //state 0
   mylcd.printState("Sleeping");
   myserial.printState("Sleeping");
   //initialize relevant pins with redundancy
-  digitalWrite (battery_charger_signal_pin, HIGH);  //battery charger on
-  digitalWrite (inverter_signal_pin, LOW);         //inverter off
-  digitalWrite(stage_one_inverter_relay, LOW);    // relay one off
-  digitalWrite(stage_two_inverter_relay, LOW);    // relay two off
+  digitalWrite (Pin::battery_charger, HIGH);  //battery charger on
+  digitalWrite (Pin::inverter, LOW);         //inverter off
+  digitalWrite(Pin::stage_one_inverter_relay, LOW);    // relay one off
+  digitalWrite(Pin::stage_two_inverter_relay, LOW);    // relay two off
   mystatemachine.setState(MyStateMachine::STATE_SLEEP);
   return;
 }
@@ -1305,10 +1305,10 @@ void myStateMachineInitWakeStatefunction() {                //state 2
   mylcd.printState("Waking  ");
   myserial.printState("Waking  ");
   //initialize relevant pins with redundancy
-  digitalWrite (battery_charger_signal_pin, LOW);   // battery charger off
-  digitalWrite (inverter_signal_pin, LOW);          // inverter off
-  digitalWrite(stage_one_inverter_relay, LOW);      // relay one off
-  digitalWrite(stage_two_inverter_relay, LOW);      // relay two off
+  digitalWrite (Pin::battery_charger, LOW);   // battery charger off
+  digitalWrite (Pin::inverter, LOW);          // inverter off
+  digitalWrite(Pin::stage_one_inverter_relay, LOW);      // relay one off
+  digitalWrite(Pin::stage_two_inverter_relay, LOW);      // relay two off
   mystatemachine.setState(MyStateMachine::STATE_WAKE);
 }
 
@@ -1338,10 +1338,10 @@ void myStateMachineInitBalancedStatefunction() {            //state 4
   mylcd.printState("Balanced");
   myserial.printState("Balanced");
   //initialize relevant pins with redundancy
-  digitalWrite (battery_charger_signal_pin, LOW);  //battery charger off
-  digitalWrite (inverter_signal_pin, LOW);         //inverter off
-  digitalWrite(stage_one_inverter_relay, LOW);    // relay one off
-  digitalWrite(stage_two_inverter_relay, LOW);    // relay two off
+  digitalWrite (Pin::battery_charger, LOW);  //battery charger off
+  digitalWrite (Pin::inverter, LOW);         //inverter off
+  digitalWrite(Pin::stage_one_inverter_relay, LOW);    // relay one off
+  digitalWrite(Pin::stage_two_inverter_relay, LOW);    // relay two off
   //
   mystatemachine.setState(MyStateMachine::STATE_BALANCED);                               // balanced initialization complete
   return;
@@ -1378,10 +1378,10 @@ void myStateMachineInitWarmUpInverterStatefunction() {    //state 6
   mylcd.printState("Warm Up ");
   myserial.printState("Warm Up ");
   //initialize relevant pins with redundancy
-  digitalWrite (battery_charger_signal_pin, LOW);  //battery charger off
-  digitalWrite (inverter_signal_pin, HIGH);         //inverter on
-  digitalWrite(stage_one_inverter_relay, LOW);    // relay one off
-  digitalWrite(stage_two_inverter_relay, LOW);    // relay two off
+  digitalWrite (Pin::battery_charger, LOW);  //battery charger off
+  digitalWrite (Pin::inverter, HIGH);         //inverter on
+  digitalWrite(Pin::stage_one_inverter_relay, LOW);    // relay one off
+  digitalWrite(Pin::stage_two_inverter_relay, LOW);    // relay two off
   myTimer.set(seconds_to_warm_up);
   mystatemachine.setState(MyStateMachine::STATE_INVERTER_WARM_UP);
 }
@@ -1406,10 +1406,10 @@ void myStateMachineInitStageOneInverterStatefunction() {    //state 8
     mylcd.printState("Invert1 ");
   myserial.printState("Invert1 ");
   //initialize relevant pins with redundancy
-  digitalWrite (battery_charger_signal_pin, LOW);  //battery charger off
-  digitalWrite (inverter_signal_pin, HIGH);         //inverter on
-  digitalWrite(stage_one_inverter_relay, HIGH);    // relay one on
-  digitalWrite(stage_two_inverter_relay, LOW);    // relay two off
+  digitalWrite (Pin::battery_charger, LOW);  //battery charger off
+  digitalWrite (Pin::inverter, HIGH);         //inverter on
+  digitalWrite(Pin::stage_one_inverter_relay, HIGH);    // relay one on
+  digitalWrite(Pin::stage_two_inverter_relay, LOW);    // relay two off
   myTimer.set(stage_two_switching_delay);
   mystatemachine.setState(MyStateMachine::STATE_INVERTER_STAGE_ONE);
 }
@@ -1446,10 +1446,10 @@ void myStateMachineInitStageTwoInverterStatefunction() {    //state 10
   mylcd.printState("Invert2 ");
   myserial.printState("Invert2 ");
   //initialize relevant pins with redundancy
-  digitalWrite (battery_charger_signal_pin, LOW);  //battery charger off
-  digitalWrite (inverter_signal_pin, HIGH);         //inverter on
-  digitalWrite(stage_one_inverter_relay, HIGH);    // relay one on
-  digitalWrite(stage_two_inverter_relay, HIGH);    // relay two on
+  digitalWrite (Pin::battery_charger, LOW);  //battery charger off
+  digitalWrite (Pin::inverter, HIGH);         //inverter on
+  digitalWrite(Pin::stage_one_inverter_relay, HIGH);    // relay one on
+  digitalWrite(Pin::stage_two_inverter_relay, HIGH);    // relay two on
   mystatemachine.setState(MyStateMachine::STATE_INIT_INVERTER_STAGE_TWO);
 }
 
@@ -1479,10 +1479,10 @@ void myStateMachineInitDaytimeChargingfunction() {    //state 12
   mylcd.printState("Charging");
   myserial.printState("Charging");
   //initialize relevant pins with redundancy
-  digitalWrite (battery_charger_signal_pin, HIGH);  //battery charger on
-  digitalWrite (inverter_signal_pin, LOW);         //inverter off
-  digitalWrite(stage_one_inverter_relay, LOW);    // relay one off
-  digitalWrite(stage_two_inverter_relay, LOW);    // relay two off
+  digitalWrite (Pin::battery_charger, HIGH);  //battery charger on
+  digitalWrite (Pin::inverter, LOW);         //inverter off
+  digitalWrite(Pin::stage_one_inverter_relay, LOW);    // relay one off
+  digitalWrite(Pin::stage_two_inverter_relay, LOW);    // relay two off
   mystatemachine.setState(MyStateMachine::STATE_DAY_CHARGE);
 }
 //============================================
@@ -1506,10 +1506,10 @@ void myStateMachineInitInverterCooldownfunction() {    //state 14
   mylcd.printState("Cooldown");
   myserial.printState("Cooldown");
   //initialize relevant pins with redundancy
-  digitalWrite (battery_charger_signal_pin, LOW);  //battery charger off
-  digitalWrite (inverter_signal_pin, LOW);         //inverter off
-  digitalWrite(stage_one_inverter_relay, LOW);    // relay one off
-  digitalWrite(stage_two_inverter_relay, LOW);    // relay two off
+  digitalWrite (Pin::battery_charger, LOW);  //battery charger off
+  digitalWrite (Pin::inverter, LOW);         //inverter off
+  digitalWrite(Pin::stage_one_inverter_relay, LOW);    // relay one off
+  digitalWrite(Pin::stage_two_inverter_relay, LOW);    // relay two off
   myTimer.set(inverter_cooldown_time);
   mystatemachine.setState(MyStateMachine::STATE_INVERTER_COOL_DOWN);
 }

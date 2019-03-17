@@ -125,3 +125,4 @@ idea:  a function that takes these parameters (min/max voltage allowable time mi
 03-17-19-07:28 voltmeter code testing3
 03-17-19-11:55 removed MyInfo class
 03-17-19-12:03 added overloaded sprint (float) to MySerial
+03-17-19-16:45 moved pin variables to Pin namespace, renamed
