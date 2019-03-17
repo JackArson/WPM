@@ -61,6 +61,7 @@ private: //variables
 public:
     void sprint(const char *string_ptr);
     void sprint(const byte numeral);
+    void sprint(const float numeral);
     void printLinefeed();
     void printState(char const *text);
     void printStatus(); //runs every 1000 milliseconds. Called by main()
@@ -77,6 +78,11 @@ void MySerial::sprint(const char *string_ptr)
 }
 
 void MySerial::sprint(const byte numeral)
+{
+    Serial.print(numeral);   
+}
+
+void MySerial::sprint(const float numeral)
 {
     Serial.print(numeral);   
 }
@@ -667,7 +673,6 @@ void loop()
     myReadPotentiometerAndAdjustWorkbenchTrackLightsfunction();
     voltmeter.main();
     
-    myVoltagePrintingAndRecordingfunction();
     //This code runs every second (1000ms)
     RTC.read(gRTC_reading);  //gathered from library by reference
     if (gLast_RTC_reading.Second != gRTC_reading.Second) 
@@ -744,7 +749,7 @@ void loop()
             gRTC_reading.Minute == 0 &&
             gRTC_reading.Second == 0)
         {
-            mystatemachine.setState(MyStateMachine::STATE_INIT_SLEEP);  //make sure machine is sleeping (redundant)
+            //mystatemachine.setState(MyStateMachine::STATE_INIT_SLEEP);  //make sure machine is sleeping (redundant)
             inverter_run_time  = 0;
             voltage_daily_max = voltmeter.getVoltage(); 
             todays_high_voltage_timestamp = gRTC_reading;
