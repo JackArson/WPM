@@ -5,6 +5,8 @@
 #include <Wire.h>
 
 LiquidCrystal_I2C  liquidcrystali2c(0x27, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);  
+
+//globals
 tmElements_t       gRTC_reading;
 tmElements_t       gLast_RTC_reading;
 //==================================================================================================================
@@ -14,7 +16,7 @@ class MyStateMachine
 public:
     enum State
     {
-        STATE_INIT_SLEEP, //this is always selected at 2am from the main loop
+        STATE_INIT_SLEEP, //0
         STATE_SLEEP, //1
         STATE_INIT_WAKE, //2
         STATE_WAKE, //3
@@ -61,6 +63,7 @@ private: //variables
 public:
     void sprint(const char *string_ptr);
     void sprint(const byte numeral);
+    void sprint(const int numeral);
     void sprint(const float numeral);
     void printLinefeed();
     void printState(char const *text);
@@ -81,7 +84,10 @@ void MySerial::sprint(const byte numeral)
 {
     Serial.print(numeral);   
 }
-
+void MySerial::sprint(const int numeral)
+{
+    Serial.print(numeral);   
+}
 void MySerial::sprint(const float numeral)
 {
     Serial.print(numeral);   
@@ -437,7 +443,7 @@ byte Calendar::getWeekNumber(tmElements_t date)
     //divide by seconds in a week to compute week number
     const time_t seconds_in_a_week {604800};
     const time_t week_number {seconds_since_start_of_year / seconds_in_a_week};
-    return static_cast<byte>(week_number);
+    return (week_number);
 }
 
 namespace Pin
@@ -463,13 +469,14 @@ private: //variables
 public:  //methods
     void  main       ();
     float getVoltage ();
+    void  readVoltage();
 private: //methods
-    void readVoltage();
+    
 }voltmeter;
 
 void Voltmeter::main()
 {
-    readVoltage();
+    
 }
 
 float Voltmeter::getVoltage()
@@ -497,24 +504,44 @@ void Voltmeter::readVoltage()
     //my divider reading    2.9volts
     //Use a calculator to get this number. 12.28 / 2.84 = 4.32
     //Since it is a constant, there is no need to make the controller calculate it every time.
-    const float   voltage_ratio {4.25};  
+    float         voltage_divider_ratio { 4.32};  
+    //if the program displays the wrong voltage, you can fine tune it here.
+    const float   error_correction      {-0.07};  //This is the actual adjustment to my
+    //own voltmeter.  you would put a 0.00 here unless you have reason to believe
+    //your Arduino voltmeter is reading too high, or too low.  I found my error correction by
+    //trial and error
+    voltage_divider_ratio += error_correction;
+      
+    //An important note about errors and operating voltage.  I am using the full operating voltage
+    //of my Arduino as a voltage reference for simplicity.  There are other ways to set up a more 
+    //accurate voltage reference, but this method works well for me.
+    //I power my Arduino with 9 volts, and have a nice even 5 volts measured between my 5 volt
+    //pin and my ground pin.  When I plug my Arduino into my laptop for uploading, the voltage changes
+    //slightly.  What that means: My program displays the wrong voltage with the USB cable attached.
+    //The difference is about 0.2 volts.  I must remind myself to unplug the USB cable after uploading
+    //my sketch and before I wonder why the voltage is wrong.
+    //Be sure you have a steady power supply to your Arduino (or clone, or other thing 
+    //that reads code)
     
     //the range of pin values starts at 0 for 0.0 volts and top out
-    //at 1024 when the pin is at full reference voltage
+    //at 1023 when the pin is at full operating voltage
     const int   pin_reading     {analogRead(Pin::voltage_divider)};
+    myserial.sprint(pin_reading);
+    myserial.printLinefeed();
     //change the integer reading to a floating point for consistency.  The compiler may
     //do this 'implicitly' when multiplying this number, but I like to be sure.
     const float pin_value       {static_cast<float>(pin_reading)};
     const float max_pin_value   {1024.0};
     const float pin_value_ratio {pin_value / max_pin_value};
     //the pin value ratio is a number between 0.0 and 1.0  It is a decimal percentage
-    //of the controller's reference_voltage. 
-    const float reference_voltage {5.0}; //using the default operating voltage reference.
-                                         //which is measured between 5V pin and Ground
+    //of the controller's operating_voltage. 
+    const float operating_voltage {5.0}; //this is a number you need to measure, my 
+    //portable voltmeter mesures 5.0 volts between the 5V pin and ground (with
+    //the USB cable unplugged.  See note on my USB cable trouble above.)
     //there is enough information for the micro-controller to read the voltage at the pin
-    const float pin_voltage       {pin_value_ratio * reference_voltage};
+    const float pin_voltage       {pin_value_ratio * operating_voltage};
     //the 'real' voltage is the pin voltage multiplied by the voltage ratio.  
-    const float raw_voltage       {pin_voltage * voltage_ratio};
+    const float raw_voltage       {pin_voltage * voltage_divider_ratio};
     //set the mVoltage value to raw_voltage if this is the first run.
     if (mIsFirstReadingCompleted == false)
     {
@@ -640,7 +667,7 @@ void myReadPotentiometerAndAdjustWorkbenchTrackLightsfunction();
 //char const * myReturnDayofWeekfunction (byte x);
 //char const * myReturnDayofWeekFromUnixTimestampfunction (TimeElements unzipped_time);
 void mysetSunriseSunsetTimesfunction();
-void myVoltagePrintingAndRecordingfunction();
+//void myVoltagePrintingAndRecordingfunction();
 void myVoltageCalculationfunction();
 void myStateMachineInitSleepStatefunction();
 void myStateMachineSleepStatefunction();
@@ -684,18 +711,19 @@ void loop()
 {
     //This code runs as fast as possible
     myReadPotentiometerAndAdjustWorkbenchTrackLightsfunction();
-    voltmeter.main();
+    voltmeter.readVoltage();
     
     //This code runs every second (1000ms)
     RTC.read(gRTC_reading);  //gathered from library by reference
     if (gLast_RTC_reading.Second != gRTC_reading.Second) 
     {
-        gLast_RTC_reading = gRTC_reading;  //set up delay for the next loop
+        gLast_RTC_reading = gRTC_reading;  //set up 1000ms delay for the next loop
         if (RTC.read(gRTC_reading)) //gathered by reference
         {
             setTime(gRTC_reading.Hour,gRTC_reading.Minute,gRTC_reading.Second,gRTC_reading.Day,gRTC_reading.Month,gRTC_reading.Year-30);
         }
-        myVoltagePrintingAndRecordingfunction();
+        voltmeter.main();
+        //myVoltagePrintingAndRecordingfunction();
         myserial.printStatus();
         myTimer.update();
         mylcd.drawDisplay(); 
@@ -1246,20 +1274,20 @@ void mysetSunriseSunsetTimesfunction() {
 }
 
 
-//-----------------------------------------
-void myVoltagePrintingAndRecordingfunction() {
-//-----------------------------------------  
-   myPrintVoltagetoLCDfunction(14,0,voltmeter.getVoltage());                      
-   //Serial.print (stable_voltage); Serial.print ("V "); 
-   if (voltmeter.getVoltage() > voltage_daily_max) { 
-    voltage_daily_max = voltmeter.getVoltage();
-    todays_high_voltage_timestamp = gRTC_reading;
-   }
-   if (voltmeter.getVoltage() < voltage_daily_min) {
-     voltage_daily_min = voltmeter.getVoltage(); 
-     todays_low_voltage_timestamp = gRTC_reading;
-   }
-}
+////-----------------------------------------
+//void myVoltagePrintingAndRecordingfunction() {
+////-----------------------------------------  
+   //myPrintVoltagetoLCDfunction(14,0,voltmeter.getVoltage());                      
+   ////Serial.print (stable_voltage); Serial.print ("V "); 
+   //if (voltmeter.getVoltage() > voltage_daily_max) { 
+    //voltage_daily_max = voltmeter.getVoltage();
+    //todays_high_voltage_timestamp = gRTC_reading;
+   //}
+   //if (voltmeter.getVoltage() < voltage_daily_min) {
+     //voltage_daily_min = voltmeter.getVoltage(); 
+     //todays_low_voltage_timestamp = gRTC_reading;
+   //}
+//}
 
 //===================================
 //void myVoltageCalculationfunction() {
