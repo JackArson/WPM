@@ -132,3 +132,4 @@ idea:  a function that takes these parameters (min/max voltage allowable time mi
 03-19-19-09:57 simplified state printing
 03-19-19-11:21 Voltmeter::VoltRecord
 03-19-19-18:40 calendar.loadImportantDates()
+03-19-19-19:04 calendar.loadImportantDates() bugfix
