@@ -491,12 +491,23 @@ namespace Pin
 
 class Voltmeter
 {
+public:  //struct
+    struct VoltRecord
+    {
+        float voltage;
+        tmElements_t timestamp;
+    };
 private: //variables
-    float mVoltage                 {0.0}; 
-    bool  mIsFirstReadingCompleted {false};
+    float      mVoltage                    {0.0}; 
+    bool       mIsFirstReadingCompleted    {false};
+    VoltRecord mMin                        {};
+    VoltRecord mMax                        {};
 public:  //methods
     void  main       ();
+    VoltRecord getMin();
+    VoltRecord getMax();
     float getVoltage ();
+    void  initDailyStatistics();
     void  readVoltage();
 private: //methods
     
@@ -511,16 +522,28 @@ void Voltmeter::main()
     Serial.print(mVoltage);
     Serial.print("V ");
                
-   ////Serial.print (stable_voltage); Serial.print ("V "); 
-   //if (voltmeter.getVoltage() > voltage_daily_max) { 
-    //voltage_daily_max = voltmeter.getVoltage();
-    //todays_high_voltage_timestamp = gRTC_reading;
-   //}
-   //if (voltmeter.getVoltage() < voltage_daily_min) {
-     //voltage_daily_min = voltmeter.getVoltage(); 
-     //todays_low_voltage_timestamp = gRTC_reading;
-   //}
-//}    
+    if (mVoltage > mMax.voltage)
+    { 
+        mMax.voltage   = mVoltage;
+        mMax.timestamp = gRTC_reading;
+        Serial.print(" new daily high just set ");
+    }
+    if (mVoltage < mMin.voltage)
+    {
+        mMin.voltage   = mVoltage; 
+        mMin.timestamp = gRTC_reading;
+        Serial.print(" new daily low just set ");
+    }   
+}
+
+Voltmeter::VoltRecord Voltmeter::getMin()
+{
+    return mMin;
+}
+
+Voltmeter::VoltRecord Voltmeter::getMax()
+{
+    return mMax;
 }
 
 float Voltmeter::getVoltage()
@@ -528,6 +551,21 @@ float Voltmeter::getVoltage()
     return mVoltage;
 }
 
+void Voltmeter::initDailyStatistics()
+{
+    if (mVoltage)
+    {
+        mMin.voltage = mVoltage;
+        mMin.timestamp = gRTC_reading;
+        mMax.voltage = mVoltage;
+        mMax.timestamp = gRTC_reading;
+    }
+    else
+    {
+        Serial.print("Voltmeter::initDailyStatistics  no voltage detected");
+    }
+    
+}
 void Voltmeter::readVoltage()
 {
     //The 5 volt Arduino controller cannot read voltage above 5 volts.
@@ -553,7 +591,7 @@ void Voltmeter::readVoltage()
     const float   error_correction      {-0.07};  //This is the actual adjustment to my
     //own voltmeter.  you would put a 0.00 here unless you have reason to believe
     //your Arduino voltmeter is reading too high, or too low.  I found my error correction by
-    //trial and error
+    //adjusting this number and examining the result
     voltage_divider_ratio += error_correction;
       
     //An important note about errors and operating voltage.  I am using the full operating voltage
@@ -570,10 +608,7 @@ void Voltmeter::readVoltage()
     //the range of pin values starts at 0 for 0.0 volts and top out
     //at 1023 when the pin is at full operating voltage
     const int   pin_reading     {analogRead(Pin::voltage_divider)};
-    myserial.sprint(pin_reading);
-    myserial.printLinefeed();
-    //change the integer reading to a floating point for consistency.  The compiler may
-    //do this 'implicitly' when multiplying this number, but I like to be sure.
+    
     const float pin_value       {static_cast<float>(pin_reading)};
     const float max_pin_value   {1024.0};
     const float pin_value_ratio {pin_value / max_pin_value};
@@ -593,8 +628,10 @@ void Voltmeter::readVoltage()
         mIsFirstReadingCompleted = true;
     }
 
-    //use this code helps to stabilize a jumpy reading
-    //my system runs well with a max deviation of 0.01
+    //My voltmeter gets jumpy when my solar chargers are processing a lot of energy
+    //Use the code below to help stabilize a jumpy reading (if needed.)
+    //My voltmeter display runs well with a max deviation setting of 0.01
+    const float max_deviation {0.01};
     //a lower number produces a more consistent reading, at the
     //expense of reaction time.
     //Explained another way, with a small max_deviation
@@ -602,10 +639,9 @@ void Voltmeter::readVoltage()
     //the battery was disconnected.
     
     //I am not an electronics expert, but my experiments to stabilize
-    //my voltage divider reading by using capacitors were ineffective.
-    
-    const float max_deviation {0.01};
-    
+    //my voltmeter reading by using capacitors were ineffective.  This snippet below
+    //keeps my number averaged well enough though
+    //STABILIZE
     if (raw_voltage > mVoltage)
     {
         mVoltage += max_deviation;
@@ -648,13 +684,13 @@ int  inverter_run_time  = 0;
 
 //float         stable_voltage = 13.4;  // the usable number to be displayed on LCD screen                     
 //float         raw_voltage = 0;            
-float         voltage_daily_max = 0;
-float         voltage_daily_min = 15; // initial setting, a number higher than expected nominal voltage
+//float         voltage_daily_max = 0;
+////float         voltage_daily_min = 15; // initial setting, a number higher than expected nominal voltage
                             
-//byte          am_pm = 0;
+////byte          am_pm = 0;
 
-tmElements_t  todays_low_voltage_timestamp;
-tmElements_t  todays_high_voltage_timestamp;
+//tmElements_t  todays_low_voltage_timestamp;
+//tmElements_t  todays_high_voltage_timestamp;
 //byte          solar_week_number = 1;
 
 
@@ -686,10 +722,6 @@ byte dimmer_reference_number = 0;
 
 const unsigned long seconds_in_a_week = 604800;  
 
-
-//void myPrintStatefunction(char const * text);
-//void myBacklightfunction();
-//byte myCalculateWeekNumberfunction(TimeElements sixpartdate);
 void myClearMessageBoardfunction();
 boolean myIsItDaylightfunction();
 boolean myIsItDeltaTimePastDawnfunction();
@@ -737,6 +769,7 @@ void setup()
     liquidcrystali2c.begin(20, 4);     // start the LiquidCrystal_I2C library
     myserial.testClock();
     voltmeter.getVoltage();
+    voltmeter.initDailyStatistics();
     //solar_week_number = myCalculateWeekNumberfunction(gRTC_reading);
     myLoadUpcomingEventsfunction();
     mysetSunriseSunsetTimesfunction();
@@ -827,7 +860,7 @@ void loop()
         default:
             break;
         }
-        Serial.println();
+        
         // This code runs at 2:00am 
         if (gRTC_reading.Hour   == 2 &&
             gRTC_reading.Minute == 0 &&
@@ -835,10 +868,11 @@ void loop()
         {
             //mystatemachine.setState(MyStateMachine::STATE_INIT_SLEEP);  //make sure machine is sleeping (redundant)
             inverter_run_time  = 0;
-            voltage_daily_max = voltmeter.getVoltage(); 
-            todays_high_voltage_timestamp = gRTC_reading;
-            voltage_daily_min = voltmeter.getVoltage();
-            todays_low_voltage_timestamp = gRTC_reading;
+            voltmeter.initDailyStatistics();
+            //voltage_daily_max = voltmeter.getVoltage(); 
+            //todays_high_voltage_timestamp = gRTC_reading;
+            ////voltage_daily_min = voltmeter.getVoltage();
+            //todays_low_voltage_timestamp = gRTC_reading;
             //solar_week_number = myCalculateWeekNumberfunction(gRTC_reading); //to read duskdawn data tables
             myLoadUpcomingEventsfunction();
             mysetSunriseSunsetTimesfunction();  
@@ -847,7 +881,8 @@ void loop()
         if ((long unsigned)(message_manager_timestamp) <= millis())
         { 
             myMessageManagerfunction(); 
-        }              
+        }
+    Serial.println();
     }
 }
 
@@ -1144,18 +1179,24 @@ void myMessageUpcomingEventsfunction(byte n){
 void myMessageVoltageDailyHighfunction(){
 //-----------------------------------  
    
-   myClearMessageBoardfunction();
-   liquidcrystali2c.setCursor (0,1);
-   //         "12345678901234567890"
-   myPrintVoltagetoLCDfunction(2,1,voltage_daily_max);
-   liquidcrystali2c.print (F(" @"));
-   Coordinant coordinant {11, 1};
-   const bool right_justify {false};
-   mylcd.printClock(todays_high_voltage_timestamp, coordinant, right_justify);
-   myPrintVoltagetoLCDfunction(2,2,voltage_daily_min);
-   liquidcrystali2c.print (F(" @"));
-   coordinant = {11, 2};
-   mylcd.printClock(todays_low_voltage_timestamp, coordinant, right_justify);   
+    myClearMessageBoardfunction();
+    liquidcrystali2c.setCursor (0,1);
+    //         "12345678901234567890"
+    Voltmeter::VoltRecord high {};
+    high = voltmeter.getMax();
+    myPrintVoltagetoLCDfunction(2,1,high.voltage);
+    liquidcrystali2c.print (F(" @"));
+    Coordinant coordinant {11, 1};
+    const bool right_justify {false};
+    mylcd.printClock(high.timestamp, coordinant, right_justify);
+
+
+    Voltmeter::VoltRecord low {};
+    low = voltmeter.getMin();
+    myPrintVoltagetoLCDfunction(2, 2, low.voltage);
+    liquidcrystali2c.print (F(" @"));
+    coordinant = {11, 2};
+    mylcd.printClock(low.timestamp, coordinant, right_justify);   
 }
 
 void myMessageWeekNumberfunction() {
