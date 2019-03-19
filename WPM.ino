@@ -58,17 +58,20 @@ class MySerial
 {
 private: //variables
     //choose the serial output 
-    bool  mPrintStateMachineChanges {true};
-    bool  mPrintTimestamp           {true};
+    bool  mPrintStateMachineChanges   {true};
+    bool  mPrintTimestamp             {true};
+    byte  mQtyStatusStrings           {0};
+    const char *mStatusStringList[10] {""}; //set >= max list size 
 public:
-    void sprint(const char *string_ptr);
-    void sprint(const byte numeral);
-    void sprint(const int numeral);
-    void sprint(const float numeral);
+    void setStatusString(const char * string_ptr);
     void printLinefeed();
     void printState(char const *text);
     void printStatus(); //runs every 1000 milliseconds. Called by main()
     void printTimestamp();
+    void sprint(const char *string_ptr);
+    void sprint(const byte numeral);
+    void sprint(const int numeral);
+    void sprint(const float numeral);
     void testClock();
 private: //methods
     
@@ -111,7 +114,13 @@ void MySerial::printStatus()
     if (mPrintTimestamp)
     {
         printTimestamp();
+        for (int i = 0; i < mQtyStatusStrings; i++)
+        {
+            Serial.print(" ");
+            Serial.print(mStatusStringList[i]);
+        }
     }
+    mQtyStatusStrings = 0;
     Serial.println();
 }
 
@@ -135,6 +144,12 @@ void MySerial::printTimestamp()
    }
    Serial.print(gRTC_reading.Second);
    Serial.print("  ");
+}
+
+void MySerial::setStatusString(const char * string_ptr)
+{
+    //add string to the list
+    mStatusStringList[mQtyStatusStrings++] = string_ptr;
 }
 
 void MySerial::testClock()
@@ -476,7 +491,22 @@ private: //methods
 
 void Voltmeter::main()
 {
-    
+    //print results to LCD
+    liquidcrystali2c.setCursor(14, 0);
+    liquidcrystali2c.print(mVoltage);
+    //print results to serial 
+    myserial.setStatusString("voltage here");
+               
+   ////Serial.print (stable_voltage); Serial.print ("V "); 
+   //if (voltmeter.getVoltage() > voltage_daily_max) { 
+    //voltage_daily_max = voltmeter.getVoltage();
+    //todays_high_voltage_timestamp = gRTC_reading;
+   //}
+   //if (voltmeter.getVoltage() < voltage_daily_min) {
+     //voltage_daily_min = voltmeter.getVoltage(); 
+     //todays_low_voltage_timestamp = gRTC_reading;
+   //}
+//}    
 }
 
 float Voltmeter::getVoltage()
@@ -723,7 +753,7 @@ void loop()
             setTime(gRTC_reading.Hour,gRTC_reading.Minute,gRTC_reading.Second,gRTC_reading.Day,gRTC_reading.Month,gRTC_reading.Year-30);
         }
         voltmeter.main();
-        //myVoltagePrintingAndRecordingfunction();
+        //();
         myserial.printStatus();
         myTimer.update();
         mylcd.drawDisplay(); 
@@ -814,29 +844,29 @@ void loop()
 
 
 
-//==============================================================
-byte myCalculateWeekNumberfunction(TimeElements sixpartdate) {
-//==============================================================
+////==============================================================
+//byte myCalculateWeekNumberfunction(TimeElements sixpartdate) {
+////==============================================================
 
-   //get unix time from start of current year by copying a six part date (tm_Elements_t) and zeroing everything but the year.
-   //then subtract that from the unix time now, then convert to weeks.
+   ////get unix time from start of current year by copying a six part date (tm_Elements_t) and zeroing everything but the year.
+   ////then subtract that from the unix time now, then convert to weeks.
    
-   long unsigned        longdate;
-   long unsigned        seconds_since_start_of_year;
-   const long unsigned  seconds_in_a_week = 604800;
-   byte                 week_number;
+   //long unsigned        longdate;
+   //long unsigned        seconds_since_start_of_year;
+   //const long unsigned  seconds_in_a_week = 604800;
+   //byte                 week_number;
    
-   sixpartdate.Hour = 0;
-   sixpartdate.Minute = 0;
-   sixpartdate.Second = 0;
-   sixpartdate.Day = 0;
-   sixpartdate.Month = 0;
-   longdate = makeTime (sixpartdate);
-   seconds_since_start_of_year = (now() - longdate);
-   week_number = (seconds_since_start_of_year/seconds_in_a_week) + 1;
-   return (week_number);
+   //sixpartdate.Hour = 0;
+   //sixpartdate.Minute = 0;
+   //sixpartdate.Second = 0;
+   //sixpartdate.Day = 0;
+   //sixpartdate.Month = 0;
+   //longdate = makeTime (sixpartdate);
+   //seconds_since_start_of_year = (now() - longdate);
+   //week_number = (seconds_since_start_of_year/seconds_in_a_week) + 1;
+   //return (week_number);
    
-}
+//}
 
 //---------------------------------
 void myClearMessageBoardfunction(){
