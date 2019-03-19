@@ -32,7 +32,6 @@ public:
         STATE_DAY_CHARGE, //13
         STATE_INIT_INVERTER_COOL_DOWN, //14
         STATE_INVERTER_COOL_DOWN, //15
-        STATE_ERROR,
         MAX_STATE
     };
 private: //variables
@@ -50,6 +49,61 @@ MyStateMachine::State MyStateMachine::getState()
 void  MyStateMachine::setState(State state)
 {
     mState = state;
+    const char *start_string {" state set to "};
+    const char *finish_string {""};
+    liquidcrystali2c.setCursor (0,0);
+    switch (mState)
+    {
+    case STATE_INIT_SLEEP:
+    case STATE_INIT_WAKE:
+    case STATE_INIT_BALANCED:
+    case STATE_INIT_INVERTER_WARM_UP:
+    case STATE_INIT_INVERTER_STAGE_ONE:
+    case STATE_INIT_INVERTER_STAGE_TWO:
+    case STATE_INIT_DAY_CHARGE:
+    case STATE_INIT_INVERTER_COOL_DOWN:
+        break;
+    case STATE_SLEEP:
+        finish_string = "sleeping";
+        liquidcrystali2c.print("Sleeping");
+        break;
+    case STATE_WAKE:
+        finish_string = "waking";
+        liquidcrystali2c.print("Waking ");
+        break;
+    case STATE_BALANCED:
+        finish_string = "balanced";
+        liquidcrystali2c.print("Balanced");
+        break;
+    case STATE_INVERTER_WARM_UP:
+        finish_string = "warm up";
+        liquidcrystali2c.print("Warm up ");
+        break;
+    case STATE_INVERTER_STAGE_ONE:
+        finish_string = "stage one inverter";
+        liquidcrystali2c.print("Invert1 ");
+        break;
+    case STATE_INVERTER_STAGE_TWO:
+        finish_string = "stage one inverter";
+        liquidcrystali2c.print("Invert2 ");
+        break;
+    case STATE_DAY_CHARGE:
+        finish_string = "charging";
+        liquidcrystali2c.print("Charging");
+        break;
+    case STATE_INVERTER_COOL_DOWN:
+        finish_string = "inverter cool down";
+        liquidcrystali2c.print("Cooldown");
+        break;
+    case MAX_STATE:
+    default:
+        break;
+    }
+    if (finish_string != "")
+    {
+        Serial.print(start_string);
+        Serial.print(finish_string);
+    }
 }
 
 //==================================================================================================================
@@ -58,15 +112,10 @@ class MySerial
 {
 private: //variables
     //choose the serial output 
-    bool  mPrintStateMachineChanges   {true};
-    bool  mPrintTimestamp             {true};
-    byte  mQtyStatusStrings           {0};
-    const char *mStatusStringList[10] {""}; //set >= max list size 
+        
 public:
-    void setStatusString(const char * string_ptr);
     void printLinefeed();
     void printState(char const *text);
-    void printStatus(); //runs every 1000 milliseconds. Called by main()
     void printTimestamp();
     void sprint(const char *string_ptr);
     void sprint(const byte numeral);
@@ -101,29 +150,6 @@ void MySerial::printLinefeed()
     Serial.println();
 }
 
-void MySerial::printState(char const *text)
-{
-    printTimestamp();
-    sprint(" state changed to: ");
-    sprint(text);
-    printLinefeed();
-}
-
-void MySerial::printStatus()
-{
-    if (mPrintTimestamp)
-    {
-        printTimestamp();
-        for (int i = 0; i < mQtyStatusStrings; i++)
-        {
-            Serial.print(" ");
-            Serial.print(mStatusStringList[i]);
-        }
-    }
-    mQtyStatusStrings = 0;
-    Serial.println();
-}
-
 void MySerial::printTimestamp()
 {    
     if (gRTC_reading.Hour <= 9)
@@ -146,17 +172,10 @@ void MySerial::printTimestamp()
    Serial.print("  ");
 }
 
-void MySerial::setStatusString(const char * string_ptr)
-{
-    //add string to the list
-    mStatusStringList[mQtyStatusStrings++] = string_ptr;
-}
-
 void MySerial::testClock()
 {
     if (RTC.read(gRTC_reading))
     {
-        //setTime to be removed after all references deleted     
         setTime (gRTC_reading.Hour,gRTC_reading.Minute,gRTC_reading.Second,gRTC_reading.Day,gRTC_reading.Month,gRTC_reading.Year-30); // -30 years correction WTF?
     }
     else
@@ -202,7 +221,6 @@ public:  // <-make this private when old public references are removed
                           const Coordinant   coordinant,
                           const bool         right_justify);
     void printDate       (const Coordinant   coordinant);
-    void printState      (char const        *text);
     void updateBacklight ();
 }mylcd;
 
@@ -266,12 +284,7 @@ void MyLCD::printDateSuffix(byte day_of_month)
 
 //MyLCD private methods start here
 
-void MyLCD::printState(char const *text)
-{
-    //LCD printing in the upper left 8 characters of the 4x20 display   
-    liquidcrystali2c.setCursor (0,0);
-    print (text);
-}
+
 
 void MyLCD::updateBacklight()
 {
@@ -495,7 +508,8 @@ void Voltmeter::main()
     liquidcrystali2c.setCursor(14, 0);
     liquidcrystali2c.print(mVoltage);
     //print results to serial 
-    myserial.setStatusString("voltage here");
+    Serial.print(mVoltage);
+    Serial.print("V ");
                
    ////Serial.print (stable_voltage); Serial.print ("V "); 
    //if (voltmeter.getVoltage() > voltage_daily_max) { 
@@ -752,13 +766,12 @@ void loop()
         {
             setTime(gRTC_reading.Hour,gRTC_reading.Minute,gRTC_reading.Second,gRTC_reading.Day,gRTC_reading.Month,gRTC_reading.Year-30);
         }
+
+        myserial.printTimestamp();
         voltmeter.main();
-        //();
-        myserial.printStatus();
         myTimer.update();
         mylcd.drawDisplay(); 
         
-        //myPrintDatetoLCDfunction(0, 3);
         myPrintLDRresultsToLCDfunction();
         switch (mystatemachine.getState())
         {
@@ -810,11 +823,11 @@ void loop()
         case MyStateMachine::STATE_INVERTER_COOL_DOWN:
             myStateMachineInverterCooldownfunction();
             break;
-        case MyStateMachine::STATE_ERROR:
         case MyStateMachine::MAX_STATE:
         default:
             break;
         }
+        Serial.println();
         // This code runs at 2:00am 
         if (gRTC_reading.Hour   == 2 &&
             gRTC_reading.Minute == 0 &&
@@ -1347,11 +1360,7 @@ void mysetSunriseSunsetTimesfunction() {
 //===========================================
 void myStateMachineInitSleepStatefunction() {               //state 0
   //================================5.8.2018===
-  //liquidcrystali2c.setCursor(0, 0);
-  //mylcd.print("Sleeping");
-  mylcd.printState("Sleeping");
-  myserial.printState("Sleeping");
-  //initialize relevant pins with redundancy
+  
   digitalWrite (Pin::battery_charger, HIGH);  //battery charger on
   digitalWrite (Pin::inverter, LOW);         //inverter off
   digitalWrite(Pin::stage_one_inverter_relay, LOW);    // relay one off
@@ -1374,9 +1383,6 @@ void myStateMachineSleepStatefunction() {                   //state 1
 //==========================================
 void myStateMachineInitWakeStatefunction() {                //state 2
   //==============================5.8.2018====
-  mylcd.printState("Waking  ");
-  myserial.printState("Waking  ");
-  //initialize relevant pins with redundancy
   digitalWrite (Pin::battery_charger, LOW);   // battery charger off
   digitalWrite (Pin::inverter, LOW);          // inverter off
   digitalWrite(Pin::stage_one_inverter_relay, LOW);      // relay one off
@@ -1407,9 +1413,7 @@ void myStateMachineWakeStatefunction() {                    //state 3
 void myStateMachineInitBalancedStatefunction() {            //state 4
   //===================================5.8.2018===
 
-  mylcd.printState("Balanced");
-  myserial.printState("Balanced");
-  //initialize relevant pins with redundancy
+  
   digitalWrite (Pin::battery_charger, LOW);  //battery charger off
   digitalWrite (Pin::inverter, LOW);         //inverter off
   digitalWrite(Pin::stage_one_inverter_relay, LOW);    // relay one off
@@ -1447,9 +1451,7 @@ void myStateMachineBalancedStatefunction() {                //state 5
 void myStateMachineInitWarmUpInverterStatefunction() {    //state 6
   //===========================================5.8.2018===
   const byte seconds_to_warm_up = 4;
-  mylcd.printState("Warm Up ");
-  myserial.printState("Warm Up ");
-  //initialize relevant pins with redundancy
+  
   digitalWrite (Pin::battery_charger, LOW);  //battery charger off
   digitalWrite (Pin::inverter, HIGH);         //inverter on
   digitalWrite(Pin::stage_one_inverter_relay, LOW);    // relay one off
@@ -1474,10 +1476,7 @@ void myStateMachineWarmUpInverterStatefunction() {        //state 7
 void myStateMachineInitStageOneInverterStatefunction() {    //state 8
   //===========================================5.8.2018===
 
-  const byte  stage_two_switching_delay = 15;  //seconds.  this prevents stage two from engaging too soon
-    mylcd.printState("Invert1 ");
-  myserial.printState("Invert1 ");
-  //initialize relevant pins with redundancy
+  const byte  stage_two_switching_delay = 15;  //seconds.  this prevents stage two from engaging too soon    
   digitalWrite (Pin::battery_charger, LOW);  //battery charger off
   digitalWrite (Pin::inverter, HIGH);         //inverter on
   digitalWrite(Pin::stage_one_inverter_relay, HIGH);    // relay one on
@@ -1515,9 +1514,6 @@ void myStateMachineStageOneInverterStatefunction() {        //state 9
 //======================================================
 void myStateMachineInitStageTwoInverterStatefunction() {    //state 10
   //==============================5.8.2018================
-  mylcd.printState("Invert2 ");
-  myserial.printState("Invert2 ");
-  //initialize relevant pins with redundancy
   digitalWrite (Pin::battery_charger, LOW);  //battery charger off
   digitalWrite (Pin::inverter, HIGH);         //inverter on
   digitalWrite(Pin::stage_one_inverter_relay, HIGH);    // relay one on
@@ -1548,9 +1544,6 @@ void myStateMachineStageTwoInverterStatefunction() {        //state 11
 //================================================
 void myStateMachineInitDaytimeChargingfunction() {    //state 12
   //====================================5.11.2018===
-  mylcd.printState("Charging");
-  myserial.printState("Charging");
-  //initialize relevant pins with redundancy
   digitalWrite (Pin::battery_charger, HIGH);  //battery charger on
   digitalWrite (Pin::inverter, LOW);         //inverter off
   digitalWrite(Pin::stage_one_inverter_relay, LOW);    // relay one off
@@ -1574,10 +1567,6 @@ void myStateMachineInitInverterCooldownfunction() {    //state 14
   //====================================5.11.2018===
 
   byte inverter_cooldown_time = 30;  //seconds
-
-  mylcd.printState("Cooldown");
-  myserial.printState("Cooldown");
-  //initialize relevant pins with redundancy
   digitalWrite (Pin::battery_charger, LOW);  //battery charger off
   digitalWrite (Pin::inverter, LOW);         //inverter off
   digitalWrite(Pin::stage_one_inverter_relay, LOW);    // relay one off
