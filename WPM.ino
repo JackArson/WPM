@@ -451,8 +451,13 @@ private: //variables
         {"Mathew",       12, 17, 1995, EVENTTYPE_BIRTHDAY},     //21
         {"Christmas",    12, 25, 0,    EVENTTYPE_HOLIDAY}       //22
     };
+private: //variables continued
+    byte mQtyImportantDatesToReport              {};
+    byte mDatesToReportList[QTY_IMPORTANT_DATES] {};
+    //mDatesToReportList array is large enough to hold all events
 public:  //methods
-        byte getWeekNumber (tmElements_t date);
+    byte getWeekNumber     (tmElements_t date);
+    void loadImportantDates();
 
 }calendar;
 
@@ -473,6 +478,61 @@ byte Calendar::getWeekNumber(tmElements_t date)
     const time_t week_number {seconds_since_start_of_year / seconds_in_a_week};
     return (week_number);
 }
+
+void Calendar::loadImportantDates()
+{
+    //load all events in the next two weeks
+    const int search_window_days {14};
+    const int search_window_secs {search_window_days * SECS_PER_DAY}; 
+    for (int i = 0; i < QTY_IMPORTANT_DATES; i++)
+    {
+        //build anniversary date of event
+        tmElements_t event_anniversary {};
+        //clear Hours, Minutes, Seconds
+        event_anniversary.Hour   = 0;
+        event_anniversary.Minute = 0;
+        event_anniversary.Second = 0;
+        //align year
+        event_anniversary.Year   = gRTC_reading.Year;
+        //get day and month
+        event_anniversary.Day    = importantdatelist[i].day;
+        event_anniversary.Month  = importantdatelist[i].month;
+        //convert tmElements_t to time_t
+        time_t event = makeTime(event_anniversary);
+        //see if date is in search window
+        if (event > now() && event <= now() + search_window_secs)
+        {
+            Serial.print(" detected ");
+            Serial.println(importantdatelist[i].text);
+        }
+        
+    }
+    //TimeElements  record_date = gRTC_reading;
+    //TimeElements  reference_date = gRTC_reading;
+    //record_date.Year = gRTC_reading.Year - 30;        //*year error correction
+    //reference_date.Year = gRTC_reading.Year - 30;
+    //// check for events ocurring from now till the end of the scan window
+    //for (byte x = 0; x < QTY_IMPORTANT_DATES; x++)
+    //{
+      //record_date.Month = important_dates_month_array[x];
+      //record_date.Day = important_dates_day_array[x];      
+      //record_zipped_time = makeTime(record_date) / seconds_in_a_day;
+      //now_zipped_time = makeTime(reference_date) / seconds_in_a_day;
+      //if (record_zipped_time - now_zipped_time <= scan_window) {
+        ////flag the first two records of the next scan_window
+        //if (!message_loaded [1]){
+          //reminder_message_pointer [1] = x;
+          //message_loaded [1] = true;
+        //} else {
+          //if (!message_loaded [2]){
+            //reminder_message_pointer [2] = x;
+            //message_loaded [2] = true;
+          //}
+        //}
+        
+}
+
+//==end of Calendar==========================================================================
 
 namespace Pin
 {                              
@@ -725,7 +785,7 @@ const unsigned long seconds_in_a_week = 604800;
 void myClearMessageBoardfunction();
 boolean myIsItDaylightfunction();
 boolean myIsItDeltaTimePastDawnfunction();
-void myLoadUpcomingEventsfunction();
+//void myLoadUpcomingEventsfunction();
 void myMessageManagerfunction();
 void myMessageInverterRunTimefunction();
 void myMessageReminderfunction();
@@ -768,10 +828,9 @@ void setup()
     Wire.begin();                      // start the Wire library
     liquidcrystali2c.begin(20, 4);     // start the LiquidCrystal_I2C library
     myserial.testClock();
-    voltmeter.getVoltage();
+    voltmeter.readVoltage();
     voltmeter.initDailyStatistics();
-    //solar_week_number = myCalculateWeekNumberfunction(gRTC_reading);
-    myLoadUpcomingEventsfunction();
+    calendar.loadImportantDates();
     mysetSunriseSunsetTimesfunction();
     //set pins  
     pinMode (Pin::inverter, OUTPUT);
@@ -874,7 +933,7 @@ void loop()
             ////voltage_daily_min = voltmeter.getVoltage();
             //todays_low_voltage_timestamp = gRTC_reading;
             //solar_week_number = myCalculateWeekNumberfunction(gRTC_reading); //to read duskdawn data tables
-            myLoadUpcomingEventsfunction();
+            calendar.loadImportantDates();
             mysetSunriseSunsetTimesfunction();  
         }
         //This code only runs if MessageManager sets the message_manager_timestamp 
@@ -955,56 +1014,7 @@ boolean myIsItDeltaTimePastDawnfunction() {
   }
 }
 
-//-------------------------------
-void myLoadUpcomingEventsfunction(){
-//-------------------------------
-   
-   byte scan_window = 14; // get records this many days from today
-   
-   long unsigned      seconds_in_a_day = 86400;
-   long unsigned      record_zipped_time;
-   long unsigned      now_zipped_time;
-   message_loaded [1] = false;
-   message_loaded [2] = false;
-   
-   TimeElements  record_date = gRTC_reading;
-   TimeElements  reference_date = gRTC_reading;
-   record_date.Year = gRTC_reading.Year - 30;        //*year error correction
-   reference_date.Year = gRTC_reading.Year - 30;
-   // check for events ocurring from now till the end of the scan window
-   for (byte x = 0; x < QTY_IMPORTANT_DATES; x++)
-   {
-      record_date.Month = important_dates_month_array[x];
-      record_date.Day = important_dates_day_array[x];      
-      record_zipped_time = makeTime(record_date) / seconds_in_a_day;
-      now_zipped_time = makeTime(reference_date) / seconds_in_a_day;
-      if (record_zipped_time - now_zipped_time <= scan_window) {
-        //flag the first two records of the next scan_window
-        if (!message_loaded [1]){
-          reminder_message_pointer [1] = x;
-          message_loaded [1] = true;
-        } else {
-          if (!message_loaded [2]){
-            reminder_message_pointer [2] = x;
-            message_loaded [2] = true;
-          }
-        }
-        
-        //print record
-        //Serial.print (important_dates_string_array[x]);
-        //Serial.print (" - ");
-        //Serial.print (important_dates_month_array[x]);
-        //Serial.print (" - ");
-        //Serial.print (important_dates_day_array[x]);
-        //Serial.print (" - reminder_message_pointer [1] = ");
-        //Serial.println (reminder_message_pointer [1]);
-        //Serial.print (" - reminder_message_pointer [2] = ");
-        //Serial.println (reminder_message_pointer[2]);
 
-      }  
-   }
-                                               
-}
 //===============================
 void myMessageManagerfunction() {
 //=========rewritten 12.3.2017====
