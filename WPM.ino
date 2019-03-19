@@ -482,8 +482,9 @@ byte Calendar::getWeekNumber(tmElements_t date)
 void Calendar::loadImportantDates()
 {
     //load all events in the next two weeks
-    const int search_window_days {14};
-    const int search_window_secs {search_window_days * SECS_PER_DAY}; 
+    const time_t search_window_days {14};
+    const time_t seconds_in_a_day   {86400};
+    const time_t search_window_secs {search_window_days * seconds_in_a_day}; 
     for (int i = 0; i < QTY_IMPORTANT_DATES; i++)
     {
         //build anniversary date of event
