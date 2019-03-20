@@ -14,9 +14,7 @@ tmElements_t       gLast_RTC_reading;
 
 //all caps indicate a COMPILE TIME CONSTANT 
 const byte QTY_IMPORTANT_DATES = 22;  //this must be initialized in global space instead
-                                      //of inside Calendar.  Also compiler won't allow
-                                      //constexpr here.  That would have been a better,
-                                      //more specific description
+                                      //of inside Calendar.  
 class Calendar
 {
 public:
@@ -68,17 +66,58 @@ private: //variables
         {"Mathew",       12, 17, 1995, EVENTTYPE_BIRTHDAY},     //21
         {"Christmas",    12, 25, 0,    EVENTTYPE_HOLIDAY}       //22
     };
+    const char* mDaySuffix[4] = {"st", "nd", "rd", "th"};
 private: //variables continued
     byte mQtyImportantDatesToReport              {};
     byte mDatesToReportList[QTY_IMPORTANT_DATES] {};
     //mDatesToReportList array is large enough to hold all events
 public:  //methods
+    
+    const char* getDaySuffix      (byte day_number);     
     const char* getMonthShortName (const byte month_number);
     byte        getWeekNumber     (tmElements_t date);
     void        loadImportantDates();
     void        serialPrintImportantDate(const ImportantDate importantdate);
 
 }calendar;
+
+const char* Calendar::getDaySuffix(byte day_number)
+{
+    //test if number is in range
+    if (day_number < 0 || day_number > 31)
+    {
+        Serial.print  (F("Calendar::printDateSuffix:  received parameter of "));
+        Serial.print  (day_number);
+        Serial.println(F(", but it should be between 1 - 31"));
+        return mDaySuffix[3];
+    }
+    //any number over 20 should be reduced by tens until it is 10 or less
+    if (day_number >= 20)
+    {
+        while (day_number > 10)
+        {
+            day_number -= 10;
+        }
+    }
+    //day_of_month should now be between 1 and 10
+    if (day_number == 1)
+    {
+        //mDaySuffix[4] = {"st", "nd", "rd", "th"}
+        return mDaySuffix[0];
+    }
+    else if (day_number == 2)
+    {
+        return mDaySuffix[1];
+    }
+    else if (day_number == 3)
+    {
+        return mDaySuffix[2];
+    }
+    else
+    {
+        return mDaySuffix[3];
+    }
+}
 
 const char* Calendar::getMonthShortName(const byte month_number)
 {
@@ -136,9 +175,9 @@ void Calendar::loadImportantDates()
 void Calendar::serialPrintImportantDate(const ImportantDate importantdate)
 {
     //print the information to the serial monitor
-    Serial.println();
+    //Serial.println();
     Serial.print("Calendar::loadImportantDates: Detected ");
-    Serial.println(importantdate.text);
+    Serial.print(importantdate.text);
     switch (importantdate.event_type)
     {
     case EVENTTYPE_ANNIVERSARY:
@@ -158,7 +197,7 @@ void Calendar::serialPrintImportantDate(const ImportantDate importantdate)
         Serial.print(" event error ");
         break;
     };
-    Serial.print(" on ");
+    Serial.print("on ");
     const byte month_number  {importantdate.month};
     const char *month_string_ptr {getMonthShortName(month_number)};
     Serial.print(month_string_ptr);
@@ -408,45 +447,11 @@ void MyLCD::print(const byte numeral)
 
 void MyLCD::printDateSuffix(byte day_of_month)
 {
-    //test if number is in range
-    if (day_of_month < 0 || day_of_month > 31)
-    {
-        Serial.print  (F("myLCD::printDateSuffix:  received parameter of "));
-        Serial.print  (day_of_month);
-        Serial.println(F(", but it should be between 1 - 31"));
-        return;
-    }
-    //any number over 20 should be reduced by tens until it is 10 or less
-    if (day_of_month >= 20)
-    {
-        while (day_of_month > 10)
-        {
-            day_of_month = day_of_month -10;
-        }
-    }
-    //day_of_month should be between 1 and 10
-    if (day_of_month == 1)
-    {
-        liquidcrystali2c.print("st");
-    }
-    else if (day_of_month == 2)
-    {
-
-        liquidcrystali2c.print("nd");
-    }
-    else if (day_of_month == 3)
-    {
-        liquidcrystali2c.print("rd");
-    }
-    else
-    {
-        liquidcrystali2c.print("th");
-    }
+    const char *suffix {calendar.getDaySuffix(day_of_month)};
+    liquidcrystali2c.print(suffix);
 }
 
 //MyLCD private methods start here
-
-
 
 void MyLCD::updateBacklight()
 {
