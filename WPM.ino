@@ -284,7 +284,7 @@ void  MyStateMachine::setState(State state)
         liquidcrystali2c.print("Invert1 ");
         break;
     case STATE_INVERTER_STAGE_TWO:
-        finish_string = "stage one inverter";
+        finish_string = "stage two inverter";
         liquidcrystali2c.print("Invert2 ");
         break;
     case STATE_DAY_CHARGE:
