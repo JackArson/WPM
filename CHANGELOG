@@ -136,3 +136,4 @@ idea:  a function that takes these parameters (min/max voltage allowable time mi
 03-19-19-19:07 calendar.loadImportantDates() bugfix
 03-20-19-09:43 Calendar::serialPrintImportantDate
 03-20-19-10:07 Calendar::getDaySuffix
+03-20-19-18:34 MessageManager::main()

@@ -91,7 +91,9 @@ const char* Calendar::getDaySuffix(byte day_number)
         Serial.println(F(", but it should be between 1 - 31"));
         return mDaySuffix[3];
     }
-    //any number over 20 should be reduced by tens until it is 10 or less
+    //Isolate the teens and be sure they get 'th' suffix (11th 12th 13th)
+    //The non-teen 1, 2, 3,s get their special suffix (2nd, 22nd, 31st) 
+    //Therefore, any number over 20 should be reduced by tens until it is 10 or less
     if (day_number >= 20)
     {
         while (day_number > 10)
@@ -99,7 +101,7 @@ const char* Calendar::getDaySuffix(byte day_number)
             day_number -= 10;
         }
     }
-    //day_of_month should now be between 1 and 10
+    //day_of_month should now be between (1 and 20)
     if (day_number == 1)
     {
         //mDaySuffix[4] = {"st", "nd", "rd", "th"}
@@ -175,7 +177,6 @@ void Calendar::loadImportantDates()
 void Calendar::serialPrintImportantDate(const ImportantDate importantdate)
 {
     //print the information to the serial monitor
-    //Serial.println();
     Serial.print("Calendar::loadImportantDates: Detected ");
     Serial.print(importantdate.text);
     switch (importantdate.event_type)
@@ -203,14 +204,12 @@ void Calendar::serialPrintImportantDate(const ImportantDate importantdate)
     Serial.print(month_string_ptr);
     Serial.print(", ");
     Serial.print(importantdate.day);
+    const char *day_suffix {getDaySuffix(importantdate.day)};
+    Serial.print(day_suffix);
     Serial.println();
 }
 
 //==end of Calendar==========================================================================
-
-
-
-//==================================================================================================================
 
 class MyStateMachine
 {
@@ -307,7 +306,7 @@ void  MyStateMachine::setState(State state)
     }
 }
 
-//==================================================================================================================
+//==end of MyStateMachine====================================================================
 
 class MySerial
 {
@@ -322,7 +321,7 @@ public:
     void sprint(const byte numeral);
     void sprint(const int numeral);
     void sprint(const float numeral);
-    void testClock();
+    void setClock();
 private: //methods
     
     //void print
@@ -373,11 +372,16 @@ void MySerial::printTimestamp()
    Serial.print("  ");
 }
 
-void MySerial::testClock()
+void MySerial::setClock()
 {
     if (RTC.read(gRTC_reading))
     {
-        setTime (gRTC_reading.Hour,gRTC_reading.Minute,gRTC_reading.Second,gRTC_reading.Day,gRTC_reading.Month,gRTC_reading.Year-30); // -30 years correction WTF?
+        setTime (gRTC_reading.Hour,
+                 gRTC_reading.Minute,
+                 gRTC_reading.Second,
+                 gRTC_reading.Day,
+                 gRTC_reading.Month,
+                 gRTC_reading.Year - 30);
     }
     else
     {
@@ -607,6 +611,8 @@ void Voltmeter::main()
     //print results to LCD
     liquidcrystali2c.setCursor(14, 0);
     liquidcrystali2c.print(mVoltage);
+    liquidcrystali2c.setCursor(19, 0);
+    liquidcrystali2c.print("V");
     //print results to serial 
     Serial.print(mVoltage);
     Serial.print("V ");
@@ -615,13 +621,13 @@ void Voltmeter::main()
     { 
         mMax.voltage   = mVoltage;
         mMax.timestamp = gRTC_reading;
-        Serial.print(" new daily high just set ");
+        Serial.print(" New daily high just set.");
     }
     if (mVoltage < mMin.voltage)
     {
         mMin.voltage   = mVoltage; 
         mMin.timestamp = gRTC_reading;
-        Serial.print(" new daily low just set ");
+        Serial.print(" New daily low just set.");
     }   
 }
 
@@ -739,8 +745,33 @@ void Voltmeter::readVoltage()
     {
         mVoltage -= max_deviation;
     }
-}    
-  
+}
+
+//==end of Voltmeter=========================================================================
+
+class MessageManager
+{
+private: //variables
+    time_t       mNextMessageTimestamp  {0};
+    const time_t mMessageDuration       {5000}; //milliseconds
+public:  //methods
+    void main();
+}messagemanager;
+
+void MessageManager::main()
+{
+    if (mNextMessageTimestamp <= millis())
+    { 
+        //set up delay for next message
+        mNextMessageTimestamp += mMessageDuration;
+        Serial.println("MessageManager::main:  Delay Test");
+    }
+}
+
+
+//==end of MessageManager====================================================================
+
+
 
 // 2                      3                      4                     5                       6                       7                      8                     9                      10                     11                     12                     13                     14                     15                     16                     17                      18                     19                     20                      21                     22
 byte  number_of_records_to_scan = 23;      // "12345678901234567890","12345678901234567890","12345678901234567890","12345678901234567890","12345678901234567890",,"12345678901234567890","12345678901234567890","12345678901234567890","12345678901234567890","12345678901234567890","12345678901234567890","12345678901234567890","12345678901234567890","12345678901234567890","12345678901234567890","12345678901234567890","12345678901234567890","12345678901234567890","12345678901234567890","12345678901234567890","12345678901234567890","12345678901234567890"     
@@ -856,7 +887,7 @@ void setup()
     Serial.begin(250000);              // start the serial monitor
     Wire.begin();                      // start the Wire library
     liquidcrystali2c.begin(20, 4);     // start the LiquidCrystal_I2C library
-    myserial.testClock();
+    myserial.setClock();
     voltmeter.readVoltage();
     voltmeter.initDailyStatistics();
     calendar.loadImportantDates();
@@ -883,16 +914,15 @@ void loop()
     if (gLast_RTC_reading.Second != gRTC_reading.Second) 
     {
         gLast_RTC_reading = gRTC_reading;  //set up 1000ms delay for the next loop
-        if (RTC.read(gRTC_reading)) //gathered by reference
+        if (RTC.read(gRTC_reading))        //gathered by reference
         {
             setTime(gRTC_reading.Hour,gRTC_reading.Minute,gRTC_reading.Second,gRTC_reading.Day,gRTC_reading.Month,gRTC_reading.Year-30);
         }
-
         myserial.printTimestamp();
         voltmeter.main();
         myTimer.update();
         mylcd.drawDisplay(); 
-        
+        messagemanager.main();
         myPrintLDRresultsToLCDfunction();
         switch (mystatemachine.getState())
         {
@@ -957,19 +987,13 @@ void loop()
             //mystatemachine.setState(MyStateMachine::STATE_INIT_SLEEP);  //make sure machine is sleeping (redundant)
             inverter_run_time  = 0;
             voltmeter.initDailyStatistics();
-            //voltage_daily_max = voltmeter.getVoltage(); 
-            //todays_high_voltage_timestamp = gRTC_reading;
-            ////voltage_daily_min = voltmeter.getVoltage();
-            //todays_low_voltage_timestamp = gRTC_reading;
+            
             //solar_week_number = myCalculateWeekNumberfunction(gRTC_reading); //to read duskdawn data tables
             calendar.loadImportantDates();
             mysetSunriseSunsetTimesfunction();  
         }
-        //This code only runs if MessageManager sets the message_manager_timestamp 
-        if ((long unsigned)(message_manager_timestamp) <= millis())
-        { 
-            myMessageManagerfunction(); 
-        }
+        
+        
     Serial.println();
     }
 }
