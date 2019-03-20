@@ -9,6 +9,168 @@ LiquidCrystal_I2C  liquidcrystali2c(0x27, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);
 //globals
 tmElements_t       gRTC_reading;
 tmElements_t       gLast_RTC_reading;
+
+
+
+//all caps indicate a COMPILE TIME CONSTANT 
+const byte QTY_IMPORTANT_DATES = 22;  //this must be initialized in global space instead
+                                      //of inside Calendar.  Also compiler won't allow
+                                      //constexpr here.  That would have been a better,
+                                      //more specific description
+class Calendar
+{
+public:
+    enum EventType
+    {
+        EVENTTYPE_ANNIVERSARY,
+        EVENTTYPE_BIRTHDAY,
+        EVENTTYPE_APPOINTMENT,
+        EVENTTYPE_HOLIDAY,
+        MAX_EVENTTYPE 
+    };
+    struct ImportantDate
+    {
+        const char *text;
+        byte        month;
+        byte        day;
+        int         year;
+        EventType   event_type; 
+    };
+    
+private: //variables
+    const char* mMonthShortName[12] = {"Jan", "Feb", "Mar", "Apr",
+                                       "May", "Jun", "Jul", "Aug",
+                                       "Sep", "Oct", "Nov", "Dec"};
+    //this compiler can't set array length so QTY_IMPORTANT_DATES (right above
+    //this class) must be manually counted and set.     
+    const ImportantDate importantdatelist[QTY_IMPORTANT_DATES] = 
+    {
+        {"Kathy",         1,  7, 1967, EVENTTYPE_BIRTHDAY},     //1
+        {"Jack(cat)",     2,  6, 2011, EVENTTYPE_BIRTHDAY},     //2
+        {"Katrina",       2,  9, 2000, EVENTTYPE_BIRTHDAY},     //3
+        {"Alan",          2, 10, 1993, EVENTTYPE_BIRTHDAY},     //4
+        {"Jack(dog)",     2, 27, 2012, EVENTTYPE_BIRTHDAY},     //5
+        {"Joshua",        3, 23, 1993, EVENTTYPE_BIRTHDAY},     //6
+        {"Dad",           3, 30, 1943, EVENTTYPE_BIRTHDAY},     //7
+        {"Christopher",   4,  3, 1990, EVENTTYPE_BIRTHDAY},     //8
+        {"Jon",           4, 15, 1968, EVENTTYPE_BIRTHDAY},     //9
+        {"Mena",          4, 24, 1972, EVENTTYPE_BIRTHDAY},     //10
+        {"Jacob",         4, 26, 2005, EVENTTYPE_BIRTHDAY},     //11
+        {"Elizabeth",     4, 29, 2000, EVENTTYPE_BIRTHDAY},     //12
+        {"Aunt Helen",    5, 23, 1946, EVENTTYPE_BIRTHDAY},     //13
+        {"Aunt Julie",    5, 31, 1942, EVENTTYPE_BIRTHDAY},     //14
+        {"Paul and Mena", 6, 29, 1991, EVENTTYPE_ANNIVERSARY},  //15
+        {"Cersei",        6, 15, 2015, EVENTTYPE_BIRTHDAY},     //16
+        {"Mom and Dad",   9,  7, 1963, EVENTTYPE_ANNIVERSARY},  //17
+        {"Paul",          9, 24, 1969, EVENTTYPE_BIRTHDAY},     //18
+        {"Mom",          10, 23, 1943, EVENTTYPE_BIRTHDAY},     //19
+        {"Erik",         12,  4, 1999, EVENTTYPE_BIRTHDAY},     //20
+        {"Mathew",       12, 17, 1995, EVENTTYPE_BIRTHDAY},     //21
+        {"Christmas",    12, 25, 0,    EVENTTYPE_HOLIDAY}       //22
+    };
+private: //variables continued
+    byte mQtyImportantDatesToReport              {};
+    byte mDatesToReportList[QTY_IMPORTANT_DATES] {};
+    //mDatesToReportList array is large enough to hold all events
+public:  //methods
+    const char* getMonthShortName (const byte month_number);
+    byte        getWeekNumber     (tmElements_t date);
+    void        loadImportantDates();
+    void        serialPrintImportantDate(const ImportantDate importantdate);
+
+}calendar;
+
+const char* Calendar::getMonthShortName(const byte month_number)
+{
+    return mMonthShortName[month_number];
+}
+
+byte Calendar::getWeekNumber(tmElements_t date)
+{
+    //convert date to the first moment of the year
+    date.Hour   = 0;
+    date.Minute = 0;
+    date.Second = 0;
+    date.Day    = 0;
+    date.Month  = 0;
+    //convert first moment of the year to unix time
+    const time_t year_start {makeTime(date)};
+    //how many seconds have elapsed since the year began?
+    const time_t seconds_since_start_of_year {now() - year_start};
+    //divide by seconds in a week to compute week number
+    const time_t seconds_in_a_week {604800};
+    const time_t week_number {seconds_since_start_of_year / seconds_in_a_week};
+    return (week_number);
+}
+
+void Calendar::loadImportantDates()
+{
+    //load all events in the next two weeks
+    const time_t search_window_days {14};
+    const time_t seconds_in_a_day   {86400};
+    const time_t search_window_secs {search_window_days * seconds_in_a_day}; 
+    for (int i = 0; i < QTY_IMPORTANT_DATES; i++)
+    {
+        //build anniversary date of event
+        tmElements_t event_anniversary {};
+        //clear Hours, Minutes, Seconds
+        event_anniversary.Hour   = 0;
+        event_anniversary.Minute = 0;
+        event_anniversary.Second = 0;
+        //align year
+        event_anniversary.Year   = gRTC_reading.Year;
+        //get day and month
+        event_anniversary.Day    = importantdatelist[i].day;
+        event_anniversary.Month  = importantdatelist[i].month;
+        //convert tmElements_t to time_t
+        time_t event = makeTime(event_anniversary);
+        //see if date is in search window
+        if (event > now() && event <= now() + search_window_secs)
+        {
+            serialPrintImportantDate(importantdatelist[i]);
+            
+        }
+    }
+}
+
+void Calendar::serialPrintImportantDate(const ImportantDate importantdate)
+{
+    //print the information to the serial monitor
+    Serial.println();
+    Serial.print("Calendar::loadImportantDates: Detected ");
+    Serial.println(importantdate.text);
+    switch (importantdate.event_type)
+    {
+    case EVENTTYPE_ANNIVERSARY:
+        Serial.print(" anniversary ");
+        break;
+    case EVENTTYPE_BIRTHDAY:
+        Serial.print(" birthday ");
+        break;
+    case EVENTTYPE_APPOINTMENT:
+        Serial.print(" appointment ");
+        break;
+    case EVENTTYPE_HOLIDAY:
+        Serial.print(" holiday ");
+        break;
+    case MAX_EVENTTYPE:
+    default:
+        Serial.print(" event error ");
+        break;
+    };
+    Serial.print(" on ");
+    const byte month_number  {importantdate.month};
+    const char *month_string_ptr {getMonthShortName(month_number)};
+    Serial.print(month_string_ptr);
+    Serial.print(", ");
+    Serial.print(importantdate.day);
+    Serial.println();
+}
+
+//==end of Calendar==========================================================================
+
+
+
 //==================================================================================================================
 
 class MyStateMachine
@@ -344,10 +506,7 @@ void MyLCD::printDate(const Coordinant coordinant)
     liquidcrystali2c.setCursor(coordinant.x, coordinant.y); 
     print(dayShortStr(weekday()));
     print (", ");
-    const char* month_short_name[12] = {"Jan", "Feb", "Mar", "Apr",
-                                        "May", "Jun", "Jul", "Aug",
-                                        "Sep", "Oct", "Nov", "Dec"};
-    print (month_short_name[gRTC_reading.Month-1]);    
+    print (calendar.getMonthShortName(gRTC_reading.Month-1));    
     print(" ");
     print((gRTC_reading.Day));
     print(" ");  //this space to clear last digit when month rolls over (31 to 1) 
@@ -398,142 +557,6 @@ void MyTimer::set(byte x)
 }
 
 
-//all caps indicate a COMPILE TIME CONSTANT 
-const byte QTY_IMPORTANT_DATES = 22;  //this must be initialized in global space instead
-                                      //of inside Calendar.  Also compiler won't allow
-                                      //constexpr here.  That would have been a better,
-                                      //more specific description
-class Calendar
-{
-public:
-    enum EventType
-    {
-        EVENTTYPE_ANNIVERSARY,
-        EVENTTYPE_BIRTHDAY,
-        EVENTTYPE_APPOINTMENT,
-        EVENTTYPE_HOLIDAY,
-        MAX_EVENTTYPE 
-    };
-    struct ImportantDate
-    {
-        const char *text;
-        byte        month;
-        byte        day;
-        int         year;
-        EventType   event_type; 
-    };
-    
-private: //variables
-    //this compiler can't set array length so QTY_IMPORTANT_DATES (right above
-    //this class) must be manually counted and set.     
-    const ImportantDate importantdatelist[QTY_IMPORTANT_DATES] = 
-    {
-        {"Kathy",         1,  7, 1967, EVENTTYPE_BIRTHDAY},     //1
-        {"Jack(cat)",     2,  6, 2011, EVENTTYPE_BIRTHDAY},     //2
-        {"Katrina",       2,  9, 2000, EVENTTYPE_BIRTHDAY},     //3
-        {"Alan",          2, 10, 1993, EVENTTYPE_BIRTHDAY},     //4
-        {"Jack(dog)",     2, 27, 2012, EVENTTYPE_BIRTHDAY},     //5
-        {"Joshua",        3, 23, 1993, EVENTTYPE_BIRTHDAY},     //6
-        {"Dad",           3, 30, 1943, EVENTTYPE_BIRTHDAY},     //7
-        {"Christopher",   4,  3, 1990, EVENTTYPE_BIRTHDAY},     //8
-        {"Jon",           4, 15, 1968, EVENTTYPE_BIRTHDAY},     //9
-        {"Mena",          4, 24, 1972, EVENTTYPE_BIRTHDAY},     //10
-        {"Jacob",         4, 26, 2005, EVENTTYPE_BIRTHDAY},     //11
-        {"Elizabeth",     4, 29, 2000, EVENTTYPE_BIRTHDAY},     //12
-        {"Aunt Helen",    5, 23, 1946, EVENTTYPE_BIRTHDAY},     //13
-        {"Aunt Julie",    5, 31, 1942, EVENTTYPE_BIRTHDAY},     //14
-        {"Paul and Mena", 6, 29, 1991, EVENTTYPE_ANNIVERSARY},  //15
-        {"Cersei",        6, 15, 2015, EVENTTYPE_BIRTHDAY},     //16
-        {"Mom and Dad",   9,  7, 1963, EVENTTYPE_ANNIVERSARY},  //17
-        {"Paul",          9, 24, 1969, EVENTTYPE_BIRTHDAY},     //18
-        {"Mom",          10, 23, 1943, EVENTTYPE_BIRTHDAY},     //19
-        {"Erik",         12,  4, 1999, EVENTTYPE_BIRTHDAY},     //20
-        {"Mathew",       12, 17, 1995, EVENTTYPE_BIRTHDAY},     //21
-        {"Christmas",    12, 25, 0,    EVENTTYPE_HOLIDAY}       //22
-    };
-private: //variables continued
-    byte mQtyImportantDatesToReport              {};
-    byte mDatesToReportList[QTY_IMPORTANT_DATES] {};
-    //mDatesToReportList array is large enough to hold all events
-public:  //methods
-    byte getWeekNumber     (tmElements_t date);
-    void loadImportantDates();
-
-}calendar;
-
-byte Calendar::getWeekNumber(tmElements_t date)
-{
-    //convert date to the first moment of the year
-    date.Hour   = 0;
-    date.Minute = 0;
-    date.Second = 0;
-    date.Day    = 0;
-    date.Month  = 0;
-    //convert first moment of the year to unix time
-    const time_t year_start {makeTime(date)};
-    //how many seconds have elapsed since the year began?
-    const time_t seconds_since_start_of_year {now() - year_start};
-    //divide by seconds in a week to compute week number
-    const time_t seconds_in_a_week {604800};
-    const time_t week_number {seconds_since_start_of_year / seconds_in_a_week};
-    return (week_number);
-}
-
-void Calendar::loadImportantDates()
-{
-    //load all events in the next two weeks
-    const time_t search_window_days {14};
-    const time_t seconds_in_a_day   {86400};
-    const time_t search_window_secs {search_window_days * seconds_in_a_day}; 
-    for (int i = 0; i < QTY_IMPORTANT_DATES; i++)
-    {
-        //build anniversary date of event
-        tmElements_t event_anniversary {};
-        //clear Hours, Minutes, Seconds
-        event_anniversary.Hour   = 0;
-        event_anniversary.Minute = 0;
-        event_anniversary.Second = 0;
-        //align year
-        event_anniversary.Year   = gRTC_reading.Year;
-        //get day and month
-        event_anniversary.Day    = importantdatelist[i].day;
-        event_anniversary.Month  = importantdatelist[i].month;
-        //convert tmElements_t to time_t
-        time_t event = makeTime(event_anniversary);
-        //see if date is in search window
-        if (event > now() && event <= now() + search_window_secs)
-        {
-            Serial.print(" detected ");
-            Serial.println(importantdatelist[i].text);
-        }
-        
-    }
-    //TimeElements  record_date = gRTC_reading;
-    //TimeElements  reference_date = gRTC_reading;
-    //record_date.Year = gRTC_reading.Year - 30;        //*year error correction
-    //reference_date.Year = gRTC_reading.Year - 30;
-    //// check for events ocurring from now till the end of the scan window
-    //for (byte x = 0; x < QTY_IMPORTANT_DATES; x++)
-    //{
-      //record_date.Month = important_dates_month_array[x];
-      //record_date.Day = important_dates_day_array[x];      
-      //record_zipped_time = makeTime(record_date) / seconds_in_a_day;
-      //now_zipped_time = makeTime(reference_date) / seconds_in_a_day;
-      //if (record_zipped_time - now_zipped_time <= scan_window) {
-        ////flag the first two records of the next scan_window
-        //if (!message_loaded [1]){
-          //reminder_message_pointer [1] = x;
-          //message_loaded [1] = true;
-        //} else {
-          //if (!message_loaded [2]){
-            //reminder_message_pointer [2] = x;
-            //message_loaded [2] = true;
-          //}
-        //}
-        
-}
-
-//==end of Calendar==========================================================================
 
 namespace Pin
 {                              
