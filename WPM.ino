@@ -397,22 +397,39 @@ void MySerial::setClock()
     }
 }
 
+//==end of MySerial=========================================================================
+
 struct Coordinant
 {
     byte x;
     byte y;
 };
 
-//=============================================================================================================
+namespace Pin
+{                              
+    //digital pins
+    const byte light_sensor_one         {2};  //brown   wire lower cable              
+    const byte light_sensor_two         {3};  //orange wire lower cable
+    const byte battery_charger          {11}; //green wire upper cable  
+    const byte inverter                 {5};  //blue wire upper cable
+    const byte workbench_lighting       {10}; //purple wire upper cable* too fast PWM
+    const byte stage_one_inverter_relay {8};  //A
+    const byte stage_two_inverter_relay {9};  //S
+    //analog pins
+    const byte voltage_divider          {A0}; //green  wire lower cable
+    const byte potentiometer            {A1}; //yellow wire
+}
+
+//==end of namespace Pin======================================================================
+
+class MyLCD
+{
+
 //  01234567890123456789 20 x 4        LCD Display
 //0|Charging15 SA 13.02v               The number next to 'Charging' is a state change timer
 //1|  message display                  'S' indicates 'S'ummer sensor is detecting light
 //2|       box                         'A' indicates 'A'utumn sensor is detecting light
 //3|Wed, Mar 15 *11:53am               '*' before clock indicates daylight savings time active
-
-
-class MyLCD
-{
 
 private: //variables
     
@@ -426,6 +443,7 @@ public:  // <-make this private when old public references are removed
                           const Coordinant   coordinant,
                           const bool         right_justify);
     void printDate       (const Coordinant   coordinant);
+    void printLDRresults ();
     void updateBacklight ();
 }mylcd;
 
@@ -437,6 +455,8 @@ void MyLCD::drawDisplay()
     printClock(gRTC_reading, coordinant, right_justify);
     coordinant = {0, 3};
     printDate(coordinant);
+    printLDRresults();
+    //myPrintLDRresultsToLCDfunction();
 }
 
 void MyLCD::print(const char *string_ptr)
@@ -456,6 +476,28 @@ void MyLCD::printDateSuffix(byte day_of_month)
 }
 
 //MyLCD private methods start here
+
+void MyLCD::printLDRresults()
+{
+    liquidcrystali2c.setCursor (11,0);
+    if (digitalRead(Pin::light_sensor_one))
+    { 
+        liquidcrystali2c.print("A");
+    }
+    else
+    {
+        liquidcrystali2c.print(" ");
+    }
+
+    if (digitalRead(Pin::light_sensor_two))
+    {
+        liquidcrystali2c.print("S");
+    }
+    else
+    {
+        liquidcrystali2c.print(" ");
+    }
+}
 
 void MyLCD::updateBacklight()
 {
@@ -523,26 +565,26 @@ void MyLCD::printDate(const Coordinant coordinant)
 
 //=========================================================================================================
 
-class MyTimer
+class CoundownTimer
 {
 private:
     byte mCounter;
   public:
-    MyTimer();
+    CoundownTimer();
     byte getCounter   ();
     void update       ();
     void set          (byte x); 
-}myTimer;
+}coundowntimer;
 
-MyTimer::MyTimer()
+CoundownTimer::CoundownTimer()
 {}
 
-byte MyTimer::getCounter()
+byte CoundownTimer::getCounter()
 {
     return mCounter;
 }
 
-void MyTimer::update()
+void CoundownTimer::update()
 {
     liquidcrystali2c.setCursor(8, 0);
     if(mCounter) //if a countdown is running
@@ -560,27 +602,14 @@ void MyTimer::update()
     }
 }
 
-void MyTimer::set(byte x)
+void CoundownTimer::set(byte x)
 {
     mCounter = x;
 }
 
 
 
-namespace Pin
-{                              
-    //digital pins
-    const byte light_sensor_one         {2};  //brown   wire lower cable              
-    const byte light_sensor_two         {3};  //orange wire lower cable
-    const byte battery_charger          {11}; //green wire upper cable  
-    const byte inverter                 {5};  //blue wire upper cable
-    const byte workbench_lighting       {10}; //purple wire upper cable* too fast PWM
-    const byte stage_one_inverter_relay {8};  //A
-    const byte stage_two_inverter_relay {9};  //S
-    //analog pins
-    const byte voltage_divider          {A0}; //green  wire lower cable
-    const byte potentiometer            {A1}; //yellow wire
-}
+
 
 class Voltmeter
 {
@@ -795,29 +824,7 @@ boolean daylight_savings_time = true; // was false from fall to spring, now tryi
                                       // spring to fall
 
 int  inverter_run_time  = 0;
-//byte power_manager_mode = 0; // 0 = night time, or before first charge
-                             // 1 = balance mode first 14v charge complete, gomode 2 if power drops below 12.6 60s
-                         //                                  gomode 3 if power rises above 13.5 60s
-                         // 2 = aux charger trying to get us to 12.6                                  
-                         // 3 = inverter cycling
 
-
-//float         stable_voltage = 13.4;  // the usable number to be displayed on LCD screen                     
-//float         raw_voltage = 0;            
-//float         voltage_daily_max = 0;
-////float         voltage_daily_min = 15; // initial setting, a number higher than expected nominal voltage
-                            
-////byte          am_pm = 0;
-
-//tmElements_t  todays_low_voltage_timestamp;
-//tmElements_t  todays_high_voltage_timestamp;
-//byte          solar_week_number = 1;
-
-
-
-long unsigned message_manager_timestamp    = millis();
-
-//initializations: do not adjust
 byte          today_sunrise_hour = 0;
 byte          today_sunset_hour = 0;
 byte          today_sunrise_minute = 0;
@@ -825,10 +832,9 @@ byte          today_sunset_minute = 0;
 byte          message_manager_next_message = 1;
 // power manager initializations
 //new
-byte          machine_state = 4;  //initiate balanced state
+//byte          machine_state = 4;  //initiate balanced state
 //old
 byte          inverter_warm_up_timer = 0; //seconds
-int           reusable_countdown_variable = 0;
 int           balance_falling_countdown = 0;
 int           balance_rising_countdown = 0;
 
@@ -914,16 +920,18 @@ void loop()
     if (gLast_RTC_reading.Second != gRTC_reading.Second) 
     {
         gLast_RTC_reading = gRTC_reading;  //set up 1000ms delay for the next loop
-        if (RTC.read(gRTC_reading))        //gathered by reference
+        if (RTC.read(gRTC_reading))        //gRTC_reading is gathered by reference
         {
             setTime(gRTC_reading.Hour,gRTC_reading.Minute,gRTC_reading.Second,gRTC_reading.Day,gRTC_reading.Month,gRTC_reading.Year-30);
         }
+        coundowntimer.update();
+        mylcd.drawDisplay();
+        messagemanager.main();
+        
+        //begin serial report
         myserial.printTimestamp();
         voltmeter.main();
-        myTimer.update();
-        mylcd.drawDisplay(); 
-        messagemanager.main();
-        myPrintLDRresultsToLCDfunction();
+        
         switch (mystatemachine.getState())
         {
         case MyStateMachine::STATE_INIT_SLEEP:
@@ -984,49 +992,17 @@ void loop()
             gRTC_reading.Minute == 0 &&
             gRTC_reading.Second == 0)
         {
-            //mystatemachine.setState(MyStateMachine::STATE_INIT_SLEEP);  //make sure machine is sleeping (redundant)
             inverter_run_time  = 0;
-            voltmeter.initDailyStatistics();
-            
-            //solar_week_number = myCalculateWeekNumberfunction(gRTC_reading); //to read duskdawn data tables
+            voltmeter.initDailyStatistics();            
             calendar.loadImportantDates();
             mysetSunriseSunsetTimesfunction();  
         }
         
         
     Serial.println();
+    //end serial report
     }
 }
-
-
-
-
-
-
-
-////==============================================================
-//byte myCalculateWeekNumberfunction(TimeElements sixpartdate) {
-////==============================================================
-
-   ////get unix time from start of current year by copying a six part date (tm_Elements_t) and zeroing everything but the year.
-   ////then subtract that from the unix time now, then convert to weeks.
-   
-   //long unsigned        longdate;
-   //long unsigned        seconds_since_start_of_year;
-   //const long unsigned  seconds_in_a_week = 604800;
-   //byte                 week_number;
-   
-   //sixpartdate.Hour = 0;
-   //sixpartdate.Minute = 0;
-   //sixpartdate.Second = 0;
-   //sixpartdate.Day = 0;
-   //sixpartdate.Month = 0;
-   //longdate = makeTime (sixpartdate);
-   //seconds_since_start_of_year = (now() - longdate);
-   //week_number = (seconds_since_start_of_year/seconds_in_a_week) + 1;
-   //return (week_number);
-   
-//}
 
 //---------------------------------
 void myClearMessageBoardfunction(){
@@ -1068,43 +1044,43 @@ boolean myIsItDeltaTimePastDawnfunction() {
 }
 
 
-//===============================
-void myMessageManagerfunction() {
-//=========rewritten 12.3.2017====
+////===============================
+//void myMessageManagerfunction() {
+////=========rewritten 12.3.2017====
 
-  if (message_manager_next_message <= 1) {
-    myMessageSunrisefunction();
-    message_manager_timestamp    = millis()+3000; 
-  }
-  if (message_manager_next_message == 2) {
-    myMessageWeekNumberfunction();
-    message_manager_timestamp    = millis()+3000;
-  }   
-  if (message_manager_next_message == 3) {
-    myMessageReminderfunction();
-    message_manager_timestamp    = millis()+3000;
-  }
-  if (message_manager_next_message == 4) {
-    myMessageVoltageDailyHighfunction();
-    message_manager_timestamp    = millis()+6000;
-  }
-  if (message_manager_next_message == 5) { 
-    myMessageInverterRunTimefunction();
-    message_manager_timestamp    = millis()+2000;
-  }
-  if (message_manager_next_message == 6) {
-    myMessageUpcomingEventsfunction(1);
-    message_manager_timestamp    = millis()+3000;
-  }
-  if (message_manager_next_message == 7) {
-    myMessageUpcomingEventsfunction(2);
-    message_manager_timestamp    = millis()+3000;  
-  }
-  message_manager_next_message++;
-  if (message_manager_next_message == 8) {
-    message_manager_next_message = 1;   
-  }
-}
+  //if (message_manager_next_message <= 1) {
+    //myMessageSunrisefunction();
+    //message_manager_timestamp    = millis()+3000; 
+  //}
+  //if (message_manager_next_message == 2) {
+    //myMessageWeekNumberfunction();
+    //message_manager_timestamp    = millis()+3000;
+  //}   
+  //if (message_manager_next_message == 3) {
+    //myMessageReminderfunction();
+    //message_manager_timestamp    = millis()+3000;
+  //}
+  //if (message_manager_next_message == 4) {
+    //myMessageVoltageDailyHighfunction();
+    //message_manager_timestamp    = millis()+6000;
+  //}
+  //if (message_manager_next_message == 5) { 
+    //myMessageInverterRunTimefunction();
+    //message_manager_timestamp    = millis()+2000;
+  //}
+  //if (message_manager_next_message == 6) {
+    //myMessageUpcomingEventsfunction(1);
+    //message_manager_timestamp    = millis()+3000;
+  //}
+  //if (message_manager_next_message == 7) {
+    //myMessageUpcomingEventsfunction(2);
+    //message_manager_timestamp    = millis()+3000;  
+  //}
+  //message_manager_next_message++;
+  //if (message_manager_next_message == 8) {
+    //message_manager_next_message = 1;   
+  //}
+//}
 
 
 
@@ -1274,67 +1250,6 @@ void myMessageWeekNumberfunction() {
    liquidcrystali2c.print (calendar.getWeekNumber(gRTC_reading));   
 }
 
-////---------------------------------------------
-//void myPrintDatetoLCDfunction(byte x, byte y) {
-////--------------------------------------------- 
-   //liquidcrystali2c.setCursor (x,y);
-   //liquidcrystali2c.print(myReturnDayofWeekfunction(weekday() - 1));
-   //liquidcrystali2c.print (", ");
-   //liquidcrystali2c.print (month_short_name[gRTC_reading.Month-1]);    
-   //liquidcrystali2c.print(" ");
-   //liquidcrystali2c.print((gRTC_reading.Day));
-   //liquidcrystali2c.print(" ");  //this space to clear last digit when month rolls over (31 to 1) 
-//}
-//-------------------------------------
-void myPrintLDRresultsToLCDfunction() {
-//-------------------------------------
-   liquidcrystali2c.setCursor (11,0);
-   //Serial.print("Summer: "); Serial.print(analogRead(light_sensor_two)); Serial.print(". ");
-   if (digitalRead(Pin::light_sensor_two)) {
-      liquidcrystali2c.print("S");
-   } else {
-      liquidcrystali2c.print(" ");
-   }     
-   if (digitalRead(Pin::light_sensor_one)) { 
-      liquidcrystali2c.print("A");
-   } else {
-      liquidcrystali2c.print(" ");
-   }     
-}
-
-
-
-////---------------------------------------------   
-//void myPrintTimetoLCDfunction(TimeElements timestamp, byte x, byte y, boolean right_justify) {
-////---------------------------------------------  
-                                      //// x and y are the LCD coordinants where the time is to be printed
-                                      //// x can be 0 to 19
-                                      //// y can be 0 to 3
-   //liquidcrystali2c.setCursor (x,y);                                      
-   //if ((timestamp.Hour) >= 12) {      
-      //am_pm = 12;
-   //} else {                           // set am_pm variable
-      //am_pm = 0;
-   //} 
-   //if ((timestamp.Hour) == 12 || (timestamp.Hour) == 0) {
-      //liquidcrystali2c.print ("12");
-   //} else {
-      //if ((timestamp.Hour)-am_pm < 10 && right_justify) {             
-         //liquidcrystali2c.print (" ");
-      //}
-      //liquidcrystali2c.print ((timestamp.Hour)-(am_pm));
-   //}   
-   //liquidcrystali2c.print(":");
-   //if ((timestamp.Minute) < 10 ) {  
-      //liquidcrystali2c.print ("0");
-   //}  
-   //liquidcrystali2c.print (timestamp.Minute);
-   //if ((timestamp.Hour) >= 12) {
-      //liquidcrystali2c.print("pm");
-   //} else {                          
-      //liquidcrystali2c.print("am");
-   //}                                      
-//}
 //----------------------------------------------------
 void myPrintVoltagetoLCDfunction(int x,int y,float v){
 //----------------------------------------------------
@@ -1560,7 +1475,7 @@ void myStateMachineInitWarmUpInverterStatefunction() {    //state 6
   digitalWrite (Pin::inverter, HIGH);         //inverter on
   digitalWrite(Pin::stage_one_inverter_relay, LOW);    // relay one off
   digitalWrite(Pin::stage_two_inverter_relay, LOW);    // relay two off
-  myTimer.set(seconds_to_warm_up);
+  coundowntimer.set(seconds_to_warm_up);
   mystatemachine.setState(MyStateMachine::STATE_INVERTER_WARM_UP);
 }
 
@@ -1570,7 +1485,7 @@ void myStateMachineInitWarmUpInverterStatefunction() {    //state 6
 void myStateMachineWarmUpInverterStatefunction() {        //state 7
   //=======================================5.8.2018===
 
-  if (myTimer.getCounter()) {    //warming up during countdown
+  if (coundowntimer.getCounter()) {    //warming up during countdown
     return;
   }
   mystatemachine.setState(MyStateMachine::STATE_INIT_INVERTER_STAGE_ONE);
@@ -1585,7 +1500,7 @@ void myStateMachineInitStageOneInverterStatefunction() {    //state 8
   digitalWrite (Pin::inverter, HIGH);         //inverter on
   digitalWrite(Pin::stage_one_inverter_relay, HIGH);    // relay one on
   digitalWrite(Pin::stage_two_inverter_relay, LOW);    // relay two off
-  myTimer.set(stage_two_switching_delay);
+  coundowntimer.set(stage_two_switching_delay);
   mystatemachine.setState(MyStateMachine::STATE_INVERTER_STAGE_ONE);
 }
 
@@ -1603,7 +1518,7 @@ void myStateMachineStageOneInverterStatefunction() {        //state 9
     return;
   }
 
-  if (voltmeter.getVoltage() >= voltage_to_switch_to_stage_two && !myTimer.getCounter()) {
+  if (voltmeter.getVoltage() >= voltage_to_switch_to_stage_two && !coundowntimer.getCounter()) {
     mystatemachine.setState(MyStateMachine::STATE_INIT_INVERTER_STAGE_TWO);  //initiate stage two inverter
     return;
   }
@@ -1675,7 +1590,7 @@ void myStateMachineInitInverterCooldownfunction() {    //state 14
   digitalWrite (Pin::inverter, LOW);         //inverter off
   digitalWrite(Pin::stage_one_inverter_relay, LOW);    // relay one off
   digitalWrite(Pin::stage_two_inverter_relay, LOW);    // relay two off
-  myTimer.set(inverter_cooldown_time);
+  coundowntimer.set(inverter_cooldown_time);
   mystatemachine.setState(MyStateMachine::STATE_INVERTER_COOL_DOWN);
 }
 
@@ -1683,7 +1598,7 @@ void myStateMachineInitInverterCooldownfunction() {    //state 14
 void myStateMachineInverterCooldownfunction() {    //state 15
   //====================================5.11.2018===
 
-  if (!myTimer.getCounter()) {
+  if (!coundowntimer.getCounter()) {
     mystatemachine.setState(MyStateMachine::STATE_INIT_BALANCED);  //init balanced
   }
 }
