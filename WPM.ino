@@ -41,7 +41,7 @@ private: //variables
                                        "Sep", "Oct", "Nov", "Dec"};
     //this compiler can't set array length so QTY_IMPORTANT_DATES (right above
     //this class) must be manually counted and set.     
-    const ImportantDate importantdatelist[QTY_IMPORTANT_DATES] = 
+    const ImportantDate mImportantDateList[QTY_IMPORTANT_DATES] = 
     {
         {"Kathy",         1,  7, 1967, EVENTTYPE_BIRTHDAY},     //1
         {"Jack(cat)",     2,  6, 2011, EVENTTYPE_BIRTHDAY},     //2
@@ -73,12 +73,13 @@ private: //variables continued
     //mDatesToReportList array is large enough to hold all events
 public:  //methods
     
-    const char* getDaySuffix            (byte day_number);     
-    const char* getMonthShortName       (const byte month_number);
-    byte        getWeekNumber           (tmElements_t date);
-    byte        getQtyImportantDates    ();
-    void        loadImportantDates      ();
-    void        serialPrintImportantDate(const ImportantDate importantdate);
+    const char*   getDaySuffix            (byte day_number);
+    ImportantDate getImportantDate        (const byte index);     
+    const char*   getMonthShortName       (const byte month_number);
+    byte          getWeekNumber           (tmElements_t date);
+    byte          getQtyImportantDates    ();
+    void          loadImportantDates      ();
+    void          serialPrintImportantDate(const ImportantDate importantdate);
 
 }calendar;
 
@@ -120,6 +121,15 @@ const char* Calendar::getDaySuffix(byte day_number)
     {
         return mDaySuffix[3];
     }
+}
+
+Calendar::ImportantDate Calendar::getImportantDate(const byte index)
+{
+    //the caller asks for of the date that was stored in mDatesToReportList
+    //mDatesToReportList is a list of index numbers that refer to items in
+    //mImportantDateList
+    const byte importantdate_index {mDatesToReportList[index]};
+    return mImportantDateList[importantdate_index];
 }
 
 const char* Calendar::getMonthShortName(const byte month_number)
@@ -167,14 +177,14 @@ void Calendar::loadImportantDates()
         //align year
         event_anniversary.Year   = gRTC_reading.Year;
         //get day and month
-        event_anniversary.Day    = importantdatelist[i].day;
-        event_anniversary.Month  = importantdatelist[i].month;
+        event_anniversary.Day    = mImportantDateList[i].day;
+        event_anniversary.Month  = mImportantDateList[i].month;
         //convert tmElements_t to time_t
         time_t event = makeTime(event_anniversary);
         //see if date is in search window
         if (event > now() && event <= now() + search_window_secs)
         {
-            serialPrintImportantDate(importantdatelist[i]);
+            serialPrintImportantDate(mImportantDateList[i]);
             
         }
     }
@@ -787,8 +797,10 @@ void Voltmeter::readVoltage()
 class MessageManager
 {
 private: //variables
+    byte         mCurrentMessageIndex   {0};
     time_t       mNextMessageTimestamp  {0};
     const time_t mMessageDuration       {5000}; //milliseconds
+    const byte   mQtySystemMessages     {0};        
 public:  //methods
     void main();
 }messagemanager;
@@ -799,7 +811,25 @@ void MessageManager::main()
     { 
         //set up delay for next message
         mNextMessageTimestamp += mMessageDuration;
-        Serial.println("MessageManager::main:  Delay Test");
+        //print message
+        if (mCurrentMessageIndex < calendar.getQtyImportantDates()) //calendar message
+        {
+            calendar.getImportantDate(mCurrentMessageIndex);
+        }
+        else //system message
+        {
+            
+        }
+        //adjust index
+        mCurrentMessageIndex++;
+        const byte total_messages {mQtySystemMessages + calendar.getQtyImportantDates()};
+        if (mCurrentMessageIndex == total_messages)
+        {
+            mCurrentMessageIndex = 0;
+        }
+        
+        Serial.print("MessageManager::main  mCurrentMessageIndex is ");
+        Serial.println("mCurrentMessageIndex");
     }
 }
 
