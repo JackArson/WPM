@@ -450,17 +450,19 @@ class MyLCD
 private: //variables
     
 public:
-    void drawDisplay     ();
-    void print           (const char        *string_ptr);
-    void print           (const byte         numeral);
-    void printDateSuffix (const byte         day_of_month);
+    void drawDisplay        ();
+    void print              (const char        *string_ptr);
+    void print              (const byte         numeral);
+    void printDateSuffix    (const byte         day_of_month);
+    void printImportantDate (Calendar::ImportantDate importantdate);
 public:  // <-make this private when old public references are removed
-    void printClock      (const TimeElements time,
-                          const Coordinant   coordinant,
-                          const bool         right_justify);
-    void printDate       (const Coordinant   coordinant);
-    void printLDRresults ();
-    void updateBacklight ();
+    void printClock         (const TimeElements time,
+                             const Coordinant   coordinant,
+                             const bool         right_justify);
+    void printDate          (const Coordinant   coordinant);
+    ;
+    void printLDRresults    ();
+    void updateBacklight    ();
 }mylcd;
 
 void MyLCD::drawDisplay()
@@ -489,6 +491,15 @@ void MyLCD::printDateSuffix(byte day_of_month)
 {
     const char *suffix {calendar.getDaySuffix(day_of_month)};
     liquidcrystali2c.print(suffix);
+}
+
+void MyLCD::printImportantDate(Calendar::ImportantDate importantdate)
+{
+    //clear top line
+    liquidcrystali2c.setCursor(0, 1);
+    liquidcrystali2c.print(F("                    "));
+    liquidcrystali2c.setCursor(0, 1);
+    liquidcrystali2c.print(importantdate.text);
 }
 
 //MyLCD private methods start here
@@ -814,7 +825,11 @@ void MessageManager::main()
         //print message
         if (mCurrentMessageIndex < calendar.getQtyImportantDates()) //calendar message
         {
-            calendar.getImportantDate(mCurrentMessageIndex);
+            Calendar::ImportantDate importantdate {};
+            importantdate = calendar.getImportantDate(mCurrentMessageIndex);
+            mylcd.printImportantDate(importantdate);
+            
+            
         }
         else //system message
         {
