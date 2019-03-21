@@ -842,9 +842,10 @@ void MessageManager::main()
         {
             mCurrentMessageIndex = 0;
         }
-        
+        Serial.print("MessageManager::main  total_messages is ");
+        Serial.println(total_messages);
         Serial.print("MessageManager::main  mCurrentMessageIndex is ");
-        Serial.println("mCurrentMessageIndex");
+        Serial.println(mCurrentMessageIndex);
     }
 }
 

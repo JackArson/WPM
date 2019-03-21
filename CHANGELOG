@@ -141,3 +141,4 @@ idea:  a function that takes these parameters (min/max voltage allowable time mi
 03-21-19-17:58 Calendar::getQtyImportantDates
 03-21-19-18:33 Calendar::getImportantDate
 03-21-19-18:55 MyLCD::printImportantDate
+03-21-19-19:04 MessageManager diagnostics
