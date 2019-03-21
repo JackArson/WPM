@@ -73,10 +73,11 @@ private: //variables continued
     //mDatesToReportList array is large enough to hold all events
 public:  //methods
     
-    const char* getDaySuffix      (byte day_number);     
-    const char* getMonthShortName (const byte month_number);
-    byte        getWeekNumber     (tmElements_t date);
-    void        loadImportantDates();
+    const char* getDaySuffix            (byte day_number);     
+    const char* getMonthShortName       (const byte month_number);
+    byte        getWeekNumber           (tmElements_t date);
+    byte        getQtyImportantDates    ();
+    void        loadImportantDates      ();
     void        serialPrintImportantDate(const ImportantDate importantdate);
 
 }calendar;
@@ -142,6 +143,11 @@ byte Calendar::getWeekNumber(tmElements_t date)
     const time_t seconds_in_a_week {604800};
     const time_t week_number {seconds_since_start_of_year / seconds_in_a_week};
     return (week_number);
+}
+
+byte Calendar::getQtyImportantDates()
+{
+    return mQtyImportantDatesToReport;
 }
 
 void Calendar::loadImportantDates()
