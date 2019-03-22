@@ -328,7 +328,7 @@ class MySerial
 {
 private: //variables
     //choose the serial output 
-    bool mUseLaptopOperatingVoltage{false};    
+    bool mUseLaptopOperatingVoltage{true};    
 public:
     void checkInput();
     void printImportantDate(const Calendar::ImportantDate* importantdate);
@@ -371,8 +371,9 @@ void MySerial::checkInput()
 
 void MySerial::printImportantDate(const Calendar::ImportantDate* importantdate)
 {
-    Serial.print(importantdate->text);
-    Serial.print(sizeof(importantdate->text));
+    const String name(importantdate->text);
+    Serial.print(name);
+    Serial.println(name.length());
 }
 
 void MySerial::sprint(const char *string_ptr)
@@ -874,8 +875,6 @@ void MessageManager::main()
 {
     if (mNextMessageTimestamp <= millis())
     { 
-        Serial.print("MessageManager::main  mCurrentMessageIndex is ");
-        Serial.println(mCurrentMessageIndex);
         //set up delay for next message
         mNextMessageTimestamp += mMessageDuration;
         //print message
@@ -897,10 +896,7 @@ void MessageManager::main()
         {
             mCurrentMessageIndex = 0;
         }
-        Serial.print("MessageManager::main  total_messages is ");
-        Serial.println(total_messages);
-        Serial.print("MessageManager::main  new mCurrentMessageIndex is ");
-        Serial.println(mCurrentMessageIndex);
+        
     }
 }
 
