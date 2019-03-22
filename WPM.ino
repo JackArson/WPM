@@ -677,7 +677,7 @@ public:  //struct
         tmElements_t timestamp;
     };
 private: //variables
-    const float mLaptopOperatingVoltage     {4.925};
+    const float mLaptopOperatingVoltage     {5.125};
     bool        mIsFirstReadingCompleted    {false};
     VoltRecord  mMin                        {};
     VoltRecord  mMax                        {};
@@ -991,7 +991,7 @@ void setup()
 {
     Serial.begin(250000);              // start the serial monitor
     Serial.println(F("If you are reading this, you are connected to the serial port via"));
-    Serial.println(F("USB.  Your laptop lowers the operating voltage of your"));
+    Serial.println(F("USB.  Your laptop raises the operating voltage of your"));
     Serial.println(F("microcontroller.  If you plan to leave this cable plugged in,"));
     Serial.println(F("you need to enter a 'c' in the entry field to switch to 'corrected'"));
     Serial.println(F("operating voltage.  Your LCD will display 12.97c instead of 12.97v"));

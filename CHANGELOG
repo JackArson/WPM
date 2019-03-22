@@ -144,3 +144,4 @@ idea:  a function that takes these parameters (min/max voltage allowable time mi
 03-21-19-19:04 MessageManager diagnostics
 03-22-19-09:20 mLaptopOperatingVoltage concept
 03-22-19-10:11 MySerial::checkInput() and MySerial::usingLaptopOperatingVoltage()
+03-22-19-10:26 calibrate laptop operating voltage
