@@ -647,10 +647,13 @@ public:  //struct
         tmElements_t timestamp;
     };
 private: //variables
-    float      mVoltage                    {0.0}; 
-    bool       mIsFirstReadingCompleted    {false};
-    VoltRecord mMin                        {};
-    VoltRecord mMax                        {};
+    const float mLaptopOperatingVoltage     {4.925};
+    bool        mIsFirstReadingCompleted    {false};
+    VoltRecord  mMin                        {};
+    VoltRecord  mMax                        {};
+    bool        mUseLaptopOperatingVoltage  {false};
+    float       mVoltage                    {0.0}; 
+    
 public:  //methods
     void  main       ();
     VoltRecord getMin();
@@ -664,15 +667,25 @@ private: //methods
 
 void Voltmeter::main()
 {
+    //print results to serial 
+    Serial.print(mVoltage);
     //print results to LCD
     liquidcrystali2c.setCursor(14, 0);
     liquidcrystali2c.print(mVoltage);
     liquidcrystali2c.setCursor(19, 0);
-    liquidcrystali2c.print("V");
-    //print results to serial 
-    Serial.print(mVoltage);
-    Serial.print("V ");
-               
+    if (mUseLaptopOperatingVoltage)
+    {
+        //print a 'c' instead of a 'v' as a reminder that program is using
+        //'c'orrective voltage
+        liquidcrystali2c.print("c");
+        Serial.print("c ");
+    }
+    else
+    {
+        //'v' for voltage
+        liquidcrystali2c.print("v");
+        Serial.print("v ");
+    }
     if (mVoltage > mMax.voltage)
     { 
         mMax.voltage   = mVoltage;
@@ -765,10 +778,15 @@ void Voltmeter::readVoltage()
     const float pin_value_ratio {pin_value / max_pin_value};
     //the pin value ratio is a number between 0.0 and 1.0  It is a decimal percentage
     //of the controller's operating_voltage. 
-    const float operating_voltage {5.0}; //this is a number you need to measure, my 
+    float operating_voltage {5.0}; //this is a number you need to measure, my 
     //portable voltmeter mesures 5.0 volts between the 5V pin and ground (with
     //the USB cable unplugged.  See note on my USB cable trouble above.)
     //there is enough information for the micro-controller to read the voltage at the pin
+    if (mUseLaptopOperatingVoltage)
+    {
+        operating_voltage = mLaptopOperatingVoltage;
+    }
+    
     const float pin_voltage       {pin_value_ratio * operating_voltage};
     //the 'real' voltage is the pin voltage multiplied by the voltage ratio.  
     const float raw_voltage       {pin_voltage * voltage_divider_ratio};
