@@ -328,8 +328,9 @@ class MySerial
 {
 private: //variables
     //choose the serial output 
-        
+    bool mUseLaptopOperatingVoltage{false};    
 public:
+    void checkInput();
     void printLinefeed();
     void printState(char const *text);
     void printTimestamp();
@@ -338,10 +339,34 @@ public:
     void sprint(const int numeral);
     void sprint(const float numeral);
     void setClock();
+    bool usingLaptopOperatingVoltage();
 private: //methods
     
     //void print
 }myserial;
+
+void MySerial::checkInput()
+{
+    //check if the user wants to toggle 'c'orrected voltage
+    
+    if (Serial.available())
+    {
+        const char input {Serial.read()};
+        if (input == 'c' || input == 'C')
+        {
+            if (mUseLaptopOperatingVoltage == true)
+            {
+                mUseLaptopOperatingVoltage = false;
+                Serial.print(F("Switched to normal operating voltage."));
+            }
+            else
+            {
+                mUseLaptopOperatingVoltage = true;
+                Serial.print(F("Switched to laptop operating voltage."));
+            }
+        }
+    }
+}
 
 void MySerial::sprint(const char *string_ptr)
 {
@@ -411,6 +436,11 @@ void MySerial::setClock()
             Serial.println(F("I can't find the clock through the I2C connection, check wiring."));
         } 
     }
+}
+
+bool MySerial::usingLaptopOperatingVoltage()
+{
+    return mUseLaptopOperatingVoltage;
 }
 
 //==end of MySerial=========================================================================
@@ -651,16 +681,15 @@ private: //variables
     bool        mIsFirstReadingCompleted    {false};
     VoltRecord  mMin                        {};
     VoltRecord  mMax                        {};
-    bool        mUseLaptopOperatingVoltage  {false};
     float       mVoltage                    {0.0}; 
     
 public:  //methods
-    void  main       ();
-    VoltRecord getMin();
-    VoltRecord getMax();
-    float getVoltage ();
-    void  initDailyStatistics();
-    void  readVoltage();
+    void       main                ();
+    VoltRecord getMin              ();
+    VoltRecord getMax              ();
+    float      getVoltage          ();
+    void       initDailyStatistics ();
+    void       readVoltage         ();
 private: //methods
     
 }voltmeter;
@@ -673,7 +702,7 @@ void Voltmeter::main()
     liquidcrystali2c.setCursor(14, 0);
     liquidcrystali2c.print(mVoltage);
     liquidcrystali2c.setCursor(19, 0);
-    if (mUseLaptopOperatingVoltage)
+    if (myserial.usingLaptopOperatingVoltage())
     {
         //print a 'c' instead of a 'v' as a reminder that program is using
         //'c'orrective voltage
@@ -782,7 +811,7 @@ void Voltmeter::readVoltage()
     //portable voltmeter mesures 5.0 volts between the 5V pin and ground (with
     //the USB cable unplugged.  See note on my USB cable trouble above.)
     //there is enough information for the micro-controller to read the voltage at the pin
-    if (mUseLaptopOperatingVoltage)
+    if (myserial.usingLaptopOperatingVoltage())
     {
         operating_voltage = mLaptopOperatingVoltage;
     }
@@ -961,6 +990,15 @@ void myStateMachineInverterCooldownfunction();
 void setup()
 {
     Serial.begin(250000);              // start the serial monitor
+    Serial.println(F("If you are reading this, you are connected to the serial port via"));
+    Serial.println(F("USB.  Your laptop lowers the operating voltage of your"));
+    Serial.println(F("microcontroller.  If you plan to leave this cable plugged in,"));
+    Serial.println(F("you need to enter a 'c' in the entry field to switch to 'corrected'"));
+    Serial.println(F("operating voltage.  Your LCD will display 12.97c instead of 12.97v"));
+    Serial.println(F("as a reminder.  Enter a 'c' in the entry field again to toggle back"));
+    Serial.println(F("to normal before you pull the cable.  If you forget, just reset the"));
+    Serial.println(F("controller."));
+    Serial.println(F("                                                   -Paul 03.22.2019"));
     Wire.begin();                      // start the Wire library
     liquidcrystali2c.begin(20, 4);     // start the LiquidCrystal_I2C library
     myserial.setClock();
@@ -984,7 +1022,7 @@ void loop()
     //This code runs as fast as possible
     myReadPotentiometerAndAdjustWorkbenchTrackLightsfunction();
     voltmeter.readVoltage();
-    
+    myserial.checkInput();
     //This code runs every second (1000ms)
     RTC.read(gRTC_reading);  //gathered from library by reference
     if (gLast_RTC_reading.Second != gRTC_reading.Second) 
