@@ -331,14 +331,8 @@ private: //variables
     bool mUseLaptopOperatingVoltage{true};    
 public:
     void checkInput();
-    void printImportantDate(const Calendar::ImportantDate* importantdate);
-    void printLinefeed();
     void printState(char const *text);
     void printTimestamp();
-    void sprint(const char *string_ptr);
-    void sprint(const byte numeral);
-    void sprint(const int numeral);
-    void sprint(const float numeral);
     void setClock();
     bool usingLaptopOperatingVoltage();
 private: //methods
@@ -348,8 +342,7 @@ private: //methods
 
 void MySerial::checkInput()
 {
-    //check if the user wants to toggle 'c'orrected voltage
-    
+    //check if the user wants to toggle 'c'orrected voltage    
     if (Serial.available())
     {
         const char input {Serial.read()};
@@ -369,35 +362,6 @@ void MySerial::checkInput()
     }
 }
 
-void MySerial::printImportantDate(const Calendar::ImportantDate* importantdate)
-{
-    const String name(importantdate->text);
-    Serial.print(name);
-    Serial.println(name.length());
-}
-
-void MySerial::sprint(const char *string_ptr)
-{
-    Serial.print(string_ptr);   
-}
-
-void MySerial::sprint(const byte numeral)
-{
-    Serial.print(numeral);   
-}
-void MySerial::sprint(const int numeral)
-{
-    Serial.print(numeral);   
-}
-void MySerial::sprint(const float numeral)
-{
-    Serial.print(numeral);   
-}
-
-void MySerial::printLinefeed()
-{
-    Serial.println();
-}
 
 void MySerial::printTimestamp()
 {    
@@ -486,7 +450,7 @@ class MyLCD
 //3|Wed, Mar 15 *11:53am               '*' before clock indicates daylight savings time active
 
 private: //variables
-    
+    const byte mLCD_Width {20};
 public:
     void drawDisplay        ();
     void print              (const char        *string_ptr);
@@ -498,9 +462,10 @@ public:  // <-make this private when old public references are removed
                              const Coordinant   coordinant,
                              const bool         right_justify);
     void printDate          (const Coordinant   coordinant);
-    ;
     void printLDRresults    ();
     void updateBacklight    ();
+private: //methods
+    void centerText         (String &text);
 }mylcd;
 
 void MyLCD::drawDisplay()
@@ -537,11 +502,29 @@ void MyLCD::printImportantDate(const Calendar::ImportantDate* importantdate)
     liquidcrystali2c.setCursor(0, 1);
     liquidcrystali2c.print(F("                    "));
     liquidcrystali2c.setCursor(0, 1);
-    liquidcrystali2c.print(importantdate->text);
+    //liquidcrystali2c.print(importantdate->text);
+    //String topline(importantdate->text);
+    String topline("01234567890123456789012");
+    centerText(topline);
+    Serial.print("MyLCD::printImportantDate  topline: ");
+    Serial.println(topline);
+    //Serial.println(name.length());
 }
 
 //MyLCD private methods start here
 
+void MyLCD::centerText(String &text)
+{
+    //center the text in a 20 char (mLCD_Width) string by
+    //padding the front and rear with spaces
+    const byte initial_length {text.length()};
+    if (initial_length > mLCD_Width)
+    {
+        //string is too long
+        Serial.println("MyLCD::centerText  String is larger than screen width");
+        text.remove(mLCD_Width);
+    }    
+}
 void MyLCD::printLDRresults()
 {
     liquidcrystali2c.setCursor (11,0);
@@ -883,7 +866,7 @@ void MessageManager::main()
             const Calendar::ImportantDate *importantdate{};
             importantdate = calendar.getImportantDate(mCurrentMessageIndex);
             mylcd.printImportantDate(importantdate);
-            myserial.printImportantDate(importantdate);
+            //myserial.printImportantDate(importantdate);
         }
         else //system messages
         {
