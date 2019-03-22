@@ -69,17 +69,17 @@ private: //variables
     const char* mDaySuffix[4] = {"st", "nd", "rd", "th"};
 private: //variables continued
     byte mQtyImportantDatesToReport              {};
-    byte mDatesToReportList[QTY_IMPORTANT_DATES] {};
-    //mDatesToReportList array is large enough to hold all events
+    ImportantDate* mDatesToReportList[QTY_IMPORTANT_DATES] {};
+    //mDatesToReportList array is large enough to hold pointers to every event if needed.
 public:  //methods
     
-    const char*   getDaySuffix            (byte day_number);
-    ImportantDate getImportantDate        (const byte index);     
-    const char*   getMonthShortName       (const byte month_number);
-    byte          getWeekNumber           (tmElements_t date);
-    byte          getQtyImportantDates    ();
-    void          loadImportantDates      ();
-    void          serialPrintImportantDate(const ImportantDate importantdate);
+    const char*    getDaySuffix            (byte day_number);
+    ImportantDate* getImportantDate        (const byte index);     
+    const char*    getMonthShortName       (const byte month_number);
+    byte           getWeekNumber           (tmElements_t date);
+    byte           getQtyImportantDates    ();
+    void           loadImportantDates      ();
+    void           serialPrintImportantDate(const ImportantDate importantdate);
 
 }calendar;
 
@@ -123,13 +123,9 @@ const char* Calendar::getDaySuffix(byte day_number)
     }
 }
 
-Calendar::ImportantDate Calendar::getImportantDate(const byte index)
+Calendar::ImportantDate* Calendar::getImportantDate(const byte index)
 {
-    //the caller asks for of the date that was stored in mDatesToReportList
-    //mDatesToReportList is a list of index numbers that refer to items in
-    //mImportantDateList
-    const byte importantdate_index {mDatesToReportList[index]};
-    return mImportantDateList[importantdate_index];
+    return mDatesToReportList[index];
 }
 
 const char* Calendar::getMonthShortName(const byte month_number)
@@ -185,7 +181,7 @@ void Calendar::loadImportantDates()
         if (event > now() && event <= now() + search_window_secs)
         {
             serialPrintImportantDate(mImportantDateList[i]);
-            
+            ++mQtyImportantDatesToReport;
         }
     }
 }
@@ -331,6 +327,7 @@ private: //variables
     bool mUseLaptopOperatingVoltage{false};    
 public:
     void checkInput();
+    void printImportantDate(Calendar::ImportantDate* importantdate);
     void printLinefeed();
     void printState(char const *text);
     void printTimestamp();
@@ -366,6 +363,11 @@ void MySerial::checkInput()
             }
         }
     }
+}
+
+void MySerial::printImportantDate(Calendar::ImportantDate* importantdate)
+{
+    Serial.print(importantdate->text);
 }
 
 void MySerial::sprint(const char *string_ptr)
@@ -484,7 +486,7 @@ public:
     void print              (const char        *string_ptr);
     void print              (const byte         numeral);
     void printDateSuffix    (const byte         day_of_month);
-    void printImportantDate (Calendar::ImportantDate importantdate);
+    void printImportantDate (Calendar::ImportantDate* importantdate);
 public:  // <-make this private when old public references are removed
     void printClock         (const TimeElements time,
                              const Coordinant   coordinant,
@@ -523,13 +525,13 @@ void MyLCD::printDateSuffix(byte day_of_month)
     liquidcrystali2c.print(suffix);
 }
 
-void MyLCD::printImportantDate(Calendar::ImportantDate importantdate)
+void MyLCD::printImportantDate(Calendar::ImportantDate* importantdate)
 {
     //clear top line
     liquidcrystali2c.setCursor(0, 1);
     liquidcrystali2c.print(F("                    "));
     liquidcrystali2c.setCursor(0, 1);
-    liquidcrystali2c.print(importantdate.text);
+    liquidcrystali2c.print(importantdate->text);
 }
 
 //MyLCD private methods start here
@@ -867,31 +869,32 @@ void MessageManager::main()
 {
     if (mNextMessageTimestamp <= millis())
     { 
+        Serial.print("MessageManager::main  mCurrentMessageIndex is ");
+        Serial.println(mCurrentMessageIndex);
         //set up delay for next message
         mNextMessageTimestamp += mMessageDuration;
         //print message
         if (mCurrentMessageIndex < calendar.getQtyImportantDates()) //calendar message
         {
-            Calendar::ImportantDate importantdate {};
+            Calendar::ImportantDate *importantdate{};
             importantdate = calendar.getImportantDate(mCurrentMessageIndex);
             mylcd.printImportantDate(importantdate);
-            
-            
+            myserial.printImportantDate(importantdate);
         }
-        else //system message
+        else //system messages
         {
             
         }
+        const byte total_messages {mQtySystemMessages + calendar.getQtyImportantDates()};
         //adjust index
         mCurrentMessageIndex++;
-        const byte total_messages {mQtySystemMessages + calendar.getQtyImportantDates()};
         if (mCurrentMessageIndex == total_messages)
         {
             mCurrentMessageIndex = 0;
         }
         Serial.print("MessageManager::main  total_messages is ");
         Serial.println(total_messages);
-        Serial.print("MessageManager::main  mCurrentMessageIndex is ");
+        Serial.print("MessageManager::main  new mCurrentMessageIndex is ");
         Serial.println(mCurrentMessageIndex);
     }
 }
