@@ -41,7 +41,7 @@ private: //variables
                                        "Sep", "Oct", "Nov", "Dec"};
     //this compiler can't set array length so QTY_IMPORTANT_DATES (right above
     //this class) must be manually counted and set.     
-    const ImportantDate mImportantDateList[QTY_IMPORTANT_DATES] = 
+    ImportantDate mImportantDateList[QTY_IMPORTANT_DATES] = 
     {
         {"Kathy",         1,  7, 1967, EVENTTYPE_BIRTHDAY},     //1
         {"Jack(cat)",     2,  6, 2011, EVENTTYPE_BIRTHDAY},     //2
@@ -181,7 +181,11 @@ void Calendar::loadImportantDates()
         if (event > now() && event <= now() + search_window_secs)
         {
             serialPrintImportantDate(mImportantDateList[i]);
+            //load a pointer to the important date into mDatesToReportList
+            ImportantDate *pointer {&mImportantDateList[i]};
+            mDatesToReportList[mQtyImportantDatesToReport] = pointer;
             ++mQtyImportantDatesToReport;
+            
         }
     }
 }
