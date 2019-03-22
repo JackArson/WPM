@@ -41,7 +41,7 @@ private: //variables
                                        "Sep", "Oct", "Nov", "Dec"};
     //this compiler can't set array length so QTY_IMPORTANT_DATES (right above
     //this class) must be manually counted and set.     
-    ImportantDate mImportantDateList[QTY_IMPORTANT_DATES] = 
+    const ImportantDate mImportantDateList[QTY_IMPORTANT_DATES] = 
     {
         {"Kathy",         1,  7, 1967, EVENTTYPE_BIRTHDAY},     //1
         {"Jack(cat)",     2,  6, 2011, EVENTTYPE_BIRTHDAY},     //2
@@ -69,12 +69,12 @@ private: //variables
     const char* mDaySuffix[4] = {"st", "nd", "rd", "th"};
 private: //variables continued
     byte mQtyImportantDatesToReport              {};
-    ImportantDate* mDatesToReportList[QTY_IMPORTANT_DATES] {};
+    ImportantDate const * mDatesToReportList[QTY_IMPORTANT_DATES] {};
     //mDatesToReportList array is large enough to hold pointers to every event if needed.
 public:  //methods
     
     const char*    getDaySuffix            (byte day_number);
-    ImportantDate* getImportantDate        (const byte index);     
+    const ImportantDate* getImportantDate        (const byte index);     
     const char*    getMonthShortName       (const byte month_number);
     byte           getWeekNumber           (tmElements_t date);
     byte           getQtyImportantDates    ();
@@ -123,7 +123,7 @@ const char* Calendar::getDaySuffix(byte day_number)
     }
 }
 
-Calendar::ImportantDate* Calendar::getImportantDate(const byte index)
+const Calendar::ImportantDate* Calendar::getImportantDate(const byte index)
 {
     return mDatesToReportList[index];
 }
@@ -182,7 +182,7 @@ void Calendar::loadImportantDates()
         {
             serialPrintImportantDate(mImportantDateList[i]);
             //load a pointer to the important date into mDatesToReportList
-            ImportantDate *pointer {&mImportantDateList[i]};
+            const ImportantDate *pointer {&mImportantDateList[i]};
             mDatesToReportList[mQtyImportantDatesToReport] = pointer;
             ++mQtyImportantDatesToReport;
             
@@ -331,7 +331,7 @@ private: //variables
     bool mUseLaptopOperatingVoltage{false};    
 public:
     void checkInput();
-    void printImportantDate(Calendar::ImportantDate* importantdate);
+    void printImportantDate(const Calendar::ImportantDate* importantdate);
     void printLinefeed();
     void printState(char const *text);
     void printTimestamp();
@@ -358,20 +358,21 @@ void MySerial::checkInput()
             if (mUseLaptopOperatingVoltage == true)
             {
                 mUseLaptopOperatingVoltage = false;
-                Serial.print(F("Switched to normal operating voltage."));
+                Serial.println(F("Switched to normal operating voltage."));
             }
             else
             {
                 mUseLaptopOperatingVoltage = true;
-                Serial.print(F("Switched to laptop operating voltage."));
+                Serial.println(F("Switched to laptop operating voltage."));
             }
         }
     }
 }
 
-void MySerial::printImportantDate(Calendar::ImportantDate* importantdate)
+void MySerial::printImportantDate(const Calendar::ImportantDate* importantdate)
 {
     Serial.print(importantdate->text);
+    Serial.print(sizeof(importantdate->text));
 }
 
 void MySerial::sprint(const char *string_ptr)
@@ -490,7 +491,7 @@ public:
     void print              (const char        *string_ptr);
     void print              (const byte         numeral);
     void printDateSuffix    (const byte         day_of_month);
-    void printImportantDate (Calendar::ImportantDate* importantdate);
+    void printImportantDate (const Calendar::ImportantDate* importantdate);
 public:  // <-make this private when old public references are removed
     void printClock         (const TimeElements time,
                              const Coordinant   coordinant,
@@ -529,7 +530,7 @@ void MyLCD::printDateSuffix(byte day_of_month)
     liquidcrystali2c.print(suffix);
 }
 
-void MyLCD::printImportantDate(Calendar::ImportantDate* importantdate)
+void MyLCD::printImportantDate(const Calendar::ImportantDate* importantdate)
 {
     //clear top line
     liquidcrystali2c.setCursor(0, 1);
@@ -880,7 +881,7 @@ void MessageManager::main()
         //print message
         if (mCurrentMessageIndex < calendar.getQtyImportantDates()) //calendar message
         {
-            Calendar::ImportantDate *importantdate{};
+            const Calendar::ImportantDate *importantdate{};
             importantdate = calendar.getImportantDate(mCurrentMessageIndex);
             mylcd.printImportantDate(importantdate);
             myserial.printImportantDate(importantdate);
