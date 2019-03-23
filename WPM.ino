@@ -285,7 +285,7 @@ void  MyStateMachine::setState(State state)
         break;
     case STATE_WAKE:
         finish_string = "waking";
-        liquidcrystali2c.print("Waking ");
+        liquidcrystali2c.print("Waking  ");
         break;
     case STATE_BALANCED:
         finish_string = "balanced";
@@ -345,7 +345,7 @@ void MySerial::checkInput()
     //check if the user wants to toggle 'c'orrected voltage    
     if (Serial.available())
     {
-        const char input {Serial.read()};
+        const char input {static_cast<char>(Serial.read())};
         if (input == 'c' || input == 'C')
         {
             if (mUseLaptopOperatingVoltage == true)
@@ -504,10 +504,15 @@ void MyLCD::printImportantDate(const Calendar::ImportantDate* importantdate)
     liquidcrystali2c.setCursor(0, 1);
     //liquidcrystali2c.print(importantdate->text);
     //String topline(importantdate->text);
-    String topline("01234567890123456789012");
+    String topline ("01234567890123456789012");
     centerText(topline);
     Serial.print("MyLCD::printImportantDate  topline: ");
     Serial.println(topline);
+    topline = "Paul";
+    centerText(topline);
+    Serial.print("MyLCD::printImportantDate  topline: ");
+    Serial.println(topline);
+    
     //Serial.println(name.length());
 }
 
@@ -517,13 +522,41 @@ void MyLCD::centerText(String &text)
 {
     //center the text in a 20 char (mLCD_Width) string by
     //padding the front and rear with spaces
-    const byte initial_length {text.length()};
-    if (initial_length > mLCD_Width)
+    const byte string_length (text.length());
+    if (string_length > mLCD_Width)
     {
         //string is too long
         Serial.println("MyLCD::centerText  String is larger than screen width");
+        String end {text.substring(mLCD_Width)};
         text.remove(mLCD_Width);
-    }    
+        Serial.print("MyLCD::centerText  Removed \"");
+        Serial.print(end);
+        Serial.println("\"");
+    }
+    else if (string_length <= 0)
+    {
+        //string empty
+        Serial.println("MyLCD::centerText  no string error");
+    }
+    else
+    {
+        //string good
+        const byte extra_chars (mLCD_Width - string_length);
+        const byte extra_spaces_in_front (extra_chars / 2);  //remainder dropped
+        const byte extra_spaces_in_rear  (extra_chars - extra_spaces_in_front);
+        String front {""};
+        for (int i = 0; i < extra_spaces_in_front; i++)
+        {
+            front += '*';
+        }
+        String rear {""};
+        for (int i = 0; i < extra_spaces_in_rear; i++)
+        {
+            rear += '*';
+        }
+        text = front + text + rear;
+    }
+    
 }
 void MyLCD::printLDRresults()
 {
@@ -872,7 +905,9 @@ void MessageManager::main()
         {
             
         }
-        const byte total_messages {mQtySystemMessages + calendar.getQtyImportantDates()};
+        const byte calendar_messages {calendar.getQtyImportantDates()};
+        const byte system_messages   {mQtySystemMessages};
+        const byte total_messages    (system_messages + calendar_messages);
         //adjust index
         mCurrentMessageIndex++;
         if (mCurrentMessageIndex == total_messages)
