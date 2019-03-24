@@ -452,6 +452,7 @@ public:
     void print              (const byte         numeral);
     void printDateSuffix    (const byte         day_of_month);
     void printImportantDate (const Calendar::ImportantDate* importantdate);
+    void printLine          (String string, const int row);
 public:  // <-make this private when old public references are removed
     void printClock         (const TimeElements time,
                              const Coordinant   coordinant,
@@ -522,7 +523,7 @@ void MyLCD::printImportantDate(const Calendar::ImportantDate* importantdate)
     centerText(top_line);
     liquidcrystali2c.setCursor(0, 1);
     liquidcrystali2c.print(top_line);
-    Serial.print("MyLCD::printImportantDate     topline: ");
+    Serial.print("MyLCD::printImportantDate      topline: ");
     Serial.println(top_line);
     //load topline for dissolve effect
     mMessageTopLine = top_line;
@@ -562,6 +563,13 @@ void MyLCD::printImportantDate(const Calendar::ImportantDate* importantdate)
     Serial.println(bottom_line);
     //load bottom line for dissolve effect
     mMessageBottomLine = bottom_line;
+}
+
+void MyLCD::printLine(String string, const int row)
+{
+    centerText(string);
+    liquidcrystali2c.setCursor(0, row);
+    liquidcrystali2c.print(string);
 }
 
 //MyLCD private methods start here
@@ -933,6 +941,7 @@ private: //variables
     const byte   mQtySystemMessages     {5};        
 public:  //methods
     void main();
+    void voltageRecordMessage();
 }messagemanager;
 
 void MessageManager::main()
@@ -957,8 +966,8 @@ void MessageManager::main()
             const int sytem_message_index {mCurrentMessageIndex - calendar_messages};
             switch (sytem_message_index)
             {
-                case 0:
-                    Serial.println(sytem_message_index);
+                case 0: //voltage record high and low
+                    voltageRecordMessage();
                     break;
                 case 1:
                     Serial.println(sytem_message_index);
@@ -972,9 +981,9 @@ void MessageManager::main()
                 case 4:
                     Serial.println(sytem_message_index);
                     break;
-                case 5:
-                    Serial.println(sytem_message_index);
-                    break;
+                //case 5:
+                    //Serial.println(sytem_message_index);
+                    //break;
                 default:
                     break;
             }
@@ -990,6 +999,31 @@ void MessageManager::main()
     }
 }
 
+void MessageManager::voltageRecordMessage()
+{
+    const Voltmeter::VoltRecord min_record {voltmeter.getMin()};    
+    const String min_voltage               {min_record.voltage};
+    const int    min_record_hour           {min_record.timestamp.Hour};
+    const String min_record_hour_str       {min_record_hour};
+    const int    min_record_minute         {min_record.timestamp.Minute};
+    const String min_record_minute_str     {min_record_minute};
+    String top_line                        {min_voltage + " at " +
+                                            min_record_hour_str + ':' +
+                                            min_record_minute_str};
+    mylcd.printLine(top_line, 1);
+    Serial.print(top_line);
+    const Voltmeter::VoltRecord max_record {voltmeter.getMax()};
+    const String max_voltage               {max_record.voltage};
+    const int    max_record_hour           {max_record.timestamp.Hour};
+    const String max_record_hour_str       {max_record_hour};
+    const int    max_record_maxute         {max_record.timestamp.Minute};
+    const String max_record_maxute_str     {max_record_maxute};
+    String bottom_line                     {max_voltage + " at " +
+                                            max_record_hour_str + ':' +
+                                            max_record_maxute_str};
+    mylcd.printLine(bottom_line, 2);
+    Serial.print(bottom_line);
+}
 
 //==end of MessageManager====================================================================
 
