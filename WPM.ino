@@ -448,8 +448,6 @@ private: //variables
     String mMessageBottomLine {""};
 public:
     void drawDisplay        ();
-//    void print              (const char        *string_ptr);
-//    void print              (const byte         numeral);
     void printDateSuffix    (const byte         day_of_month);
     void printImportantDate (const Calendar::ImportantDate* importantdate);
 public:  // <-make this private when old public references are removed
