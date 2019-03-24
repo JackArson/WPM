@@ -448,11 +448,10 @@ private: //variables
     String mMessageBottomLine {""};
 public:
     void drawDisplay        ();
-    void print              (const char        *string_ptr);
-    void print              (const byte         numeral);
+//    void print              (const char        *string_ptr);
+//    void print              (const byte         numeral);
     void printDateSuffix    (const byte         day_of_month);
     void printImportantDate (const Calendar::ImportantDate* importantdate);
-    void printLine          (String string, const int row);
 public:  // <-make this private when old public references are removed
     void printClock         (const TimeElements time,
                              const Coordinant   coordinant,
@@ -460,7 +459,6 @@ public:  // <-make this private when old public references are removed
     void printDate          (const Coordinant   coordinant);
     void printLDRresults    ();
     void updateBacklight    ();
-private: //methods
     void centerText         (String &text);
 }mylcd;
 
@@ -476,15 +474,15 @@ void MyLCD::drawDisplay()
     //myPrintLDRresultsToLCDfunction();
 }
 
-void MyLCD::print(const char *string_ptr)
-{
-    liquidcrystali2c.print(string_ptr);   
-}
+//void MyLCD::print(const char *string_ptr)
+//{
+    //liquidcrystali2c.print(string_ptr);   
+//}
 
-void MyLCD::print(const byte numeral)
-{
-    liquidcrystali2c.print(numeral);   
-}
+//void MyLCD::print(const byte numeral)
+//{
+    //liquidcrystali2c.print(numeral);   
+//}
 
 void MyLCD::printDateSuffix(byte day_of_month)
 {
@@ -563,13 +561,6 @@ void MyLCD::printImportantDate(const Calendar::ImportantDate* importantdate)
     Serial.println(bottom_line);
     //load bottom line for dissolve effect
     mMessageBottomLine = bottom_line;
-}
-
-void MyLCD::printLine(String string, const int row)
-{
-    centerText(string);
-    liquidcrystali2c.setCursor(0, row);
-    liquidcrystali2c.print(string);
 }
 
 //MyLCD private methods start here
@@ -663,41 +654,41 @@ void MyLCD::printClock(const TimeElements time, const Coordinant coordinant, con
     }
     if ((time.Hour) == 12 || (time.Hour) == 0)
     {
-        print("12");
+        liquidcrystali2c.print("12");
     }
     else
     {
         if (time.Hour - format < 10 && right_justify == true)
         {             
-            print (" ");
+            liquidcrystali2c.print (" ");
         }
-        print (time.Hour - format);
+        liquidcrystali2c.print (time.Hour - format);
     }   
-    print(":");
+    liquidcrystali2c.print(":");
     if (time.Minute < 10)
     {  
-        print ("0");
+        liquidcrystali2c.print ("0");
     }  
-    print(time.Minute);
+    liquidcrystali2c.print(time.Minute);
     if (time.Hour >= 12)
     {
-        print("pm");
+        liquidcrystali2c.print("pm");
     }
     else
     {                          
-        print("am");
+        liquidcrystali2c.print("am");
     }                                      
 }
 
 void MyLCD::printDate(const Coordinant coordinant)
 {
     liquidcrystali2c.setCursor(coordinant.x, coordinant.y); 
-    print(dayShortStr(weekday()));
-    print (", ");
-    print (calendar.getMonthShortName(gRTC_reading.Month-1));    
-    print(" ");
-    print((gRTC_reading.Day));
-    print(" ");  //this space to clear last digit when month rolls over (31 to 1) 
+    liquidcrystali2c.print(dayShortStr(weekday()));
+    liquidcrystali2c.print (", ");
+    liquidcrystali2c.print (calendar.getMonthShortName(gRTC_reading.Month-1));    
+    liquidcrystali2c.print(" ");
+    liquidcrystali2c.print((gRTC_reading.Day));
+    liquidcrystali2c.print(" ");  //this space to clear last digit when month rolls over (31 to 1) 
 }
 
 //=========================================================================================================
@@ -728,14 +719,14 @@ void CoundownTimer::update()
     {
         if(mCounter <= 9)
         {
-            mylcd.print(" "); // clear the first space if a single digit
+            liquidcrystali2c.print(" "); // clear the first space if a single digit
         }
-        mylcd.print(mCounter);                 // print the counter
+        liquidcrystali2c.print(mCounter);                 // print the counter
         mCounter--;                          // counter decrements here
     }
     else
     {
-        mylcd.print("  ");             // no counter, so clear the board
+        liquidcrystali2c.print("  ");             // no counter, so clear the board
     }
 }
 
@@ -1010,7 +1001,9 @@ void MessageManager::voltageRecordMessage()
     String top_line                        {min_voltage + " at " +
                                             min_record_hour_str + ':' +
                                             min_record_minute_str};
-    mylcd.printLine(top_line, 1);
+    mylcd.centerText(top_line);
+    liquidcrystali2c.setCursor(0, 1);
+    liquidcrystali2c.print(top_line);
     Serial.print(top_line);
     const Voltmeter::VoltRecord max_record {voltmeter.getMax()};
     const String max_voltage               {max_record.voltage};
@@ -1021,7 +1014,9 @@ void MessageManager::voltageRecordMessage()
     String bottom_line                     {max_voltage + " at " +
                                             max_record_hour_str + ':' +
                                             max_record_maxute_str};
-    mylcd.printLine(bottom_line, 2);
+    mylcd.centerText(bottom_line);
+    liquidcrystali2c.setCursor(0, 2);
+    liquidcrystali2c.print(bottom_line);
     Serial.print(bottom_line);
 }
 
@@ -1392,60 +1387,60 @@ void myMessageSunrisefunction() {
   
 //----------------------------------------
 void myMessageUpcomingEventsfunction(byte n){
-//----------------------------------------  
-  TimeElements timex = gRTC_reading;
-  myClearMessageBoardfunction();
-  timex.Day = important_dates_day_array[reminder_message_pointer [n]];
-  //Serial.print ("reminder_message_pointer [n]");
-  //Serial.println (reminder_message_pointer [n]);
-  //Serial.print ("timex.Day");
-  //Serial.println (timex.Day);
-  timex.Month = important_dates_month_array[reminder_message_pointer [n]];
-  //Serial.print ("reminder_message_pointer [n]");
-  //Serial.println (reminder_message_pointer [n]);
-  //Serial.print ("timex.Month");
-  //Serial.println (timex.Month);
-  if(gRTC_reading.Month == 12 && timex.Month == 1) {    //to protect myReturnDayofWeekFromUnixTimestampfunction
-                                                        //from end of year rollover
-    timex.Year++; 
-  }
-  if (message_loaded [n]){
-    liquidcrystali2c.setCursor (0,1);
-    if (important_dates_yob_array[reminder_message_pointer [n]]) {
-    liquidcrystali2c.print (important_dates_string_array[reminder_message_pointer [n]]);
-    liquidcrystali2c.print ("'s ");
-    liquidcrystali2c.print (year() - important_dates_yob_array[reminder_message_pointer [n]]);
-    const byte day_of_month = year() - important_dates_yob_array[reminder_message_pointer [n]];
-    mylcd.printDateSuffix(day_of_month);
-    if (event_type_to_print_array[reminder_message_pointer [n]] == 1) {
-      liquidcrystali2c.print (" B-day");  
-    }
-    } else {
-    liquidcrystali2c.print (important_dates_string_array[reminder_message_pointer [n]]);
-    }
-    liquidcrystali2c.setCursor (5,2);
-    if (timex.Day == gRTC_reading.Day || timex.Day == gRTC_reading.Day + 1) {      
-      if (timex.Day == gRTC_reading.Day) {
-        //         "12345678901234567890"
-        liquidcrystali2c.print ("   today.");  
-      }
-      if (timex.Day == gRTC_reading.Day+1) {
-        //         "12345678901234567890"
-        liquidcrystali2c.print (" tomorrow");  
-      }
-    } else {
+////----------------------------------------  
+  //TimeElements timex = gRTC_reading;
+  //myClearMessageBoardfunction();
+  //timex.Day = important_dates_day_array[reminder_message_pointer [n]];
+  ////Serial.print ("reminder_message_pointer [n]");
+  ////Serial.println (reminder_message_pointer [n]);
+  ////Serial.print ("timex.Day");
+  ////Serial.println (timex.Day);
+  //timex.Month = important_dates_month_array[reminder_message_pointer [n]];
+  ////Serial.print ("reminder_message_pointer [n]");
+  ////Serial.println (reminder_message_pointer [n]);
+  ////Serial.print ("timex.Month");
+  ////Serial.println (timex.Month);
+  //if(gRTC_reading.Month == 12 && timex.Month == 1) {    //to protect myReturnDayofWeekFromUnixTimestampfunction
+                                                        ////from end of year rollover
+    //timex.Year++; 
+  //}
+  //if (message_loaded [n]){
+    //liquidcrystali2c.setCursor (0,1);
+    //if (important_dates_yob_array[reminder_message_pointer [n]]) {
+    //liquidcrystali2c.print (important_dates_string_array[reminder_message_pointer [n]]);
+    //liquidcrystali2c.print ("'s ");
+    //liquidcrystali2c.print (year() - important_dates_yob_array[reminder_message_pointer [n]]);
+    //const byte day_of_month = year() - important_dates_yob_array[reminder_message_pointer [n]];
+    //mylcd.printDateSuffix(day_of_month);
+    //if (event_type_to_print_array[reminder_message_pointer [n]] == 1) {
+      //liquidcrystali2c.print (" B-day");  
+    //}
+    //} else {
+    //liquidcrystali2c.print (important_dates_string_array[reminder_message_pointer [n]]);
+    //}
+    //liquidcrystali2c.setCursor (5,2);
+    //if (timex.Day == gRTC_reading.Day || timex.Day == gRTC_reading.Day + 1) {      
+      //if (timex.Day == gRTC_reading.Day) {
+        ////         "12345678901234567890"
+        //liquidcrystali2c.print ("   today.");  
+      //}
+      //if (timex.Day == gRTC_reading.Day+1) {
+        ////         "12345678901234567890"
+        //liquidcrystali2c.print (" tomorrow");  
+      //}
+    //} else {
 
 
-      time_t long_int_time {makeTime(timex)};
-      int myday {weekday(long_int_time)};
-      const char *dayString {dayShortStr(myday)};
-      mylcd.print(dayString);
-      liquidcrystali2c.print (", ");
-      liquidcrystali2c.print (month_short_name[(important_dates_month_array[reminder_message_pointer [n]])-1]);
-      liquidcrystali2c.print (" ");
-      liquidcrystali2c.print (important_dates_day_array[reminder_message_pointer [n]]);
-    }  
-  }
+      //time_t long_int_time {makeTime(timex)};
+      //int myday {weekday(long_int_time)};
+      //const char *dayString {dayShortStr(myday)};
+      //mylcd.print(dayString);
+      //liquidcrystali2c.print (", ");
+      //liquidcrystali2c.print (month_short_name[(important_dates_month_array[reminder_message_pointer [n]])-1]);
+      //liquidcrystali2c.print (" ");
+      //liquidcrystali2c.print (important_dates_day_array[reminder_message_pointer [n]]);
+    //}  
+  //}
 }
 //
 

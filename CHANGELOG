@@ -157,3 +157,4 @@ idea:  a function that takes these parameters (min/max voltage allowable time mi
 03-24-19-12:50 MyLCD::printImportantDate bottom 3
 03-24-19-17:47 MessageManager begin system status messages
 03-24-19-18:25 MessageManager::voltageRecordMessage()
+03-24-19-19:01 windows segfault repair attempt
