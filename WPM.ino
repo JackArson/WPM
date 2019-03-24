@@ -86,14 +86,6 @@ public:  //methods
 
 const char* Calendar::getDaySuffix(byte day_number)
 {
-    //test if number is in range
-    if (day_number < 0 || day_number > 31)
-    {
-        Serial.print  (F("Calendar::printDateSuffix:  received parameter of "));
-        Serial.print  (day_number);
-        Serial.println(F(", but it should be between 1 - 31"));
-        return mDaySuffix[3];
-    }
     //Isolate the teens and be sure they get 'th' suffix (11th 12th 13th)
     //The non-teen 1, 2, 3,s get their special suffix (2nd, 22nd, 31st) 
     //Therefore, any number over 20 should be reduced by tens until it is 10 or less
@@ -557,10 +549,10 @@ void MyLCD::printImportantDate(const Calendar::ImportantDate* importantdate)
         bottom_line = day_str + ", "; //Wed,
         String month_str {calendar.getMonthShortName(event.Month)};
         bottom_line += month_str; //Wed, Sep 
-        bottom_line + ' ';
+        bottom_line += ' ';
         String date_str {event.Day};  
         bottom_line += date_str; //Wed, Sep 3
-        bottom_line + ' ';
+        bottom_line += ' ';
         String date_suffix {calendar.getDaySuffix(event.Day)};
         bottom_line += date_suffix; //Wed, Sep 3rd
     }
