@@ -13,7 +13,7 @@ tmElements_t       gLast_RTC_reading;
 
 
 //all caps indicate a COMPILE TIME CONSTANT 
-const byte QTY_IMPORTANT_DATES = 22;  //this must be initialized in global space instead
+const byte QTY_IMPORTANT_DATES = 23;  //this must be initialized in global space instead
                                       //of inside Calendar.  
 class Calendar
 {
@@ -50,7 +50,7 @@ private: //variables
         {"Jack(dog)",     2, 27, 2012, EVENTTYPE_BIRTHDAY},     //5
         {"Joshua",        3, 23, 1993, EVENTTYPE_BIRTHDAY},     //6
         {"Dad",           3, 30, 1943, EVENTTYPE_BIRTHDAY},     //7
-        {"Christopher",   4,  3, 1990, EVENTTYPE_BIRTHDAY},     //8
+        {"Chris",         4,  3, 1990, EVENTTYPE_BIRTHDAY},     //8
         {"Jon",           4, 15, 1968, EVENTTYPE_BIRTHDAY},     //9
         {"Mena",          4, 24, 1972, EVENTTYPE_BIRTHDAY},     //10
         {"Jacob",         4, 26, 2005, EVENTTYPE_BIRTHDAY},     //11
@@ -64,7 +64,8 @@ private: //variables
         {"Mom",          10, 23, 1943, EVENTTYPE_BIRTHDAY},     //19
         {"Erik",         12,  4, 1999, EVENTTYPE_BIRTHDAY},     //20
         {"Mathew",       12, 17, 1995, EVENTTYPE_BIRTHDAY},     //21
-        {"Christmas",    12, 25, 0,    EVENTTYPE_HOLIDAY}       //22
+        {"Christmas",    12, 25, 0,    EVENTTYPE_HOLIDAY},      //22
+        {"Paul Crowned King", 3, 28, 2019, EVENTTYPE_APPOINTMENT} //23
     };
     const char* mDaySuffix[4] = {"st", "nd", "rd", "th"};
 private: //variables continued
@@ -503,44 +504,28 @@ void MyLCD::printImportantDate(const Calendar::ImportantDate* importantdate)
     liquidcrystali2c.print(F("                    "));
     liquidcrystali2c.setCursor(0, 1);
     //format top line
-    String topline(importantdate->text); //Paul
-    bool use_possessive_suffix {false};
-    bool use_day_suffix {false};
-    String possessive {"'s"};
+    String topline                   (importantdate->text); //Paul
+    const String possessive          {"'s"};
+    const byte day_of_month          {importantdate->day};
+    const String day_of_month_string {day_of_month};
+    const String day_suffix          {calendar.getDaySuffix(day_of_month)};
     switch (importantdate->event_type)
     {
         case Calendar::EVENTTYPE_ANNIVERSARY:
-            use_possessive_suffix = true;
-            use_day_suffix        = true;
-            break;
         case Calendar::EVENTTYPE_BIRTHDAY:
-            use_possessive_suffix = true;
-            use_day_suffix        = true;
+            topline += possessive; //Paul & Mena's
+            topline += ' '; //add a space
+            topline += day_of_month_string; //Paul & Mena's 27
+            topline += day_suffix; //Paul & Mena's 27th
             break;
-        case Calendar::EVENTTYPE_APPOINTMENT:
-            break;
-        case Calendar::EVENTTYPE_HOLIDAY:
-            break;
+        case Calendar::EVENTTYPE_APPOINTMENT: //Paul dentist
+        case Calendar::EVENTTYPE_HOLIDAY: //Christmas
         case Calendar::MAX_EVENTTYPE:        
         default:
             break;
     }
-    if (use_possessive_suffix)
-    {
-        topline += possessive; //Paul's
-    }
-    topline += ' ';
-    //add day of month
-    const byte day_of_month {importantdate->day};
-    String day {day_of_month};
-    topline += day; //Paul's 50
-    //add day suffix
-    if (use_day_suffix)
-    {
-        topline += calendar.getDaySuffix(day_of_month); //Paul's 50th
-    }
-    
     centerText(topline);
+    liquidcrystali2c.print(topline);
     Serial.print("MyLCD::printImportantDate  topline: ");
     Serial.println(topline);
     
@@ -578,12 +563,12 @@ void MyLCD::centerText(String &text)
         String front {""};
         for (int i = 0; i < extra_spaces_in_front; i++)
         {
-            front += '*';
+            front += ' '; //add a space
         }
         String rear {""};
         for (int i = 0; i < extra_spaces_in_rear; i++)
         {
-            rear += '*';
+            rear += ' '; //add a space
         }
         text = front + text + rear;
     }
