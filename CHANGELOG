@@ -152,3 +152,4 @@ idea:  a function that takes these parameters (min/max voltage allowable time mi
 03-23-19-18:49 String object testing
 03-24-19-09:46 MyLCD::printImportantDate format
 03-24-19-10:11 MyLCD::printImportantDate format
+03-24-19-12:00 MyLCD::printImportantDate bottom

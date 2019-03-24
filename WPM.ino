@@ -452,6 +452,8 @@ class MyLCD
 
 private: //variables
     const byte mLCD_Width {20};
+    String mMessageTopLine    {""};
+    String mMessageBottomLine {""};
 public:
     void drawDisplay        ();
     void print              (const char        *string_ptr);
@@ -499,24 +501,20 @@ void MyLCD::printDateSuffix(byte day_of_month)
 
 void MyLCD::printImportantDate(const Calendar::ImportantDate* importantdate)
 {
-    //clear top line
-    liquidcrystali2c.setCursor(0, 1);
-    liquidcrystali2c.print(F("                    "));
-    liquidcrystali2c.setCursor(0, 1);
     //format top line
-    String topline                   (importantdate->text); //Paul
-    const String possessive          {"'s"};
-    const byte day_of_month          {importantdate->day};
-    const String day_of_month_string {day_of_month};
-    const String day_suffix          {calendar.getDaySuffix(day_of_month)};
+    String top_line            (importantdate->text); //Paul
     switch (importantdate->event_type)
     {
         case Calendar::EVENTTYPE_ANNIVERSARY:
         case Calendar::EVENTTYPE_BIRTHDAY:
-            topline += possessive; //Paul & Mena's
-            topline += ' '; //add a space
-            topline += day_of_month_string; //Paul & Mena's 27
-            topline += day_suffix; //Paul & Mena's 27th
+            {
+                top_line += "'s "; //Paul & Mena's
+                const byte   anniversary (year() - importantdate->year);
+                const String anniversary_str {anniversary};
+                top_line += anniversary_str; //Paul & Mena's 27
+                const String anniversary_date_suffix {calendar.getDaySuffix(anniversary)};
+                top_line += anniversary_date_suffix; //Paul & Mena's 27th 
+            }
             break;
         case Calendar::EVENTTYPE_APPOINTMENT: //Paul dentist
         case Calendar::EVENTTYPE_HOLIDAY: //Christmas
@@ -524,12 +522,49 @@ void MyLCD::printImportantDate(const Calendar::ImportantDate* importantdate)
         default:
             break;
     }
-    centerText(topline);
-    liquidcrystali2c.print(topline);
+    centerText(top_line);
+    liquidcrystali2c.setCursor(0, 1);
+    liquidcrystali2c.print(top_line);
     Serial.print("MyLCD::printImportantDate  topline: ");
-    Serial.println(topline);
-    
-    
+    Serial.println(top_line);
+    //load topline for dissolve effect
+    mMessageTopLine = top_line;
+
+    //format bottom line
+    String bottom_line ("");
+    if (importantdate->day == day())
+    {
+        bottom_line = "today";
+    }
+    else if (importantdate->day == day() + 1)
+    {
+        bottom_line = "tomorrow";
+    }
+    else
+    {
+        tmElements_t event {};
+        event.Day   = importantdate->day;
+        event.Month = importantdate->month;
+        event.Year  = year();
+        time_t event_unix {makeTime(event)};
+        const byte day_of_week (weekday(event_unix));
+        String day_str {dayShortStr(day_of_week)};
+        bottom_line = day_str + ", "; //Wed,
+        String month_str {calendar.getMonthShortName(event.Month)};
+        bottom_line += month_str; //Wed, Sep 
+        bottom_line + ' ';
+        String date_str {event.Day};  
+        bottom_line += date_str; //Wed, Sep 3
+        String date_suffix {calendar.getDaySuffix(event.Day)};
+        bottom_line += date_suffix; //Wed, Sep 3rd
+    }
+    centerText(bottom_line);
+    liquidcrystali2c.setCursor(0, 2);
+    liquidcrystali2c.print(bottom_line);
+    Serial.print("MyLCD::printImportantDate  bottom line: ");
+    Serial.println(bottom_line);
+    //load topline for dissolve effect
+    mMessageBottomLine = bottom_line;
 }
 
 //MyLCD private methods start here
