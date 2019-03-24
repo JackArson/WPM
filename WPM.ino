@@ -502,18 +502,49 @@ void MyLCD::printImportantDate(const Calendar::ImportantDate* importantdate)
     liquidcrystali2c.setCursor(0, 1);
     liquidcrystali2c.print(F("                    "));
     liquidcrystali2c.setCursor(0, 1);
-    //liquidcrystali2c.print(importantdate->text);
-    //String topline(importantdate->text);
-    String topline ("01234567890123456789012");
-    centerText(topline);
-    Serial.print("MyLCD::printImportantDate  topline: ");
-    Serial.println(topline);
-    topline = "Paul";
+    //format top line
+    String topline(importantdate->text); //Paul
+    bool use_possessive_suffix {false};
+    bool use_day_suffix {false};
+    String possessive {"'s"};
+    switch (importantdate->event_type)
+    {
+        case Calendar::EVENTTYPE_ANNIVERSARY:
+            use_possessive_suffix = true;
+            use_day_suffix        = true;
+            break;
+        case Calendar::EVENTTYPE_BIRTHDAY:
+            use_possessive_suffix = true;
+            use_day_suffix        = true;
+            break;
+        case Calendar::EVENTTYPE_APPOINTMENT:
+            break;
+        case Calendar::EVENTTYPE_HOLIDAY:
+            break;
+        case Calendar::MAX_EVENTTYPE:        
+        default:
+            break;
+    }
+    if (use_possessive_suffix)
+    {
+        topline += possessive; //Paul's
+    }
+    topline += ' ';
+    //add day of month
+    const byte day_of_month {importantdate->day};
+    String day {day_of_month};
+    topline += day; //Paul's 50
+    //add day suffix
+    if (use_day_suffix)
+    {
+        topline += calendar.getDaySuffix(day_of_month); //Paul's 50th
+    }
+    
     centerText(topline);
     Serial.print("MyLCD::printImportantDate  topline: ");
     Serial.println(topline);
     
-    //Serial.println(name.length());
+    
 }
 
 //MyLCD private methods start here
