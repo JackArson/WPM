@@ -552,7 +552,6 @@ void MyLCD::printImportantDate(const Calendar::ImportantDate* importantdate)
         bottom_line += ' ';
         String date_str {event.Day};  
         bottom_line += date_str; //Wed, Sep 3
-        bottom_line += ' ';
         String date_suffix {calendar.getDaySuffix(event.Day)};
         bottom_line += date_suffix; //Wed, Sep 3rd
     }
@@ -931,7 +930,7 @@ private: //variables
     byte         mCurrentMessageIndex   {0};
     time_t       mNextMessageTimestamp  {0};
     const time_t mMessageDuration       {5000}; //milliseconds
-    const byte   mQtySystemMessages     {0};        
+    const byte   mQtySystemMessages     {5};        
 public:  //methods
     void main();
 }messagemanager;
@@ -942,6 +941,9 @@ void MessageManager::main()
     { 
         //set up delay for next message
         mNextMessageTimestamp += mMessageDuration;
+        const byte calendar_messages {calendar.getQtyImportantDates()};
+        const byte system_messages   {mQtySystemMessages};
+        const byte total_messages    (system_messages + calendar_messages);
         //print message
         if (mCurrentMessageIndex < calendar.getQtyImportantDates()) //calendar message
         {
@@ -952,11 +954,32 @@ void MessageManager::main()
         }
         else //system messages
         {
+            const int sytem_message_index {mCurrentMessageIndex - calendar_messages};
+            switch (sytem_message_index)
+            {
+                case 0:
+                    Serial.println(sytem_message_index);
+                    break;
+                case 1:
+                    Serial.println(sytem_message_index);
+                    break;
+                case 2:
+                    Serial.println(sytem_message_index);
+                    break;
+                case 3:
+                    Serial.println(sytem_message_index);
+                    break;
+                case 4:
+                    Serial.println(sytem_message_index);
+                    break;
+                case 5:
+                    Serial.println(sytem_message_index);
+                    break;
+                default:
+                    break;
+            }
             
         }
-        const byte calendar_messages {calendar.getQtyImportantDates()};
-        const byte system_messages   {mQtySystemMessages};
-        const byte total_messages    (system_messages + calendar_messages);
         //adjust index
         mCurrentMessageIndex++;
         if (mCurrentMessageIndex == total_messages)
