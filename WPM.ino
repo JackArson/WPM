@@ -36,9 +36,9 @@ public:
     };
     
 private: //variables
-    const char* mMonthShortName[12] = {"Jan", "Feb", "Mar", "Apr",
-                                       "May", "Jun", "Jul", "Aug",
-                                       "Sep", "Oct", "Nov", "Dec"};
+    const char* mMonthShortName[13] = {"-0-", "Jan", "Feb", "Mar", "Apr",
+                                              "May", "Jun", "Jul", "Aug",
+                                              "Sep", "Oct", "Nov", "Dec"};
     //this compiler can't set array length so QTY_IMPORTANT_DATES (right above
     //this class) must be manually counted and set.     
     const ImportantDate mImportantDateList[QTY_IMPORTANT_DATES] = 
@@ -509,7 +509,12 @@ void MyLCD::printImportantDate(const Calendar::ImportantDate* importantdate)
         case Calendar::EVENTTYPE_BIRTHDAY:
             {
                 top_line += "'s "; //Paul & Mena's
-                const byte   anniversary (year() - importantdate->year);
+                byte anniversary (year() - importantdate->year);
+                //fix end of year wrap around
+                if (month() == 12 && importantdate->month != 12)
+                {
+                    ++anniversary; 
+                }
                 const String anniversary_str {anniversary};
                 top_line += anniversary_str; //Paul & Mena's 27
                 const String anniversary_date_suffix {calendar.getDaySuffix(anniversary)};
@@ -525,7 +530,7 @@ void MyLCD::printImportantDate(const Calendar::ImportantDate* importantdate)
     centerText(top_line);
     liquidcrystali2c.setCursor(0, 1);
     liquidcrystali2c.print(top_line);
-    Serial.print("MyLCD::printImportantDate  topline: ");
+    Serial.print("MyLCD::printImportantDate     topline: ");
     Serial.println(top_line);
     //load topline for dissolve effect
     mMessageTopLine = top_line;
@@ -555,6 +560,7 @@ void MyLCD::printImportantDate(const Calendar::ImportantDate* importantdate)
         bottom_line + ' ';
         String date_str {event.Day};  
         bottom_line += date_str; //Wed, Sep 3
+        bottom_line + ' ';
         String date_suffix {calendar.getDaySuffix(event.Day)};
         bottom_line += date_suffix; //Wed, Sep 3rd
     }
@@ -563,7 +569,7 @@ void MyLCD::printImportantDate(const Calendar::ImportantDate* importantdate)
     liquidcrystali2c.print(bottom_line);
     Serial.print("MyLCD::printImportantDate  bottom line: ");
     Serial.println(bottom_line);
-    //load topline for dissolve effect
+    //load bottom line for dissolve effect
     mMessageBottomLine = bottom_line;
 }
 
