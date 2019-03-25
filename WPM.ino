@@ -74,6 +74,8 @@ private: //variables continued
     //mDatesToReportList array is large enough to hold pointers to every event if needed.
 public:  //methods
     
+    const String   getMyClockFormat        (const tmElements_t time,
+                                            const bool right_justify = false);
     const char*    getDaySuffix            (byte day_number);
     const ImportantDate* getImportantDate        (const byte index);     
     const char*    getMonthShortName       (const byte month_number);
@@ -84,6 +86,48 @@ public:  //methods
     void           serialPrintImportantDate(const ImportantDate importantdate);
 
 }calendar;
+
+const String Calendar::getMyClockFormat(const tmElements_t time, const bool right_justify)
+{
+    int  format {0};
+    String clock_string ("");
+    //change to 12 hour format
+    if ((time.Hour) >= 12)
+    {      
+        format = 12;
+    }
+    if ((time.Hour) == 12 || (time.Hour) == 0)
+    {
+        clock_string = "12";
+    }
+    else
+    {
+        //if a single digit, add a space
+        if (time.Hour - format < 10 && right_justify == true)
+        {             
+            clock_string = " ";
+        }
+        const String hour_string (time.Hour - format); 
+        clock_string += hour_string;
+    }   
+    clock_string += ":";
+    //if a single digit, add a zero
+    if (time.Minute < 10)
+    {  
+        clock_string += "0";
+    }
+    const String minute_string {time.Minute};   
+    clock_string += minute_string;
+    if (calendar.isAM(time))
+    {
+        clock_string += "am";
+    }
+    else
+    {                          
+        clock_string += "pm";
+    }
+    return clock_string;    
+}
 
 const char* Calendar::getDaySuffix(byte day_number)
 {
@@ -486,16 +530,6 @@ void MyLCD::drawDisplay()
     //myPrintLDRresultsToLCDfunction();
 }
 
-//void MyLCD::print(const char *string_ptr)
-//{
-    //liquidcrystali2c.print(string_ptr);   
-//}
-
-//void MyLCD::print(const byte numeral)
-//{
-    //liquidcrystali2c.print(numeral);   
-//}
-
 void MyLCD::printDateSuffix(byte day_of_month)
 {
     const char *suffix {calendar.getDaySuffix(day_of_month)};
@@ -654,42 +688,13 @@ void MyLCD::updateBacklight()
     }
 }
 
-void MyLCD::printClock(const TimeElements time, const Coordinant coordinant, const bool right_justify)
+void MyLCD::printClock(const TimeElements time,
+                       const Coordinant coordinant,
+                       const bool right_justify)
 {
-    liquidcrystali2c.setCursor(coordinant.x, coordinant.y);                                   
-    //byte am_pm  {0};
-    int  format {0};
-    //change to 12 hour format
-    if ((time.Hour) >= 12)
-    {      
-        format = 12;
-    }
-    if ((time.Hour) == 12 || (time.Hour) == 0)
-    {
-        liquidcrystali2c.print("12");
-    }
-    else
-    {
-        if (time.Hour - format < 10 && right_justify == true)
-        {             
-            liquidcrystali2c.print (" ");
-        }
-        liquidcrystali2c.print (time.Hour - format);
-    }   
-    liquidcrystali2c.print(":");
-    if (time.Minute < 10)
-    {  
-        liquidcrystali2c.print ("0");
-    }  
-    liquidcrystali2c.print(time.Minute);
-    if (calendar.isAM(time))
-    {
-        liquidcrystali2c.print("am");
-    }
-    else
-    {                          
-        liquidcrystali2c.print("pm");
-    }                                      
+    const String clock_string {(calendar.getMyClockFormat(time, right_justify))};
+    liquidcrystali2c.setCursor(coordinant.x, coordinant.y);
+    liquidcrystali2c.print("clock_string");
 }
 
 void MyLCD::printDate(const Coordinant coordinant)
@@ -1010,7 +1015,7 @@ void MessageManager::voltageRecordMessage()
     const String min_record_hour_str       {min_record_hour};
     const int    min_record_minute         {min_record.timestamp.Minute};
     const String min_record_minute_str     {min_record_minute};
-    String top_line                        {min_voltage + " at " +
+    String top_line                        {min_voltage + "v at " +
                                             min_record_hour_str + ':' +
                                             min_record_minute_str};
     mylcd.centerText(top_line);
@@ -1023,7 +1028,7 @@ void MessageManager::voltageRecordMessage()
     const String max_record_hour_str       {max_record_hour};
     const int    max_record_maxute         {max_record.timestamp.Minute};
     const String max_record_maxute_str     {max_record_maxute};
-    String bottom_line                     {max_voltage + " at " +
+    String bottom_line                     {max_voltage + "v at " +
                                             max_record_hour_str + ':' +
                                             max_record_maxute_str};
     mylcd.centerText(bottom_line);
