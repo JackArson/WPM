@@ -527,7 +527,6 @@ void MyLCD::drawDisplay()
     coordinant = {0, 3};
     printDate(coordinant);
     printLDRresults();
-    //myPrintLDRresultsToLCDfunction();
 }
 
 void MyLCD::printDateSuffix(byte day_of_month)
@@ -694,7 +693,7 @@ void MyLCD::printClock(const TimeElements time,
 {
     const String clock_string {(calendar.getMyClockFormat(time, right_justify))};
     liquidcrystali2c.setCursor(coordinant.x, coordinant.y);
-    liquidcrystali2c.print("clock_string");
+    liquidcrystali2c.print(clock_string);
 }
 
 void MyLCD::printDate(const Coordinant coordinant)
@@ -1009,32 +1008,25 @@ void MessageManager::main()
 
 void MessageManager::voltageRecordMessage()
 {
-    const Voltmeter::VoltRecord min_record {voltmeter.getMin()};    
-    const String min_voltage               {min_record.voltage};
-    const int    min_record_hour           {min_record.timestamp.Hour};
-    const String min_record_hour_str       {min_record_hour};
-    const int    min_record_minute         {min_record.timestamp.Minute};
-    const String min_record_minute_str     {min_record_minute};
-    String top_line                        {min_voltage + "v at " +
-                                            min_record_hour_str + ':' +
-                                            min_record_minute_str};
-    mylcd.centerText(top_line);
-    liquidcrystali2c.setCursor(0, 1);
-    liquidcrystali2c.print(top_line);
-    Serial.print(top_line);
-    const Voltmeter::VoltRecord max_record {voltmeter.getMax()};
-    const String max_voltage               {max_record.voltage};
-    const int    max_record_hour           {max_record.timestamp.Hour};
-    const String max_record_hour_str       {max_record_hour};
-    const int    max_record_maxute         {max_record.timestamp.Minute};
-    const String max_record_maxute_str     {max_record_maxute};
-    String bottom_line                     {max_voltage + "v at " +
-                                            max_record_hour_str + ':' +
-                                            max_record_maxute_str};
-    mylcd.centerText(bottom_line);
-    liquidcrystali2c.setCursor(0, 2);
-    liquidcrystali2c.print(bottom_line);
-    Serial.print(bottom_line);
+    const Voltmeter::VoltRecord voltrecord[2] {voltmeter.getMin(), voltmeter.getMax()};
+        
+    //const String max_voltage_string        {max_record.voltage};
+    //const String clock_string              {calendar.getMyClockFormat(max_record.timestamp)};
+    //String bottom_line                     {max_voltage_string + "v at " + clock_string};
+    //mylcd.centerText(bottom_line);
+    //liquidcrystali2c.setCursor(0, 2);
+    //liquidcrystali2c.print(bottom_line);
+    //Serial.print(bottom_line);
+    
+   
+    //const Voltmeter::VoltRecord max_record {voltmeter.getMax()};
+    //const String max_voltage_string        {max_record.voltage};
+    //const String clock_string              {calendar.getMyClockFormat(max_record.timestamp)};
+    //String bottom_line                     {max_voltage_string + "v at " + clock_string};
+    //mylcd.centerText(bottom_line);
+    //liquidcrystali2c.setCursor(0, 2);
+    //liquidcrystali2c.print(bottom_line);
+    //Serial.print(bottom_line);
 }
 
 //==end of MessageManager====================================================================
