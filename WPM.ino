@@ -707,7 +707,7 @@ void MyLCD::printDate(const Coordinant coordinant)
     liquidcrystali2c.setCursor(coordinant.x, coordinant.y); 
     liquidcrystali2c.print(dayShortStr(weekday()));
     liquidcrystali2c.print (", ");
-    liquidcrystali2c.print (calendar.getMonthShortName(gRTC_reading.Month-1));    
+    liquidcrystali2c.print (calendar.getMonthShortName(gRTC_reading.Month));    
     liquidcrystali2c.print(" ");
     liquidcrystali2c.print((gRTC_reading.Day));
     liquidcrystali2c.print(" ");  //this space to clear last digit when month rolls over (31 to 1) 
