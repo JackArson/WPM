@@ -159,3 +159,4 @@ idea:  a function that takes these parameters (min/max voltage allowable time mi
 03-24-19-18:25 MessageManager::voltageRecordMessage()
 03-24-19-19:01 windows segfault repair attempt
 03-24-19-19:05 windows segfault repair complete
+03-25-19-08:54 Calendar::isAM

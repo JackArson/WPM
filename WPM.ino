@@ -79,6 +79,7 @@ public:  //methods
     const char*    getMonthShortName       (const byte month_number);
     byte           getWeekNumber           (tmElements_t date);
     byte           getQtyImportantDates    ();
+    bool           isAM                    (const tmElements_t time);
     void           loadImportantDates      ();
     void           serialPrintImportantDate(const ImportantDate importantdate);
 
@@ -147,6 +148,19 @@ byte Calendar::getWeekNumber(tmElements_t date)
 byte Calendar::getQtyImportantDates()
 {
     return mQtyImportantDatesToReport;
+}
+
+bool Calendar::isAM(const tmElements_t time)
+{
+    //the moment after the clock hits 12 noon the time is post merīdiem
+    if (time.Hour < 12)
+    {
+        return true;
+    }
+    else
+    {
+        return false;
+    }      
 }
 
 void Calendar::loadImportantDates()
@@ -643,7 +657,7 @@ void MyLCD::updateBacklight()
 void MyLCD::printClock(const TimeElements time, const Coordinant coordinant, const bool right_justify)
 {
     liquidcrystali2c.setCursor(coordinant.x, coordinant.y);                                   
-    byte am_pm  {0};
+    //byte am_pm  {0};
     int  format {0};
     //change to 12 hour format
     if ((time.Hour) >= 12)
@@ -668,13 +682,13 @@ void MyLCD::printClock(const TimeElements time, const Coordinant coordinant, con
         liquidcrystali2c.print ("0");
     }  
     liquidcrystali2c.print(time.Minute);
-    if (time.Hour >= 12)
+    if (calendar.isAM(time))
     {
-        liquidcrystali2c.print("pm");
+        liquidcrystali2c.print("am");
     }
     else
     {                          
-        liquidcrystali2c.print("am");
+        liquidcrystali2c.print("pm");
     }                                      
 }
 
@@ -1357,28 +1371,28 @@ void myMessageReminderfunction(){
 //*******************************
 void myMessageSunrisefunction() {
 //*******************************
-  myClearMessageBoardfunction();
-  liquidcrystali2c.setCursor (0,1);
-  //           "12345678901234567890"
-  liquidcrystali2c.print (F("   Sunrise "));
-  liquidcrystali2c.print (today_sunrise_hour);
-  liquidcrystali2c.print (F(":"));
-  if (today_sunrise_minute <= 9){
-   liquidcrystali2c.print(F("0"));
-  }
-  liquidcrystali2c.print (today_sunrise_minute);
-  liquidcrystali2c.print (F("am"));
-  liquidcrystali2c.setCursor (0,2);
-  //           "12345678901234567890"
-  liquidcrystali2c.print (F("   Sunset  ")); 
-  liquidcrystali2c.print (today_sunset_hour - 12);
-  liquidcrystali2c.print (F(":"));
-  if (today_sunset_minute <= 9){
-   liquidcrystali2c.print(F("0"));
-  }
+  //myClearMessageBoardfunction();
+  //liquidcrystali2c.setCursor (0,1);
+  ////           "12345678901234567890"
+  //liquidcrystali2c.print (F("   Sunrise "));
+  //liquidcrystali2c.print (today_sunrise_hour);
+  //liquidcrystali2c.print (F(":"));
+  //if (today_sunrise_minute <= 9){
+   //liquidcrystali2c.print(F("0"));
+  //}
+  //liquidcrystali2c.print (today_sunrise_minute);
+  //liquidcrystali2c.print (F("am"));
+  //liquidcrystali2c.setCursor (0,2);
+  ////           "12345678901234567890"
+  //liquidcrystali2c.print (F("   Sunset  ")); 
+  //liquidcrystali2c.print (today_sunset_hour - 12);
+  //liquidcrystali2c.print (F(":"));
+  //if (today_sunset_minute <= 9){
+   //liquidcrystali2c.print(F("0"));
+  //}
   
-  liquidcrystali2c.print (sunset_minute[calendar.getWeekNumber(gRTC_reading)]);
-  liquidcrystali2c.print (F("pm"));
+  //liquidcrystali2c.print (sunset_minute[calendar.getWeekNumber(gRTC_reading)]);
+  //liquidcrystali2c.print (F("pm"));
 }
 
 
