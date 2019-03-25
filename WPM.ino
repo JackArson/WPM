@@ -25,7 +25,7 @@ LiquidCrystal_I2C  liquidcrystali2c(0x27, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);
 //globals
 tmElements_t       gRTC_reading;
 tmElements_t       gLast_RTC_reading;   //to control 1000ms loop
-time_t             mDissolveTimestamp  {now()};  //for LCD 'dissolve' effect
+time_t             mDissolveTimestamp  {0};  //for LCD 'dissolve' effect
 
 namespace Pin
 {                              
@@ -1499,8 +1499,7 @@ void loop()
     const time_t gDissolveInterval {100}; 
     if (millis() - gDissolveInterval  >= mDissolveTimestamp)
     {
-        mDissolveTimestamp = now(); //set up delay for next loop
-        Serial.print('y'); //test
+        mDissolveTimestamp = millis(); //set up delay for next loop
     }
     //This code runs every second (1000ms)
     RTC.read(gRTC_reading);  //gathered from library by reference
@@ -1650,8 +1649,3 @@ void myReadPotentiometerAndAdjustWorkbenchTrackLightsfunction(){
   }
   analogWrite (Pin::workbench_lighting, (255 - dimmer_reference_number) * scaling_ratio);  
   }
-
-
-
-
-
