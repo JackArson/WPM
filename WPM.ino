@@ -1008,25 +1008,19 @@ void MessageManager::main()
 
 void MessageManager::voltageRecordMessage()
 {
-    const Voltmeter::VoltRecord voltrecord[2] {voltmeter.getMin(), voltmeter.getMax()};
-        
-    //const String max_voltage_string        {max_record.voltage};
-    //const String clock_string              {calendar.getMyClockFormat(max_record.timestamp)};
-    //String bottom_line                     {max_voltage_string + "v at " + clock_string};
-    //mylcd.centerText(bottom_line);
-    //liquidcrystali2c.setCursor(0, 2);
-    //liquidcrystali2c.print(bottom_line);
-    //Serial.print(bottom_line);
-    
-   
-    //const Voltmeter::VoltRecord max_record {voltmeter.getMax()};
-    //const String max_voltage_string        {max_record.voltage};
-    //const String clock_string              {calendar.getMyClockFormat(max_record.timestamp)};
-    //String bottom_line                     {max_voltage_string + "v at " + clock_string};
-    //mylcd.centerText(bottom_line);
-    //liquidcrystali2c.setCursor(0, 2);
-    //liquidcrystali2c.print(bottom_line);
-    //Serial.print(bottom_line);
+    const int qty_voltrecord {2};
+    const Voltmeter::VoltRecord voltrecord[qty_voltrecord] {voltmeter.getMin(),
+                                                            voltmeter.getMax()};
+    for (int i = 0; i < qty_voltrecord; i++)
+    {
+        const String voltage_string  {voltrecord[i].voltage};
+        const String clock_string    {calendar.getMyClockFormat(voltrecord[i].timestamp)};
+        String voltage_record_string {voltage_string + "v at " + clock_string};
+        mylcd.centerText(voltage_record_string);
+        liquidcrystali2c.setCursor(0, i + 1);
+        liquidcrystali2c.print(voltage_record_string);
+        Serial.print(voltage_record_string);
+    }
 }
 
 //==end of MessageManager====================================================================
