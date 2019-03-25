@@ -165,3 +165,4 @@ idea:  a function that takes these parameters (min/max voltage allowable time mi
 03-25-19-10:09 MessageManager::voltageRecordMessage updated
 03-25-19-10:18 MessageManager::voltageRecordMessage updated
 03-25-19-11:44 old state machine functions refactored and moved to myStateMachine
+03-25-19-18:42 all sunrise sunset tables and critical functions moved to calendar

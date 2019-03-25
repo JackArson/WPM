@@ -1,3 +1,19 @@
+/* Workshop Power Manager controls my 12 volt solar power system in my workshop.
+ * It monitors system voltage and can activate a battery charger or an inverter.
+ * It also controls 2, 120 volt circuits and can switch them away from the grid
+ * to the inverter as needed.
+ *     The hardware is an Arduino Mega, (although an Uno would have been enough.)
+ * Attached to that is a battery backed up RTC clock, and a 4 x 20 LCD screen.  These
+ * items communicate to the Mega through the i2c protocol.  I also built a 9 volt power
+ * supply (drops to 5 volts after the Mega's regulator.)  I also built a voltage
+ * divider.  The divider allows my 5 volt Mega to measure up to 20 volts.
+ *     In addition to it's primary functions, it runs a small message system, and
+ * a track lighting system.  The message system display's system statistics and
+ * reminds me of important dates.  I converted the track lighting to 12 volts DC.
+ * The controller keeps the LED lights below 12 volts using pulse width modulation.
+ * It also reads a potentiometer I am using as a dimmer switch.       
+*/
+
 #include <Time.h>
 #include <TimeLib.h>
 #include <LiquidCrystal_I2C.h>
@@ -17,9 +33,9 @@ namespace Pin
     const byte light_sensor_two         {3};  //orange wire lower cable
     const byte battery_charger          {11}; //green wire upper cable  
     const byte inverter                 {5};  //blue wire upper cable
-    const byte workbench_lighting       {10}; //purple wire upper cable* too fast PWM
-    const byte stage_one_inverter_relay {8};  //A
-    const byte stage_two_inverter_relay {9};  //S
+    const byte workbench_lighting       {10}; //purple wire upper cable
+    const byte stage_one_inverter_relay {8};  //circuit 'A'
+    const byte stage_two_inverter_relay {9};  //circuit 'S'
     //analog pins
     const byte voltage_divider          {A0}; //green  wire lower cable
     const byte potentiometer            {A1}; //yellow wire
@@ -27,21 +43,11 @@ namespace Pin
 
 //==end of namespace Pin======================================================================
 
-boolean myIsItDaylightfunction();
-boolean myIsItDeltaTimePastDawnfunction();
-void myMessageManagerfunction();
+
 void myMessageInverterRunTimefunction();
-void myMessageReminderfunction();
 void myMessageSunrisefunction();
-void myMessageUpcomingEventsfunction(byte n);
-void myMessageVoltageDailyHighfunction();
-void myMessageWeekNumberfunction();
-void myPrintDatetoLCDfunction(byte x, byte y);
 void myPrintLDRresultsToLCDfunction();
-void myPrintVoltagetoLCDfunction(int x,int y,float v);
 void myReadPotentiometerAndAdjustWorkbenchTrackLightsfunction();
-void mysetSunriseSunsetTimesfunction();
-void myVoltageCalculationfunction();
 
 //all caps indicate a COMPILE TIME CONSTANT 
 const byte QTY_IMPORTANT_DATES = 23;  //this must be initialized in global space instead
@@ -99,24 +105,65 @@ private: //variables
         {"Paul Crowned King", 3, 28, 2019, EVENTTYPE_APPOINTMENT} //23
     };
     const char* mDaySuffix[4] = {"st", "nd", "rd", "th"};
+    //sometimes there are more than 52 weeks in a year
+    //these tables are close enough to use year after year
+    const byte sunrise_hour[53]   = { 8,  8,  8,  8,  8,  8,  8,  8,  8,  7,
+                                      7,  7,  7,  7,  6,  6,  6,  6,  6,  6,
+                                      6,  6,  6,  5,  5,  6,  6,  6,  6,  6,
+                                      6,  6,  6,  6,  6,  6,  7,  7,  7,  7,
+                                      7,  7,  7,  7,  7,  8,  8,  8,  8,  8,
+                                      8,  8,  8}; 
+    const byte sunrise_minute[53] = {47, 48, 46, 42, 37, 31, 23, 14,  4, 54,
+                                     43, 32, 21, 10, 59, 48, 38, 29, 20, 13,
+                                      7,  3,  0, 58, 58,  0,  3,  7, 12, 18,
+                                     24, 30, 37, 43, 50, 56,  3,  9, 16, 23,
+                                     29, 36, 44, 51, 59,  7, 15, 23, 30, 36,
+                                     41, 45, 47};
+    const byte sunset_hour[53]    = {18, 18, 18, 18, 18, 18, 18, 19, 19, 19,
+                                     19, 19, 19, 19, 19, 20, 20, 20, 20, 20,
+                                     20, 20, 20, 20, 20, 20, 20, 20, 20, 20,
+                                     20, 20 ,20, 20, 20, 19, 19, 19, 19, 19,
+                                     18, 18, 18, 18, 18, 18, 18, 18, 18, 18,
+                                     18, 18, 18}; 
+    const byte sunset_minute[53]  = {13, 19, 26, 34, 43, 51, 59,  7, 15, 23,
+                                     30, 37, 44, 51, 58,  5, 12, 19, 26, 33,
+                                     39, 45, 50, 54, 57, 58, 58, 56, 53, 48,
+                                     42, 34, 26, 16, 06, 55, 44, 32, 21,  9,
+                                     58, 48, 38, 29, 21, 14,  8,  4,  2,  2,
+                                      4,  7, 13};
+
 private: //variables continued
     byte mQtyImportantDatesToReport              {};
     ImportantDate const * mDatesToReportList[QTY_IMPORTANT_DATES] {};
     //mDatesToReportList array is large enough to hold pointers to every event if needed.
+    byte mTodaySunriseHour   {0};
+    byte mTodaySunriseMinute {0};
+    byte mTodaySunSetHour    {0};
+    byte mTodaySunSetMinute  {0};
+    bool mDaylightSavingsTime {true};
 public:  //methods
-    
+    void           init                    ();
     const String   getMyClockFormat        (const tmElements_t time,
                                             const bool right_justify = false);
     const char*    getDaySuffix            (byte day_number);
-    const ImportantDate* getImportantDate        (const byte index);     
+    const ImportantDate* getImportantDate  (const byte index);     
     const char*    getMonthShortName       (const byte month_number);
     byte           getWeekNumber           (tmElements_t date);
     byte           getQtyImportantDates    ();
     bool           isAM                    (const tmElements_t time);
+    bool           isDaylight              ();
+    bool           isWakeUpComplete        ();
     void           loadImportantDates      ();
     void           serialPrintImportantDate(const ImportantDate importantdate);
+    void           setSunriseSunset        ();
 
 }calendar;
+
+void Calendar::init()
+{
+    loadImportantDates();
+    setSunriseSunset();
+}
 
 const String Calendar::getMyClockFormat(const tmElements_t time, const bool right_justify)
 {
@@ -159,6 +206,25 @@ const String Calendar::getMyClockFormat(const tmElements_t time, const bool righ
     }
     return clock_string;    
 }
+
+bool Calendar::isWakeUpComplete()
+{
+    const int delay = 15;  //minutes 
+    //The wake up delay ensures that the the inverter does not burn off the fresh
+    //battery charger energy.
+
+    const int sunrise_minutes = (mTodaySunriseHour * 60) + mTodaySunriseMinute;
+    const int now_minutes     = (hour() * 60)            + minute();  
+    if (now_minutes >= sunrise_minutes + delay)
+    {
+        return true; 
+    }
+    else
+    {
+        return false;
+    }
+}
+
 
 const char* Calendar::getDaySuffix(byte day_number)
 {
@@ -238,6 +304,22 @@ bool Calendar::isAM(const tmElements_t time)
     }      
 }
 
+bool Calendar::isDaylight()
+{
+    const int sunrise_minutes {(mTodaySunriseHour * 60) + mTodaySunriseMinute};
+    const int sunset_minutes  {(mTodaySunSetHour  * 60) + mTodaySunSetMinute};
+    const int now_minutes     {(hour()            * 60) + minute()};
+    if (now_minutes >= sunrise_minutes &&
+        now_minutes <  sunset_minutes)
+    {
+        return true; 
+    }
+    else
+    {
+        return false;
+    }
+}
+
 void Calendar::loadImportantDates()
 {
     //load all events in the next two weeks
@@ -305,6 +387,15 @@ void Calendar::serialPrintImportantDate(const ImportantDate importantdate)
     const char *day_suffix {getDaySuffix(importantdate.day)};
     Serial.print(day_suffix);
     Serial.println();
+}
+
+void Calendar::setSunriseSunset()
+{
+    const int week_number {getWeekNumber(gRTC_reading)};
+    mTodaySunriseHour   = sunrise_hour[week_number] -1 + mDaylightSavingsTime;
+    mTodaySunriseMinute = sunrise_minute[week_number];
+    mTodaySunSetHour    = sunset_hour[week_number] -1 +mDaylightSavingsTime;
+    mTodaySunSetMinute  = sunset_minute[week_number]; 
 }
 
 //==end of Calendar==========================================================================
@@ -1050,7 +1141,7 @@ void MyStateMachine::initSleepStatefunction()
 void MyStateMachine::sleepStatefunction()
 {
     //switch to initiate wake state if light
-    if (myIsItDaylightfunction() == true)
+    if (calendar.isDaylight() == true)
     {        
         setState(STATE_INIT_WAKE);
     }
@@ -1068,14 +1159,14 @@ void MyStateMachine::initWakeStatefunction()
 void MyStateMachine::wakeStatefunction()
 {
     //check to see if it is time to go back to sleep
-    if (myIsItDaylightfunction() == false)
+    if (calendar.isDaylight() == false)
     {
         setState(STATE_INIT_SLEEP); //initiate sleep state
     }
     //check to see how long it is past dawn.
     //if it is delta_t, or 15 minutes, past dawn switch to state 4 (init balanced)
     //The wake up delay ensures that the the inverter does not burn off the fresh battery charger energy
-    else if (myIsItDeltaTimePastDawnfunction() == true)
+    else if (calendar.isWakeUpComplete() == true)
     {
         setState(STATE_INIT_BALANCED);  //initiate balanced
     }
@@ -1095,7 +1186,7 @@ void MyStateMachine::balancedStatefunction()
     const float voltage_to_start_inverter = 13.80;
     const float voltage_to_start_daytime_charging = 12.60;
     //switch to initiate sleep mode if dark
-    if (myIsItDaylightfunction() == false)
+    if (calendar.isDaylight() == false)
     {
         setState(STATE_INIT_SLEEP);
     }
@@ -1150,7 +1241,7 @@ void MyStateMachine::stageOneInverterStatefunction()
     const float voltage_to_switch_to_stage_two {13.80};
     mInverterRunTime++;
     //switch to initiate sleep mode if dark (unlikely)
-    if (myIsItDaylightfunction() == false)
+    if (calendar.isDaylight() == false)
     {        
         setState(STATE_INIT_SLEEP);
     }
@@ -1180,7 +1271,7 @@ void MyStateMachine::stageTwoInverterStatefunction()
 {
     const float voltage_to_drop_back_to_stage_one {12.70};
     //switch to initiate sleep mode if dark
-    if (myIsItDaylightfunction() == false)
+    if (calendar.isDaylight() == false)
     {        
         setState(STATE_INIT_SLEEP);
     }
@@ -1301,6 +1392,7 @@ void MessageManager::voltageRecordMessage()
     const int qty_voltrecord {2};
     const Voltmeter::VoltRecord voltrecord[qty_voltrecord] {voltmeter.getMin(),
                                                             voltmeter.getMax()};
+    Serial.println("Voltage extremes:");                                                            
     for (int i = 0; i < qty_voltrecord; i++)
     {
         const String voltage_string  {voltrecord[i].voltage};
@@ -1309,41 +1401,22 @@ void MessageManager::voltageRecordMessage()
         mylcd.centerText(voltage_record_string);
         liquidcrystali2c.setCursor(0, i + 1);
         liquidcrystali2c.print(voltage_record_string);
-        Serial.print(voltage_record_string);
+        Serial.println(voltage_record_string);
     }
 }
 
 //==end of MessageManager====================================================================
 
 
-
-// 2                      3                      4                     5                       6                       7                      8                     9                      10                     11                     12                     13                     14                     15                     16                     17                      18                     19                     20                      21                     22
-//byte  number_of_records_to_scan = 23;      // "12345678901234567890","12345678901234567890","12345678901234567890","12345678901234567890","12345678901234567890",,"12345678901234567890","12345678901234567890","12345678901234567890","12345678901234567890","12345678901234567890","12345678901234567890","12345678901234567890","12345678901234567890","12345678901234567890","12345678901234567890","12345678901234567890","12345678901234567890","12345678901234567890","12345678901234567890","12345678901234567890","12345678901234567890","12345678901234567890"     
-//const char* important_dates_string_array[] = {" Kathy"               ,"Jack(cat)"           ,"Katrina"             ,"  Alan"              ,"  Jack"              ," Joshua"              ,"  Dad"               ,"Christopher"         ,"  Jon"                ,"  Mena"              ," Jacob"              ,"Elizabeth"           ,"Aunt Julie"          ," Dentist 8:00AM"     ,"Paul and Mena"       ,"Empty"               ," Cersei"             ," Mom and Dad"        ,"  Paul"              ,"  Mom"               ," Erik"               ,"Mathew"              ,"      Christmas"};
-//const byte  important_dates_month_array[]  = {1                      ,2                     ,2                     ,2                     ,2                     ,3                      ,3                     ,4                     ,4                      ,4                     ,4                     ,4                     ,5                     ,10                    ,6                     ,0                     ,6                     ,9                     ,9                     ,10                    ,12                    ,12                    ,12};
-//const byte  important_dates_day_array[]    = {7                      ,6                     ,9                     ,10                    ,27                    ,23                     ,30                    ,3                     ,15                     ,24                    ,26                    ,29                    ,31                    ,10                    ,29                    ,0                     ,15                    ,7                     ,24                    ,23                    ,4                     ,17                    ,25};
-//const int   important_dates_yob_array[]    = {1967                   ,2011                  ,2000                  ,1993                  ,2012                  ,1993                   ,1943                  ,1990                  ,1968                   ,1972                  ,2005                  ,2000                  ,1942                  ,0                     ,1991                  ,0                     ,2015                  ,1963                  ,1969                  ,1943                  ,1999                  ,1995                  ,0};   
-//const byte  event_type_to_print_array[]    = {1                      ,1                     ,1                     ,1                     ,1                     ,1                      ,1                     ,1                     ,1                      ,1                     ,1                     ,1                     ,1                     ,0                     ,2                     ,0                     ,1                     ,2                     ,1                     ,1                     ,1                     ,1                     ,0};
-                                     
-
-const char* month_short_name[12] = {"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
-//               WEEK      -1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50 51 52 53
-
-byte sunrise_hour[53]   = { 8, 8, 8, 8, 8, 8, 8, 8, 8, 7, 7, 7, 7, 7, 6, 6, 6, 6, 6, 6, 6, 6, 6, 5, 5, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 7, 7, 7, 7, 7, 7, 7, 7, 7, 8, 8, 8, 8, 8, 8, 8, 8 }; 
-byte sunrise_minute[53] = {47,48,46,42,37,31,23,14, 4,54,43,32,21,10,59,48,38,29,20,13, 7, 3, 0,58,58, 0, 3, 7,12,18,24,30,37,43,50,56, 3, 9,16,23,29,36,44,51,59, 7,15,23,30,36,41,45,47 };
-
-byte sunset_hour[53]    = {18,18,18,18,18,18,18,19,19,19,19,19,19,19,19,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,19,19,19,19,19,18,18,18,18,18,18,18,18,18,18,18,18,18 }; 
-byte sunset_minute[53]  = {13,19,26,34,43,51,59, 7,15,23,30,37,44,51,58, 5,12,19,26,33,39,45,50,54,57,58,58,56,53,48,42,34,26,16,06,55,44,32,21, 9,58,48,38,29,21,14, 8, 4, 2, 2, 4, 7,13 };
-
 boolean daylight_savings_time = true; // was false from fall to spring, now trying true for 
                                       // spring to fall
 
 //int  inverter_run_time  = 0;
 
-byte          today_sunrise_hour = 0;
-byte          today_sunset_hour = 0;
-byte          today_sunrise_minute = 0;
-byte          today_sunset_minute = 0;
+//byte          today_sunrise_hour = 0;
+//byte          today_sunset_hour = 0;
+//byte          today_sunrise_minute = 0;
+//byte          today_sunset_minute = 0;
 byte          message_manager_next_message = 1;
 
 byte          inverter_warm_up_timer = 0; //seconds
@@ -1358,7 +1431,7 @@ boolean       message_loaded [3]  = {false,false,false};
 byte reminder_message_pointer [3] = {false,false,false};
 byte dimmer_reference_number = 0;
 
-const unsigned long seconds_in_a_week = 604800;  
+//const unsigned long seconds_in_a_week = 604800;  
 
 // SETUP 
 void setup()
@@ -1379,8 +1452,7 @@ void setup()
     myserial.setClock();
     voltmeter.readVoltage();
     voltmeter.initDailyStatistics();
-    calendar.loadImportantDates();
-    mysetSunriseSunsetTimesfunction();
+    calendar.init();
     //set pins  
     pinMode (Pin::inverter, OUTPUT);
     pinMode (Pin::battery_charger, OUTPUT);
@@ -1423,134 +1495,100 @@ void loop()
         {
             mystatemachine.resetInverterRunTime();
             voltmeter.initDailyStatistics();            
-            calendar.loadImportantDates();
-            mysetSunriseSunsetTimesfunction();  
+            calendar.init();
         }
-        
-        
-    Serial.println();
-    //end serial report
+    Serial.println(); //end serial report, new line
     }
 }
 
-//---------------------------------
-void myClearMessageBoardfunction(){
-//---------------------------------
-   //                              "12345678901234567890"   
-   liquidcrystali2c.setCursor (0,1); liquidcrystali2c.print (F("                    "));
-   liquidcrystali2c.setCursor (0,2); liquidcrystali2c.print (F("                    "));
-}
-
-//********************************
-boolean myIsItDaylightfunction() {
-//********************************
-  int sunrise_in_minutes = today_sunrise_hour * 60 + today_sunrise_minute;
-  int sunset_in_minutes = today_sunset_hour * 60 + today_sunset_minute;
-  int now_in_minutes = hour() * 60 + minute();
-
-  if (now_in_minutes >= sunrise_in_minutes && now_in_minutes < sunset_in_minutes) {
-    return true; 
-  } else {
-    return false;
-  }
-}
-
-//=========================================
-boolean myIsItDeltaTimePastDawnfunction() {
-//=============================5.10.2018===
-
-  //The wake up delay ensures that the the inverter does not burn off the fresh battery charger energy
-  //If the inverter is reset in the middle of the day however, this hastens the inverter activation 
-  const int sunrise_in_minutes = today_sunrise_hour * 60 + today_sunrise_minute;
-  const int delta_t = 15;  //minutes 
-  const int now_in_minutes = hour() * 60 + minute();
-  
-  if (now_in_minutes >= sunrise_in_minutes + delta_t) {
-    return true; 
-  } else {
-    return false;
-  }
-}
+////---------------------------------
+//void myClearMessageBoardfunction(){
+////---------------------------------
+   ////                              "12345678901234567890"   
+   //liquidcrystali2c.setCursor (0,1); liquidcrystali2c.print (F("                    "));
+   //liquidcrystali2c.setCursor (0,2); liquidcrystali2c.print (F("                    "));
+//}
 
 
-//-------------------------------
-void myMessageInverterRunTimefunction(){
-//-------------------------------   
-  //myClearMessageBoardfunction();
-  //liquidcrystali2c.setCursor (0,1);
-  //if (inverter_run_time == 0) {
-               ////"12345678901234567890"
-     //liquidcrystali2c.print(F("  Inverter Waiting"));
-     //return;  
-  //} 
-  //if (inverter_run_time > 0 && inverter_run_time < 60) {
-               ////"12345678901234567890"
-     //liquidcrystali2c.print(F(" Inverter harvested"));
-     //liquidcrystali2c.setCursor (8,2);
-     //liquidcrystali2c.print(inverter_run_time);
-     //liquidcrystali2c.print("s");
-     //return;  
-  //}
-  //if (inverter_run_time >= 60) {
-               ////"12345678901234567890"
-     //liquidcrystali2c.print(F(" Inverter harvested"));
-     //liquidcrystali2c.setCursor (8,2);
-     //liquidcrystali2c.print(inverter_run_time/60);
-     //liquidcrystali2c.print("m");
-     //return;  
-  //}
-}
 
-//-------------------------------
-void myMessageReminderfunction(){
-//-------------------------------
-   myClearMessageBoardfunction();
-   liquidcrystali2c.setCursor (0,1);
-   //           "12345678901234567890"
-   liquidcrystali2c.print (F("   Did you MED-X?"));
-   liquidcrystali2c.setCursor (0,2);
-   //liquidcrystali2c.print (F("   eggs floss med-x?"));
+////-------------------------------
+//void myMessageInverterRunTimefunction(){
+////-------------------------------   
+  ////myClearMessageBoardfunction();
+  ////liquidcrystali2c.setCursor (0,1);
+  ////if (inverter_run_time == 0) {
+               //////"12345678901234567890"
+     ////liquidcrystali2c.print(F("  Inverter Waiting"));
+     ////return;  
+  ////} 
+  ////if (inverter_run_time > 0 && inverter_run_time < 60) {
+               //////"12345678901234567890"
+     ////liquidcrystali2c.print(F(" Inverter harvested"));
+     ////liquidcrystali2c.setCursor (8,2);
+     ////liquidcrystali2c.print(inverter_run_time);
+     ////liquidcrystali2c.print("s");
+     ////return;  
+  ////}
+  ////if (inverter_run_time >= 60) {
+               //////"12345678901234567890"
+     ////liquidcrystali2c.print(F(" Inverter harvested"));
+     ////liquidcrystali2c.setCursor (8,2);
+     ////liquidcrystali2c.print(inverter_run_time/60);
+     ////liquidcrystali2c.print("m");
+     ////return;  
+  ////}
+//}
+
+////-------------------------------
+//void myMessageReminderfunction(){
+////-------------------------------
+   //myClearMessageBoardfunction();
+   //liquidcrystali2c.setCursor (0,1);
+   ////           "12345678901234567890"
+   //liquidcrystali2c.print (F("   Did you MED-X?"));
+   //liquidcrystali2c.setCursor (0,2);
+   ////liquidcrystali2c.print (F("   eggs floss med-x?"));
    
-}
-//*******************************
-void myMessageSunrisefunction() {
-//*******************************
-  //myClearMessageBoardfunction();
-  //liquidcrystali2c.setCursor (0,1);
-  ////           "12345678901234567890"
-  //liquidcrystali2c.print (F("   Sunrise "));
-  //liquidcrystali2c.print (today_sunrise_hour);
-  //liquidcrystali2c.print (F(":"));
-  //if (today_sunrise_minute <= 9){
-   //liquidcrystali2c.print(F("0"));
-  //}
-  //liquidcrystali2c.print (today_sunrise_minute);
-  //liquidcrystali2c.print (F("am"));
-  //liquidcrystali2c.setCursor (0,2);
-  ////           "12345678901234567890"
-  //liquidcrystali2c.print (F("   Sunset  ")); 
-  //liquidcrystali2c.print (today_sunset_hour - 12);
-  //liquidcrystali2c.print (F(":"));
-  //if (today_sunset_minute <= 9){
-   //liquidcrystali2c.print(F("0"));
-  //}
+//}
+////*******************************
+//void myMessageSunrisefunction() {
+////*******************************
+  ////myClearMessageBoardfunction();
+  ////liquidcrystali2c.setCursor (0,1);
+  //////           "12345678901234567890"
+  ////liquidcrystali2c.print (F("   Sunrise "));
+  ////liquidcrystali2c.print (today_sunrise_hour);
+  ////liquidcrystali2c.print (F(":"));
+  ////if (today_sunrise_minute <= 9){
+   ////liquidcrystali2c.print(F("0"));
+  ////}
+  ////liquidcrystali2c.print (today_sunrise_minute);
+  ////liquidcrystali2c.print (F("am"));
+  ////liquidcrystali2c.setCursor (0,2);
+  //////           "12345678901234567890"
+  ////liquidcrystali2c.print (F("   Sunset  ")); 
+  ////liquidcrystali2c.print (today_sunset_hour - 12);
+  ////liquidcrystali2c.print (F(":"));
+  ////if (today_sunset_minute <= 9){
+   ////liquidcrystali2c.print(F("0"));
+  ////}
   
-  //liquidcrystali2c.print (sunset_minute[calendar.getWeekNumber(gRTC_reading)]);
-  //liquidcrystali2c.print (F("pm"));
-}
+  ////liquidcrystali2c.print (sunset_minute[calendar.getWeekNumber(gRTC_reading)]);
+  ////liquidcrystali2c.print (F("pm"));
+//}
 
 
-void myMessageWeekNumberfunction() {
-//----------------------------------
+//void myMessageWeekNumberfunction() {
+////----------------------------------
 
-   myClearMessageBoardfunction();
-   liquidcrystali2c.setCursor (0,1);
-   //         "12345678901234567890"
-   liquidcrystali2c.print (F("  Solar Week"));
-   liquidcrystali2c.setCursor (0,2);
-   liquidcrystali2c.print (F("        Number "));
-   liquidcrystali2c.print (calendar.getWeekNumber(gRTC_reading));   
-}
+   //myClearMessageBoardfunction();
+   //liquidcrystali2c.setCursor (0,1);
+   ////         "12345678901234567890"
+   //liquidcrystali2c.print (F("  Solar Week"));
+   //liquidcrystali2c.setCursor (0,2);
+   //liquidcrystali2c.print (F("        Number "));
+   //liquidcrystali2c.print (calendar.getWeekNumber(gRTC_reading));   
+//}
 
 //**************************************************************
 void myReadPotentiometerAndAdjustWorkbenchTrackLightsfunction(){
@@ -1582,15 +1620,6 @@ void myReadPotentiometerAndAdjustWorkbenchTrackLightsfunction(){
   }
 
 
-//======================================
-void mysetSunriseSunsetTimesfunction() {
-//==================12.4.2017===========
 
-  const byte week_number {calendar.getWeekNumber(gRTC_reading)};
-  today_sunrise_hour = sunrise_hour[week_number]-1+daylight_savings_time;
-  today_sunrise_minute = sunrise_minute[week_number];
-  today_sunset_hour = sunset_hour[week_number]-1+daylight_savings_time;
-  today_sunset_minute = sunset_minute[week_number];
-}
 
 
