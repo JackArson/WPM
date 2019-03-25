@@ -24,7 +24,8 @@ LiquidCrystal_I2C  liquidcrystali2c(0x27, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);
 
 //globals
 tmElements_t       gRTC_reading;
-tmElements_t       gLast_RTC_reading;
+tmElements_t       gLast_RTC_reading;   //to control 1000ms loop
+time_t             mDissolveTimestamp  {now()};  //for LCD 'dissolve' effect
 
 namespace Pin
 {                              
@@ -43,10 +44,6 @@ namespace Pin
 
 //==end of namespace Pin======================================================================
 
-
-void myMessageInverterRunTimefunction();
-void myMessageSunrisefunction();
-void myPrintLDRresultsToLCDfunction();
 void myReadPotentiometerAndAdjustWorkbenchTrackLightsfunction();
 
 //all caps indicate a COMPILE TIME CONSTANT 
@@ -105,8 +102,8 @@ private: //variables
         {"Paul Crowned King", 3, 28, 2019, EVENTTYPE_APPOINTMENT} //23
     };
     const char* mDaySuffix[4] = {"st", "nd", "rd", "th"};
-    //sometimes there are more than 52 weeks in a year
-    //these tables are close enough to use year after year
+    //Sometimes there are more than 52 weeks in a year.
+    //These tables are close enough to use year after year
     const byte sunrise_hour[53]   = { 8,  8,  8,  8,  8,  8,  8,  8,  8,  7,
                                       7,  7,  7,  7,  6,  6,  6,  6,  6,  6,
                                       6,  6,  6,  5,  5,  6,  6,  6,  6,  6,
@@ -1329,6 +1326,7 @@ private: //variables
     const byte   mQtySystemMessages     {5};        
 public:  //methods
     void main();
+    void sunriseSunsetMessage();
     void voltageRecordMessage();
 }messagemanager;
 
@@ -1358,7 +1356,7 @@ void MessageManager::main()
                     voltageRecordMessage();
                     break;
                 case 1:
-                    Serial.println(sytem_message_index);
+                    sunriseSunsetMessage();
                     break;
                 case 2:
                     Serial.println(sytem_message_index);
@@ -1385,6 +1383,33 @@ void MessageManager::main()
         }
         
     }
+}
+
+void MessageManager::sunriseSunsetMessage()
+{
+////liquidcrystali2c.setCursor (0,1);
+  //////           "12345678901234567890"
+  ////liquidcrystali2c.print (F("   Sunrise "));
+  ////liquidcrystali2c.print (today_sunrise_hour);
+  ////liquidcrystali2c.print (F(":"));
+  ////if (today_sunrise_minute <= 9){
+   ////liquidcrystali2c.print(F("0"));
+  ////}
+  ////liquidcrystali2c.print (today_sunrise_minute);
+  ////liquidcrystali2c.print (F("am"));
+  ////liquidcrystali2c.setCursor (0,2);
+  //////           "12345678901234567890"
+  ////liquidcrystali2c.print (F("   Sunset  ")); 
+  ////liquidcrystali2c.print (today_sunset_hour - 12);
+  ////liquidcrystali2c.print (F(":"));
+  ////if (today_sunset_minute <= 9){
+   ////liquidcrystali2c.print(F("0"));
+  ////}
+  
+  ////liquidcrystali2c.print (sunset_minute[calendar.getWeekNumber(gRTC_reading)]);
+  ////liquidcrystali2c.print (F("pm"));
+//}
+
 }
 
 void MessageManager::voltageRecordMessage()
@@ -1470,6 +1495,13 @@ void loop()
     myReadPotentiometerAndAdjustWorkbenchTrackLightsfunction();
     voltmeter.readVoltage();
     myserial.checkInput();
+    //This code runs every gDissolveInterval (100ms) 
+    const time_t gDissolveInterval {100}; 
+    if (millis() - gDissolveInterval  >= mDissolveTimestamp)
+    {
+        mDissolveTimestamp = now(); //set up delay for next loop
+        Serial.print('y'); //test
+    }
     //This code runs every second (1000ms)
     RTC.read(gRTC_reading);  //gathered from library by reference
     if (gLast_RTC_reading.Second != gRTC_reading.Second) 
