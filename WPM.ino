@@ -10,7 +10,38 @@ LiquidCrystal_I2C  liquidcrystali2c(0x27, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);
 tmElements_t       gRTC_reading;
 tmElements_t       gLast_RTC_reading;
 
+namespace Pin
+{                              
+    //digital pins
+    const byte light_sensor_one         {2};  //brown   wire lower cable              
+    const byte light_sensor_two         {3};  //orange wire lower cable
+    const byte battery_charger          {11}; //green wire upper cable  
+    const byte inverter                 {5};  //blue wire upper cable
+    const byte workbench_lighting       {10}; //purple wire upper cable* too fast PWM
+    const byte stage_one_inverter_relay {8};  //A
+    const byte stage_two_inverter_relay {9};  //S
+    //analog pins
+    const byte voltage_divider          {A0}; //green  wire lower cable
+    const byte potentiometer            {A1}; //yellow wire
+}
 
+//==end of namespace Pin======================================================================
+
+boolean myIsItDaylightfunction();
+boolean myIsItDeltaTimePastDawnfunction();
+void myMessageManagerfunction();
+void myMessageInverterRunTimefunction();
+void myMessageReminderfunction();
+void myMessageSunrisefunction();
+void myMessageUpcomingEventsfunction(byte n);
+void myMessageVoltageDailyHighfunction();
+void myMessageWeekNumberfunction();
+void myPrintDatetoLCDfunction(byte x, byte y);
+void myPrintLDRresultsToLCDfunction();
+void myPrintVoltagetoLCDfunction(int x,int y,float v);
+void myReadPotentiometerAndAdjustWorkbenchTrackLightsfunction();
+void mysetSunriseSunsetTimesfunction();
+void myVoltageCalculationfunction();
 
 //all caps indicate a COMPILE TIME CONSTANT 
 const byte QTY_IMPORTANT_DATES = 23;  //this must be initialized in global space instead
@@ -278,102 +309,6 @@ void Calendar::serialPrintImportantDate(const ImportantDate importantdate)
 
 //==end of Calendar==========================================================================
 
-class MyStateMachine
-{
-public:
-    enum State
-    {
-        STATE_INIT_SLEEP, //0
-        STATE_SLEEP, //1
-        STATE_INIT_WAKE, //2
-        STATE_WAKE, //3
-        STATE_INIT_BALANCED, //4
-        STATE_BALANCED, //5
-        STATE_INIT_INVERTER_WARM_UP, //6
-        STATE_INVERTER_WARM_UP, //7
-        STATE_INIT_INVERTER_STAGE_ONE, //8
-        STATE_INVERTER_STAGE_ONE, //9
-        STATE_INIT_INVERTER_STAGE_TWO, //10
-        STATE_INVERTER_STAGE_TWO, //11
-        STATE_INIT_DAY_CHARGE, //12
-        STATE_DAY_CHARGE, //13
-        STATE_INIT_INVERTER_COOL_DOWN, //14
-        STATE_INVERTER_COOL_DOWN, //15
-        MAX_STATE
-    };
-private: //variables
-    State mState {STATE_INIT_BALANCED}; //start balanced
-public:  //methods
-    State getState();
-    void  setState(State);
-}mystatemachine;
-
-MyStateMachine::State MyStateMachine::getState()
-{
-    return mState;
-}
-
-void  MyStateMachine::setState(State state)
-{
-    mState = state;
-    const char *start_string {" state set to "};
-    const char *finish_string {""};
-    liquidcrystali2c.setCursor (0,0);
-    switch (mState)
-    {
-    case STATE_INIT_SLEEP:
-    case STATE_INIT_WAKE:
-    case STATE_INIT_BALANCED:
-    case STATE_INIT_INVERTER_WARM_UP:
-    case STATE_INIT_INVERTER_STAGE_ONE:
-    case STATE_INIT_INVERTER_STAGE_TWO:
-    case STATE_INIT_DAY_CHARGE:
-    case STATE_INIT_INVERTER_COOL_DOWN:
-        break;
-    case STATE_SLEEP:
-        finish_string = "sleeping";
-        liquidcrystali2c.print("Sleeping");
-        break;
-    case STATE_WAKE:
-        finish_string = "waking";
-        liquidcrystali2c.print("Waking  ");
-        break;
-    case STATE_BALANCED:
-        finish_string = "balanced";
-        liquidcrystali2c.print("Balanced");
-        break;
-    case STATE_INVERTER_WARM_UP:
-        finish_string = "warm up";
-        liquidcrystali2c.print("Warm up ");
-        break;
-    case STATE_INVERTER_STAGE_ONE:
-        finish_string = "stage one inverter";
-        liquidcrystali2c.print("Invert1 ");
-        break;
-    case STATE_INVERTER_STAGE_TWO:
-        finish_string = "stage two inverter";
-        liquidcrystali2c.print("Invert2 ");
-        break;
-    case STATE_DAY_CHARGE:
-        finish_string = "charging";
-        liquidcrystali2c.print("Charging");
-        break;
-    case STATE_INVERTER_COOL_DOWN:
-        finish_string = "inverter cool down";
-        liquidcrystali2c.print("Cooldown");
-        break;
-    case MAX_STATE:
-    default:
-        break;
-    }
-    if (finish_string != "")
-    {
-        Serial.print(start_string);
-        Serial.print(finish_string);
-    }
-}
-
-//==end of MyStateMachine====================================================================
 
 class MySerial
 {
@@ -473,23 +408,6 @@ struct Coordinant
     byte x;
     byte y;
 };
-
-namespace Pin
-{                              
-    //digital pins
-    const byte light_sensor_one         {2};  //brown   wire lower cable              
-    const byte light_sensor_two         {3};  //orange wire lower cable
-    const byte battery_charger          {11}; //green wire upper cable  
-    const byte inverter                 {5};  //blue wire upper cable
-    const byte workbench_lighting       {10}; //purple wire upper cable* too fast PWM
-    const byte stage_one_inverter_relay {8};  //A
-    const byte stage_two_inverter_relay {9};  //S
-    //analog pins
-    const byte voltage_divider          {A0}; //green  wire lower cable
-    const byte potentiometer            {A1}; //yellow wire
-}
-
-//==end of namespace Pin======================================================================
 
 class MyLCD
 {
@@ -939,6 +857,378 @@ void Voltmeter::readVoltage()
 
 //==end of Voltmeter=========================================================================
 
+class MyStateMachine
+{
+public:
+    enum State
+    {
+        STATE_INIT_SLEEP, //0
+        STATE_SLEEP, //1
+        STATE_INIT_WAKE, //2
+        STATE_WAKE, //3
+        STATE_INIT_BALANCED, //4
+        STATE_BALANCED, //5
+        STATE_INIT_INVERTER_WARM_UP, //6
+        STATE_INVERTER_WARM_UP, //7
+        STATE_INIT_INVERTER_STAGE_ONE, //8
+        STATE_INVERTER_STAGE_ONE, //9
+        STATE_INIT_INVERTER_STAGE_TWO, //10
+        STATE_INVERTER_STAGE_TWO, //11
+        STATE_INIT_DAY_CHARGE, //12
+        STATE_DAY_CHARGE, //13
+        STATE_INIT_INVERTER_COOL_DOWN, //14
+        STATE_INVERTER_COOL_DOWN, //15
+        MAX_STATE
+    };
+private: //variables
+    State mState           {STATE_INIT_BALANCED};
+    int   mInverterRunTime {0};
+public:  //methods
+    void  main                ();
+    State getState            ();
+    void  resetInverterRunTime();
+    void  setState            (const State);
+private: //methods
+    void initSleepStatefunction();
+    void sleepStatefunction();
+    void initWakeStatefunction();
+    void wakeStatefunction();
+    void initBalancedStatefunction();
+    void balancedStatefunction();
+    void initWarmUpInverterStatefunction();
+    void warmUpInverterStatefunction();
+    void initStageOneInverterStatefunction();
+    void stageOneInverterStatefunction();
+    void initStageTwoInverterStatefunction();
+    void stageTwoInverterStatefunction();
+    void initDaytimeChargingfunction();
+    void daytimeChargingfunction();
+    void initInverterCooldownfunction();
+    void inverterCooldownfunction();
+    
+    
+}mystatemachine;
+
+void  MyStateMachine::main()
+{
+    switch (getState())
+    {
+    case STATE_INIT_SLEEP:
+        initSleepStatefunction();
+        break;
+    case STATE_SLEEP:
+        sleepStatefunction();
+        break;
+    case STATE_INIT_WAKE:
+        initWakeStatefunction();
+        break;
+    case STATE_WAKE:
+        wakeStatefunction();
+        break;
+    case STATE_INIT_BALANCED:
+        initBalancedStatefunction();
+        break;
+    case STATE_BALANCED:
+        balancedStatefunction();
+        break;
+    case STATE_INIT_INVERTER_WARM_UP:
+        initWarmUpInverterStatefunction();
+        break;
+    case STATE_INVERTER_WARM_UP:
+        warmUpInverterStatefunction();
+        break;
+    case STATE_INIT_INVERTER_STAGE_ONE:
+        initStageOneInverterStatefunction();
+        break;
+    case STATE_INVERTER_STAGE_ONE:
+        stageOneInverterStatefunction();
+        break;
+    case STATE_INIT_INVERTER_STAGE_TWO:
+        initStageTwoInverterStatefunction();
+        break;
+    case STATE_INVERTER_STAGE_TWO:
+        stageTwoInverterStatefunction();
+        break;
+    case STATE_INIT_DAY_CHARGE:
+        initDaytimeChargingfunction();
+        break;
+    case STATE_DAY_CHARGE:
+        daytimeChargingfunction();
+        break;
+    case STATE_INIT_INVERTER_COOL_DOWN:
+        initInverterCooldownfunction();
+        break;
+    case STATE_INVERTER_COOL_DOWN:
+        inverterCooldownfunction();
+        break;
+    case MAX_STATE:
+    default:
+        break;
+    }
+}
+
+MyStateMachine::State MyStateMachine::getState()
+{
+    return mState;
+}
+
+void MyStateMachine::resetInverterRunTime()
+{
+    mInverterRunTime = 0;
+}
+
+void MyStateMachine::setState(State state)
+{
+    mState = state;
+    const char *start_string {" state set to "};
+    const char *finish_string {""};
+    liquidcrystali2c.setCursor (0,0);
+    switch (mState)
+    {
+    case STATE_INIT_SLEEP:
+    case STATE_INIT_WAKE:
+    case STATE_INIT_BALANCED:
+    case STATE_INIT_INVERTER_WARM_UP:
+    case STATE_INIT_INVERTER_STAGE_ONE:
+    case STATE_INIT_INVERTER_STAGE_TWO:
+    case STATE_INIT_DAY_CHARGE:
+    case STATE_INIT_INVERTER_COOL_DOWN:
+        break;
+    case STATE_SLEEP:
+        finish_string = "sleeping";
+        liquidcrystali2c.print("Sleeping");
+        break;
+    case STATE_WAKE:
+        finish_string = "waking";
+        liquidcrystali2c.print("Waking  ");
+        break;
+    case STATE_BALANCED:
+        finish_string = "balanced";
+        liquidcrystali2c.print("Balanced");
+        break;
+    case STATE_INVERTER_WARM_UP:
+        finish_string = "warm up";
+        liquidcrystali2c.print("Warm up ");
+        break;
+    case STATE_INVERTER_STAGE_ONE:
+        finish_string = "stage one inverter";
+        liquidcrystali2c.print("Invert1 ");
+        break;
+    case STATE_INVERTER_STAGE_TWO:
+        finish_string = "stage two inverter";
+        liquidcrystali2c.print("Invert2 ");
+        break;
+    case STATE_DAY_CHARGE:
+        finish_string = "charging";
+        liquidcrystali2c.print("Charging");
+        break;
+    case STATE_INVERTER_COOL_DOWN:
+        finish_string = "inverter cool down";
+        liquidcrystali2c.print("Cooldown");
+        break;
+    case MAX_STATE:
+    default:
+        break;
+    }
+    if (finish_string != "")
+    {
+        Serial.print(start_string);
+        Serial.print(finish_string);
+    }
+}
+
+void MyStateMachine::initSleepStatefunction()
+{
+    digitalWrite (Pin::battery_charger, HIGH);            //battery charger on
+    digitalWrite (Pin::inverter, LOW);                    //inverter off
+    digitalWrite (Pin::stage_one_inverter_relay, LOW);    // relay one off
+    digitalWrite (Pin::stage_two_inverter_relay, LOW);    // relay two off
+    setState(STATE_SLEEP);
+}
+
+
+void MyStateMachine::sleepStatefunction()
+{
+    //switch to initiate wake state if light
+    if (myIsItDaylightfunction() == true)
+    {        
+        setState(STATE_INIT_WAKE);
+    }
+}
+
+void MyStateMachine::initWakeStatefunction()
+{
+    digitalWrite (Pin::battery_charger, LOW);            // battery charger off
+    digitalWrite (Pin::inverter, LOW);                   // inverter off
+    digitalWrite (Pin::stage_one_inverter_relay, LOW);   // relay one off
+    digitalWrite (Pin::stage_two_inverter_relay, LOW);   // relay two off
+    setState(STATE_WAKE);
+}
+
+void MyStateMachine::wakeStatefunction()
+{
+    //check to see if it is time to go back to sleep
+    if (myIsItDaylightfunction() == false)
+    {
+        setState(STATE_INIT_SLEEP); //initiate sleep state
+    }
+    //check to see how long it is past dawn.
+    //if it is delta_t, or 15 minutes, past dawn switch to state 4 (init balanced)
+    //The wake up delay ensures that the the inverter does not burn off the fresh battery charger energy
+    else if (myIsItDeltaTimePastDawnfunction() == true)
+    {
+        setState(STATE_INIT_BALANCED);  //initiate balanced
+    }
+}
+
+void MyStateMachine::initBalancedStatefunction()
+{
+    digitalWrite (Pin::battery_charger, LOW);          //battery charger off
+    digitalWrite (Pin::inverter, LOW);                 //inverter off
+    digitalWrite (Pin::stage_one_inverter_relay, LOW); // relay one off
+    digitalWrite (Pin::stage_two_inverter_relay, LOW); // relay two off
+    setState(STATE_BALANCED);                          // balanced initialization complete
+}
+
+void MyStateMachine::balancedStatefunction()
+{
+    const float voltage_to_start_inverter = 13.80;
+    const float voltage_to_start_daytime_charging = 12.60;
+    //switch to initiate sleep mode if dark
+    if (myIsItDaylightfunction() == false)
+    {
+        setState(STATE_INIT_SLEEP);
+    }
+    else if (voltmeter.getVoltage() >= voltage_to_start_inverter)
+    {
+        setState(STATE_INIT_INVERTER_WARM_UP); 
+    }
+    else if (voltmeter.getVoltage() <= voltage_to_start_daytime_charging)
+    {
+        setState(STATE_INIT_DAY_CHARGE);
+    }
+}
+
+void MyStateMachine::initWarmUpInverterStatefunction()
+{
+    const int seconds_to_warm_up {4};
+    digitalWrite (Pin::battery_charger, LOW);  //battery charger off
+    digitalWrite (Pin::inverter, HIGH);         //inverter on
+    digitalWrite(Pin::stage_one_inverter_relay, LOW);    // relay one off
+    digitalWrite(Pin::stage_two_inverter_relay, LOW);    // relay two off
+    coundowntimer.set(seconds_to_warm_up);
+    setState(STATE_INVERTER_WARM_UP);
+}
+
+void MyStateMachine::warmUpInverterStatefunction()
+{
+    if (coundowntimer.getCounter())
+    {    
+        //warming up during countdown
+        return;
+    }
+    else
+    {
+        setState(STATE_INIT_INVERTER_STAGE_ONE);
+    }
+}
+
+void MyStateMachine::initStageOneInverterStatefunction()
+{
+    const int stage_two_switching_delay {15};
+    digitalWrite (Pin::battery_charger, LOW);           //battery charger off
+    digitalWrite (Pin::inverter, HIGH);                 //inverter on
+    digitalWrite (Pin::stage_one_inverter_relay, HIGH); // relay one on
+    digitalWrite (Pin::stage_two_inverter_relay, LOW);  // relay two off
+    coundowntimer.set(stage_two_switching_delay);
+    setState(STATE_INVERTER_STAGE_ONE);
+}
+
+void MyStateMachine::stageOneInverterStatefunction()
+{
+    const float voltage_to_turn_inverter_off   {12.55};
+    const float voltage_to_switch_to_stage_two {13.80};
+    mInverterRunTime++;
+    //switch to initiate sleep mode if dark (unlikely)
+    if (myIsItDaylightfunction() == false)
+    {        
+        setState(STATE_INIT_SLEEP);
+    }
+    else if (voltmeter.getVoltage() >= voltage_to_switch_to_stage_two &&
+             !coundowntimer.getCounter())
+    {
+        setState(STATE_INIT_INVERTER_STAGE_TWO);  
+    }
+    else if (voltmeter.getVoltage() <= voltage_to_turn_inverter_off)
+    {
+        setState(STATE_INIT_INVERTER_COOL_DOWN);
+    }
+
+}
+
+void MyStateMachine::initStageTwoInverterStatefunction()
+{
+    digitalWrite(Pin::battery_charger, LOW);           //battery charger off
+    digitalWrite(Pin::inverter, HIGH);                 //inverter on
+    digitalWrite(Pin::stage_one_inverter_relay, HIGH); // relay one on
+    digitalWrite(Pin::stage_two_inverter_relay, HIGH); // relay two on
+    setState(STATE_INIT_INVERTER_STAGE_TWO);
+}
+
+
+void MyStateMachine::stageTwoInverterStatefunction()
+{
+    const float voltage_to_drop_back_to_stage_one {12.70};
+    //switch to initiate sleep mode if dark
+    if (myIsItDaylightfunction() == false)
+    {        
+        setState(STATE_INIT_SLEEP);
+    }
+    else if (voltmeter.getVoltage() <= voltage_to_drop_back_to_stage_one)
+    {
+        setState(STATE_INIT_INVERTER_STAGE_ONE);
+    }
+    mInverterRunTime++;
+}
+
+void MyStateMachine::initDaytimeChargingfunction()
+{
+    digitalWrite(Pin::battery_charger, HIGH);         //battery charger on
+    digitalWrite(Pin::inverter, LOW);                 //inverter off
+    digitalWrite(Pin::stage_one_inverter_relay, LOW); //relay one off
+    digitalWrite(Pin::stage_two_inverter_relay, LOW); //relay two off
+    setState(STATE_DAY_CHARGE);
+}
+
+void MyStateMachine::daytimeChargingfunction()
+{
+    const float voltage_to_switch_off_charger {13.40};
+    if (voltmeter.getVoltage() >= voltage_to_switch_off_charger)
+    {
+        setState(STATE_INIT_BALANCED);
+    }
+}
+
+void MyStateMachine::initInverterCooldownfunction()
+{
+    const int inverter_cooldown_time {30};
+    digitalWrite(Pin::battery_charger, LOW);          //battery charger off
+    digitalWrite(Pin::inverter, LOW);                 //inverter off
+    digitalWrite(Pin::stage_one_inverter_relay, LOW); //relay one off
+    digitalWrite(Pin::stage_two_inverter_relay, LOW); //relay two off
+    coundowntimer.set(inverter_cooldown_time);
+    setState(STATE_INVERTER_COOL_DOWN);
+}
+
+void MyStateMachine::inverterCooldownfunction()
+{
+    if (!coundowntimer.getCounter())
+    {
+        setState(STATE_INIT_BALANCED);
+    }
+}
+//==end of MyStateMachine====================================================================
+
 class MessageManager
 {
 private: //variables
@@ -1015,7 +1305,7 @@ void MessageManager::voltageRecordMessage()
     {
         const String voltage_string  {voltrecord[i].voltage};
         const String clock_string    {calendar.getMyClockFormat(voltrecord[i].timestamp)};
-        String voltage_record_string {voltage_string + "v at " + clock_string};
+        String voltage_record_string {voltage_string + "v @ " + clock_string};
         mylcd.centerText(voltage_record_string);
         liquidcrystali2c.setCursor(0, i + 1);
         liquidcrystali2c.print(voltage_record_string);
@@ -1028,12 +1318,12 @@ void MessageManager::voltageRecordMessage()
 
 
 // 2                      3                      4                     5                       6                       7                      8                     9                      10                     11                     12                     13                     14                     15                     16                     17                      18                     19                     20                      21                     22
-byte  number_of_records_to_scan = 23;      // "12345678901234567890","12345678901234567890","12345678901234567890","12345678901234567890","12345678901234567890",,"12345678901234567890","12345678901234567890","12345678901234567890","12345678901234567890","12345678901234567890","12345678901234567890","12345678901234567890","12345678901234567890","12345678901234567890","12345678901234567890","12345678901234567890","12345678901234567890","12345678901234567890","12345678901234567890","12345678901234567890","12345678901234567890","12345678901234567890"     
-const char* important_dates_string_array[] = {" Kathy"               ,"Jack(cat)"           ,"Katrina"             ,"  Alan"              ,"  Jack"              ," Joshua"              ,"  Dad"               ,"Christopher"         ,"  Jon"                ,"  Mena"              ," Jacob"              ,"Elizabeth"           ,"Aunt Julie"          ," Dentist 8:00AM"     ,"Paul and Mena"       ,"Empty"               ," Cersei"             ," Mom and Dad"        ,"  Paul"              ,"  Mom"               ," Erik"               ,"Mathew"              ,"      Christmas"};
-const byte  important_dates_month_array[]  = {1                      ,2                     ,2                     ,2                     ,2                     ,3                      ,3                     ,4                     ,4                      ,4                     ,4                     ,4                     ,5                     ,10                    ,6                     ,0                     ,6                     ,9                     ,9                     ,10                    ,12                    ,12                    ,12};
-const byte  important_dates_day_array[]    = {7                      ,6                     ,9                     ,10                    ,27                    ,23                     ,30                    ,3                     ,15                     ,24                    ,26                    ,29                    ,31                    ,10                    ,29                    ,0                     ,15                    ,7                     ,24                    ,23                    ,4                     ,17                    ,25};
-const int   important_dates_yob_array[]    = {1967                   ,2011                  ,2000                  ,1993                  ,2012                  ,1993                   ,1943                  ,1990                  ,1968                   ,1972                  ,2005                  ,2000                  ,1942                  ,0                     ,1991                  ,0                     ,2015                  ,1963                  ,1969                  ,1943                  ,1999                  ,1995                  ,0};   
-const byte  event_type_to_print_array[]    = {1                      ,1                     ,1                     ,1                     ,1                     ,1                      ,1                     ,1                     ,1                      ,1                     ,1                     ,1                     ,1                     ,0                     ,2                     ,0                     ,1                     ,2                     ,1                     ,1                     ,1                     ,1                     ,0};
+//byte  number_of_records_to_scan = 23;      // "12345678901234567890","12345678901234567890","12345678901234567890","12345678901234567890","12345678901234567890",,"12345678901234567890","12345678901234567890","12345678901234567890","12345678901234567890","12345678901234567890","12345678901234567890","12345678901234567890","12345678901234567890","12345678901234567890","12345678901234567890","12345678901234567890","12345678901234567890","12345678901234567890","12345678901234567890","12345678901234567890","12345678901234567890","12345678901234567890"     
+//const char* important_dates_string_array[] = {" Kathy"               ,"Jack(cat)"           ,"Katrina"             ,"  Alan"              ,"  Jack"              ," Joshua"              ,"  Dad"               ,"Christopher"         ,"  Jon"                ,"  Mena"              ," Jacob"              ,"Elizabeth"           ,"Aunt Julie"          ," Dentist 8:00AM"     ,"Paul and Mena"       ,"Empty"               ," Cersei"             ," Mom and Dad"        ,"  Paul"              ,"  Mom"               ," Erik"               ,"Mathew"              ,"      Christmas"};
+//const byte  important_dates_month_array[]  = {1                      ,2                     ,2                     ,2                     ,2                     ,3                      ,3                     ,4                     ,4                      ,4                     ,4                     ,4                     ,5                     ,10                    ,6                     ,0                     ,6                     ,9                     ,9                     ,10                    ,12                    ,12                    ,12};
+//const byte  important_dates_day_array[]    = {7                      ,6                     ,9                     ,10                    ,27                    ,23                     ,30                    ,3                     ,15                     ,24                    ,26                    ,29                    ,31                    ,10                    ,29                    ,0                     ,15                    ,7                     ,24                    ,23                    ,4                     ,17                    ,25};
+//const int   important_dates_yob_array[]    = {1967                   ,2011                  ,2000                  ,1993                  ,2012                  ,1993                   ,1943                  ,1990                  ,1968                   ,1972                  ,2005                  ,2000                  ,1942                  ,0                     ,1991                  ,0                     ,2015                  ,1963                  ,1969                  ,1943                  ,1999                  ,1995                  ,0};   
+//const byte  event_type_to_print_array[]    = {1                      ,1                     ,1                     ,1                     ,1                     ,1                      ,1                     ,1                     ,1                      ,1                     ,1                     ,1                     ,1                     ,0                     ,2                     ,0                     ,1                     ,2                     ,1                     ,1                     ,1                     ,1                     ,0};
                                      
 
 const char* month_short_name[12] = {"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
@@ -1048,17 +1338,14 @@ byte sunset_minute[53]  = {13,19,26,34,43,51,59, 7,15,23,30,37,44,51,58, 5,12,19
 boolean daylight_savings_time = true; // was false from fall to spring, now trying true for 
                                       // spring to fall
 
-int  inverter_run_time  = 0;
+//int  inverter_run_time  = 0;
 
 byte          today_sunrise_hour = 0;
 byte          today_sunset_hour = 0;
 byte          today_sunrise_minute = 0;
 byte          today_sunset_minute = 0;
 byte          message_manager_next_message = 1;
-// power manager initializations
-//new
-//byte          machine_state = 4;  //initiate balanced state
-//old
+
 byte          inverter_warm_up_timer = 0; //seconds
 int           balance_falling_countdown = 0;
 int           balance_rising_countdown = 0;
@@ -1073,45 +1360,6 @@ byte dimmer_reference_number = 0;
 
 const unsigned long seconds_in_a_week = 604800;  
 
-void myClearMessageBoardfunction();
-boolean myIsItDaylightfunction();
-boolean myIsItDeltaTimePastDawnfunction();
-//void myLoadUpcomingEventsfunction();
-void myMessageManagerfunction();
-void myMessageInverterRunTimefunction();
-void myMessageReminderfunction();
-void myMessageSunrisefunction();
-void myMessageUpcomingEventsfunction(byte n);
-void myMessageVoltageDailyHighfunction();
-//void myMessageVoltageDailyLowfunction();
-void myMessageWeekNumberfunction();
-void myPrintDatetoLCDfunction(byte x, byte y);
-void myPrintLDRresultsToLCDfunction();
-//void myPrintSerialTimestampfunction ();
-//void myPrintTimetoLCDfunction(TimeElements timestamp, byte x, byte y, boolean right_justify);
-void myPrintVoltagetoLCDfunction(int x,int y,float v);
-void myReadPotentiometerAndAdjustWorkbenchTrackLightsfunction();
-//char const * myReturnDayofWeekfunction (byte x);
-//char const * myReturnDayofWeekFromUnixTimestampfunction (TimeElements unzipped_time);
-void mysetSunriseSunsetTimesfunction();
-//void myVoltagePrintingAndRecordingfunction();
-void myVoltageCalculationfunction();
-void myStateMachineInitSleepStatefunction();
-void myStateMachineSleepStatefunction();
-void myStateMachineInitWakeStatefunction();
-void myStateMachineWakeStatefunction();
-void myStateMachineInitBalancedStatefunction();
-void myStateMachineBalancedStatefunction();
-void myStateMachineInitWarmUpInverterStatefunction();
-void myStateMachineWarmUpInverterStatefunction();
-void myStateMachineInitStageOneInverterStatefunction();
-void myStateMachineStageOneInverterStatefunction();
-void myStateMachineInitStageTwoInverterStatefunction();
-void myStateMachineStageTwoInverterStatefunction();
-void myStateMachineInitDaytimeChargingfunction();
-void myStateMachineDaytimeChargingfunction();
-void myStateMachineInitInverterCooldownfunction();
-void myStateMachineInverterCooldownfunction();
 // SETUP 
 void setup()
 {
@@ -1125,6 +1373,7 @@ void setup()
     Serial.println(F("to normal before you pull the cable.  If you forget, just reset the"));
     Serial.println(F("controller."));
     Serial.println(F("                                                   -Paul 03.22.2019"));
+    Serial.println();
     Wire.begin();                      // start the Wire library
     liquidcrystali2c.begin(20, 4);     // start the LiquidCrystal_I2C library
     myserial.setClock();
@@ -1165,68 +1414,14 @@ void loop()
         //begin serial report
         myserial.printTimestamp();
         voltmeter.main();
-        
-        switch (mystatemachine.getState())
-        {
-        case MyStateMachine::STATE_INIT_SLEEP:
-            myStateMachineInitSleepStatefunction();
-            break;
-        case MyStateMachine::STATE_SLEEP:
-            myStateMachineSleepStatefunction();
-            break;
-        case MyStateMachine::STATE_INIT_WAKE:
-            myStateMachineInitWakeStatefunction();
-            break;
-        case MyStateMachine::STATE_WAKE:
-            myStateMachineWakeStatefunction();
-            break;
-        case MyStateMachine::STATE_INIT_BALANCED:
-            myStateMachineInitBalancedStatefunction();
-            break;
-        case MyStateMachine::STATE_BALANCED:
-            myStateMachineBalancedStatefunction();
-            break;
-        case MyStateMachine::STATE_INIT_INVERTER_WARM_UP:
-            myStateMachineInitWarmUpInverterStatefunction();
-            break;
-        case MyStateMachine::STATE_INVERTER_WARM_UP:
-            myStateMachineWarmUpInverterStatefunction();
-            break;
-        case MyStateMachine::STATE_INIT_INVERTER_STAGE_ONE:
-            myStateMachineInitStageOneInverterStatefunction();
-            break;
-        case MyStateMachine::STATE_INVERTER_STAGE_ONE:
-            myStateMachineStageOneInverterStatefunction();
-            break;
-        case MyStateMachine::STATE_INIT_INVERTER_STAGE_TWO:
-            myStateMachineInitStageTwoInverterStatefunction();
-            break;
-        case MyStateMachine::STATE_INVERTER_STAGE_TWO:
-            myStateMachineStageTwoInverterStatefunction();
-            break;
-        case MyStateMachine::STATE_INIT_DAY_CHARGE:
-            myStateMachineInitDaytimeChargingfunction();
-            break;
-        case MyStateMachine::STATE_DAY_CHARGE:
-            myStateMachineDaytimeChargingfunction();
-            break;
-        case MyStateMachine::STATE_INIT_INVERTER_COOL_DOWN:
-            myStateMachineInitInverterCooldownfunction();
-            break;
-        case MyStateMachine::STATE_INVERTER_COOL_DOWN:
-            myStateMachineInverterCooldownfunction();
-            break;
-        case MyStateMachine::MAX_STATE:
-        default:
-            break;
-        }
+        mystatemachine.main();
         
         // This code runs at 2:00am 
         if (gRTC_reading.Hour   == 2 &&
             gRTC_reading.Minute == 0 &&
             gRTC_reading.Second == 0)
         {
-            inverter_run_time  = 0;
+            mystatemachine.resetInverterRunTime();
             voltmeter.initDailyStatistics();            
             calendar.loadImportantDates();
             mysetSunriseSunsetTimesfunction();  
@@ -1278,74 +1473,32 @@ boolean myIsItDeltaTimePastDawnfunction() {
 }
 
 
-////===============================
-//void myMessageManagerfunction() {
-////=========rewritten 12.3.2017====
-
-  //if (message_manager_next_message <= 1) {
-    //myMessageSunrisefunction();
-    //message_manager_timestamp    = millis()+3000; 
-  //}
-  //if (message_manager_next_message == 2) {
-    //myMessageWeekNumberfunction();
-    //message_manager_timestamp    = millis()+3000;
-  //}   
-  //if (message_manager_next_message == 3) {
-    //myMessageReminderfunction();
-    //message_manager_timestamp    = millis()+3000;
-  //}
-  //if (message_manager_next_message == 4) {
-    //myMessageVoltageDailyHighfunction();
-    //message_manager_timestamp    = millis()+6000;
-  //}
-  //if (message_manager_next_message == 5) { 
-    //myMessageInverterRunTimefunction();
-    //message_manager_timestamp    = millis()+2000;
-  //}
-  //if (message_manager_next_message == 6) {
-    //myMessageUpcomingEventsfunction(1);
-    //message_manager_timestamp    = millis()+3000;
-  //}
-  //if (message_manager_next_message == 7) {
-    //myMessageUpcomingEventsfunction(2);
-    //message_manager_timestamp    = millis()+3000;  
-  //}
-  //message_manager_next_message++;
-  //if (message_manager_next_message == 8) {
-    //message_manager_next_message = 1;   
-  //}
-//}
-
-
-
-
-
 //-------------------------------
 void myMessageInverterRunTimefunction(){
 //-------------------------------   
-  myClearMessageBoardfunction();
-  liquidcrystali2c.setCursor (0,1);
-  if (inverter_run_time == 0) {
-               //"12345678901234567890"
-     liquidcrystali2c.print(F("  Inverter Waiting"));
-     return;  
-  } 
-  if (inverter_run_time > 0 && inverter_run_time < 60) {
-               //"12345678901234567890"
-     liquidcrystali2c.print(F(" Inverter harvested"));
-     liquidcrystali2c.setCursor (8,2);
-     liquidcrystali2c.print(inverter_run_time);
-     liquidcrystali2c.print("s");
-     return;  
-  }
-  if (inverter_run_time >= 60) {
-               //"12345678901234567890"
-     liquidcrystali2c.print(F(" Inverter harvested"));
-     liquidcrystali2c.setCursor (8,2);
-     liquidcrystali2c.print(inverter_run_time/60);
-     liquidcrystali2c.print("m");
-     return;  
-  }
+  //myClearMessageBoardfunction();
+  //liquidcrystali2c.setCursor (0,1);
+  //if (inverter_run_time == 0) {
+               ////"12345678901234567890"
+     //liquidcrystali2c.print(F("  Inverter Waiting"));
+     //return;  
+  //} 
+  //if (inverter_run_time > 0 && inverter_run_time < 60) {
+               ////"12345678901234567890"
+     //liquidcrystali2c.print(F(" Inverter harvested"));
+     //liquidcrystali2c.setCursor (8,2);
+     //liquidcrystali2c.print(inverter_run_time);
+     //liquidcrystali2c.print("s");
+     //return;  
+  //}
+  //if (inverter_run_time >= 60) {
+               ////"12345678901234567890"
+     //liquidcrystali2c.print(F(" Inverter harvested"));
+     //liquidcrystali2c.setCursor (8,2);
+     //liquidcrystali2c.print(inverter_run_time/60);
+     //liquidcrystali2c.print("m");
+     //return;  
+  //}
 }
 
 //-------------------------------
@@ -1387,91 +1540,6 @@ void myMessageSunrisefunction() {
 }
 
 
-  
-//----------------------------------------
-void myMessageUpcomingEventsfunction(byte n){
-////----------------------------------------  
-  //TimeElements timex = gRTC_reading;
-  //myClearMessageBoardfunction();
-  //timex.Day = important_dates_day_array[reminder_message_pointer [n]];
-  ////Serial.print ("reminder_message_pointer [n]");
-  ////Serial.println (reminder_message_pointer [n]);
-  ////Serial.print ("timex.Day");
-  ////Serial.println (timex.Day);
-  //timex.Month = important_dates_month_array[reminder_message_pointer [n]];
-  ////Serial.print ("reminder_message_pointer [n]");
-  ////Serial.println (reminder_message_pointer [n]);
-  ////Serial.print ("timex.Month");
-  ////Serial.println (timex.Month);
-  //if(gRTC_reading.Month == 12 && timex.Month == 1) {    //to protect myReturnDayofWeekFromUnixTimestampfunction
-                                                        ////from end of year rollover
-    //timex.Year++; 
-  //}
-  //if (message_loaded [n]){
-    //liquidcrystali2c.setCursor (0,1);
-    //if (important_dates_yob_array[reminder_message_pointer [n]]) {
-    //liquidcrystali2c.print (important_dates_string_array[reminder_message_pointer [n]]);
-    //liquidcrystali2c.print ("'s ");
-    //liquidcrystali2c.print (year() - important_dates_yob_array[reminder_message_pointer [n]]);
-    //const byte day_of_month = year() - important_dates_yob_array[reminder_message_pointer [n]];
-    //mylcd.printDateSuffix(day_of_month);
-    //if (event_type_to_print_array[reminder_message_pointer [n]] == 1) {
-      //liquidcrystali2c.print (" B-day");  
-    //}
-    //} else {
-    //liquidcrystali2c.print (important_dates_string_array[reminder_message_pointer [n]]);
-    //}
-    //liquidcrystali2c.setCursor (5,2);
-    //if (timex.Day == gRTC_reading.Day || timex.Day == gRTC_reading.Day + 1) {      
-      //if (timex.Day == gRTC_reading.Day) {
-        ////         "12345678901234567890"
-        //liquidcrystali2c.print ("   today.");  
-      //}
-      //if (timex.Day == gRTC_reading.Day+1) {
-        ////         "12345678901234567890"
-        //liquidcrystali2c.print (" tomorrow");  
-      //}
-    //} else {
-
-
-      //time_t long_int_time {makeTime(timex)};
-      //int myday {weekday(long_int_time)};
-      //const char *dayString {dayShortStr(myday)};
-      //mylcd.print(dayString);
-      //liquidcrystali2c.print (", ");
-      //liquidcrystali2c.print (month_short_name[(important_dates_month_array[reminder_message_pointer [n]])-1]);
-      //liquidcrystali2c.print (" ");
-      //liquidcrystali2c.print (important_dates_day_array[reminder_message_pointer [n]]);
-    //}  
-  //}
-}
-//
-
-
-//-----------------------------------
-void myMessageVoltageDailyHighfunction(){
-//-----------------------------------  
-   
-    myClearMessageBoardfunction();
-    liquidcrystali2c.setCursor (0,1);
-    //         "12345678901234567890"
-    Voltmeter::VoltRecord high {};
-    high = voltmeter.getMax();
-    myPrintVoltagetoLCDfunction(2,1,high.voltage);
-    liquidcrystali2c.print (F(" @"));
-    Coordinant coordinant {11, 1};
-    const bool right_justify {false};
-    mylcd.printClock(high.timestamp, coordinant, right_justify);
-
-
-    Voltmeter::VoltRecord low {};
-    low = voltmeter.getMin();
-    myPrintVoltagetoLCDfunction(2, 2, low.voltage);
-    liquidcrystali2c.print (F(" @"));
-    coordinant = {11, 2};
-    mylcd.printClock(low.timestamp, coordinant, right_justify);   
-}
-
 void myMessageWeekNumberfunction() {
 //----------------------------------
 
@@ -1483,16 +1551,6 @@ void myMessageWeekNumberfunction() {
    liquidcrystali2c.print (F("        Number "));
    liquidcrystali2c.print (calendar.getWeekNumber(gRTC_reading));   
 }
-
-//----------------------------------------------------
-void myPrintVoltagetoLCDfunction(int x,int y,float v){
-//----------------------------------------------------
-   liquidcrystali2c.setCursor (x,y);
-   liquidcrystali2c.print (v);
-   liquidcrystali2c.print ("v");      
-}
-
-
 
 //**************************************************************
 void myReadPotentiometerAndAdjustWorkbenchTrackLightsfunction(){
@@ -1521,42 +1579,8 @@ void myReadPotentiometerAndAdjustWorkbenchTrackLightsfunction(){
     dimmer_reference_number = potentiometer_reading; 
   }
   analogWrite (Pin::workbench_lighting, (255 - dimmer_reference_number) * scaling_ratio);  
-  //diagnostic
-  //Serial.println ();
-  //Serial.print ("potentiometer_reading ");
-  //Serial.print (potentiometer_reading);
-  //Serial.print (". scaling_ratio = ");
-  //Serial.print (scaling_ratio);
-  //Serial.print ("I am writing number ");
-  //Serial.print ((255 - dimmer_reference_number) * scaling_ratio);
   }
 
-
-////***************************************
-//char const * myReturnDayofWeekfunction (byte x){
-////***************************************  
-//char const * weekday_array[] = {"Sun","Mon","Tue","Wed","Thu","Fri","Sat"};
-//return weekday_array[x];  
-//}
-////*********************************************************************************
-//char const * myReturnDayofWeekFromUnixTimestampfunction (TimeElements unzipped_time){
-////*********************************************************************************
-  //long unsigned seconds_in_a_day = 86400;
-  //long unsigned zipped_time      = makeTime(unzipped_time) / seconds_in_a_day ;
-  //int x = 0;
-  ////Serial.print (" - "); 
-  ////Serial.print (zipped_time);
-  //x = (zipped_time - (zipped_time / 7) * 7);  //detecting remainder with my integer math trick
-  ////align week number with my array, because 4 <> Monday
-  //x = x - 3;
-  //if (x < 0){
-    //x=x+7;
-  //}
-  ////Serial.print (x);
-  ////Serial.print (" - ");
-  ////Serial.print(myReturnDayofWeekfunction(x));
-  //return myReturnDayofWeekfunction(x);  
-//}
 
 //======================================
 void mysetSunriseSunsetTimesfunction() {
@@ -1570,269 +1594,3 @@ void mysetSunriseSunsetTimesfunction() {
 }
 
 
-////-----------------------------------------
-//void myVoltagePrintingAndRecordingfunction() {
-////-----------------------------------------  
-   //myPrintVoltagetoLCDfunction(14,0,voltmeter.getVoltage());                      
-   ////Serial.print (stable_voltage); Serial.print ("V "); 
-   //if (voltmeter.getVoltage() > voltage_daily_max) { 
-    //voltage_daily_max = voltmeter.getVoltage();
-    //todays_high_voltage_timestamp = gRTC_reading;
-   //}
-   //if (voltmeter.getVoltage() < voltage_daily_min) {
-     //voltage_daily_min = voltmeter.getVoltage(); 
-     //todays_low_voltage_timestamp = gRTC_reading;
-   //}
-//}
-
-//===================================
-//void myVoltageCalculationfunction() {
-////===================================  
-  //const byte    range_of_voltage_trend                    = 100;
-  //raw_voltage = analogRead(the_analog_pin_to_the_voltage_divider) * voltage_measurement_divided_by_voltage_divider_measurement * reference_voltage / 1024;
-                                      //// convert analog reading to the useable voltage number
-  ////voltage = voltage + (USB_mode * 0.20);  // this line to correct voltage (add .2) when usb plugged in 
-  ////stabilizer alpha
-
-  //if (raw_voltage > stable_voltage){  voltage_trend ++;  }
-  //if (raw_voltage < stable_voltage){  voltage_trend --;  }
-  //if (voltage_trend >= range_of_voltage_trend){
-     //stable_voltage = stable_voltage + 0.01;
-     //voltage_trend = 0;
-  //}
-  //if (voltage_trend <= (0 - range_of_voltage_trend)){
-     //stable_voltage = stable_voltage - 0.01;
-     //voltage_trend = 0;
-  //}
-    
-  
-
-  ////end of stabilizer alpha 
-//}
-
-//===========================================
-void myStateMachineInitSleepStatefunction() {               //state 0
-  //================================5.8.2018===
-  
-  digitalWrite (Pin::battery_charger, HIGH);  //battery charger on
-  digitalWrite (Pin::inverter, LOW);         //inverter off
-  digitalWrite(Pin::stage_one_inverter_relay, LOW);    // relay one off
-  digitalWrite(Pin::stage_two_inverter_relay, LOW);    // relay two off
-  mystatemachine.setState(MyStateMachine::STATE_SLEEP);
-  return;
-}
-
-//=======================================
-void myStateMachineSleepStatefunction() {                   //state 1
-  //============================5.8.2018===
-  if (myIsItDaylightfunction() == true) {        //switch to initiate wake state if light
-    mystatemachine.setState(MyStateMachine::STATE_INIT_WAKE);
-    return;
-  }
-
-  return;
-}
-
-//==========================================
-void myStateMachineInitWakeStatefunction() {                //state 2
-  //==============================5.8.2018====
-  digitalWrite (Pin::battery_charger, LOW);   // battery charger off
-  digitalWrite (Pin::inverter, LOW);          // inverter off
-  digitalWrite(Pin::stage_one_inverter_relay, LOW);      // relay one off
-  digitalWrite(Pin::stage_two_inverter_relay, LOW);      // relay two off
-  mystatemachine.setState(MyStateMachine::STATE_WAKE);
-}
-
-//======================================
-void myStateMachineWakeStatefunction() {                    //state 3
-  //===========================5.8.2018===
-  //check to see if it is time to go back to sleep
-  //check to see how long it is past dawn.
-  //if it is delta_t, or 15 minutes, past dawn switch to state 4 (init balanced)
-  //The wake up delay ensures that the the inverter does not burn off the fresh battery charger energy
-  //Time of day used here so the machine can begin inverting quickly if reset mid-day
-  //I'm planning on starting in balanced mode however, so should never come up
-  if (myIsItDaylightfunction() == false) {        //return to initiate sleep mode if dark, unlikely
-    mystatemachine.setState(MyStateMachine::STATE_INIT_SLEEP); //initiate sleep state
-    return;
-  }
-  if (myIsItDeltaTimePastDawnfunction() == true) {
-    mystatemachine.setState(MyStateMachine::STATE_INIT_BALANCED);  //initiate balanced
-    return;
-  }
-}
-
-//==============================================
-void myStateMachineInitBalancedStatefunction() {            //state 4
-  //===================================5.8.2018===
-
-  
-  digitalWrite (Pin::battery_charger, LOW);  //battery charger off
-  digitalWrite (Pin::inverter, LOW);         //inverter off
-  digitalWrite(Pin::stage_one_inverter_relay, LOW);    // relay one off
-  digitalWrite(Pin::stage_two_inverter_relay, LOW);    // relay two off
-  //
-  mystatemachine.setState(MyStateMachine::STATE_BALANCED);                               // balanced initialization complete
-  return;
-}
-
-//==========================================
-void myStateMachineBalancedStatefunction() {                //state 5
-  //===============================5.8.2018===
-
-  const float voltage_to_start_inverter = 13.80;
-  const float voltage_to_start_daytime_charging = 12.60;
-
-  if (myIsItDaylightfunction() == false) {        //switch to initiate sleep mode if dark
-    mystatemachine.setState(MyStateMachine::STATE_INIT_SLEEP); //initiate sleep state
-    return;
-  }
-  if (voltmeter.getVoltage() >= voltage_to_start_inverter) {
-    mystatemachine.setState(MyStateMachine::STATE_INIT_INVERTER_WARM_UP);     //init warm up inverter
-    return;
-  }
-  if (voltmeter.getVoltage() <= voltage_to_start_daytime_charging) {
-    mystatemachine.setState(MyStateMachine::STATE_INIT_DAY_CHARGE);    //init daytime charging
-    return;
-  }
-
-
-  return;
-}
-
-//======================================================
-void myStateMachineInitWarmUpInverterStatefunction() {    //state 6
-  //===========================================5.8.2018===
-  const byte seconds_to_warm_up = 4;
-  
-  digitalWrite (Pin::battery_charger, LOW);  //battery charger off
-  digitalWrite (Pin::inverter, HIGH);         //inverter on
-  digitalWrite(Pin::stage_one_inverter_relay, LOW);    // relay one off
-  digitalWrite(Pin::stage_two_inverter_relay, LOW);    // relay two off
-  coundowntimer.set(seconds_to_warm_up);
-  mystatemachine.setState(MyStateMachine::STATE_INVERTER_WARM_UP);
-}
-
-
-
-//==================================================
-void myStateMachineWarmUpInverterStatefunction() {        //state 7
-  //=======================================5.8.2018===
-
-  if (coundowntimer.getCounter()) {    //warming up during countdown
-    return;
-  }
-  mystatemachine.setState(MyStateMachine::STATE_INIT_INVERTER_STAGE_ONE);
-
-}
-//======================================================
-void myStateMachineInitStageOneInverterStatefunction() {    //state 8
-  //===========================================5.8.2018===
-
-  const byte  stage_two_switching_delay = 15;  //seconds.  this prevents stage two from engaging too soon    
-  digitalWrite (Pin::battery_charger, LOW);  //battery charger off
-  digitalWrite (Pin::inverter, HIGH);         //inverter on
-  digitalWrite(Pin::stage_one_inverter_relay, HIGH);    // relay one on
-  digitalWrite(Pin::stage_two_inverter_relay, LOW);    // relay two off
-  coundowntimer.set(stage_two_switching_delay);
-  mystatemachine.setState(MyStateMachine::STATE_INVERTER_STAGE_ONE);
-}
-
-//==================================================
-void myStateMachineStageOneInverterStatefunction() {        //state 9
-  //=======================================5.8.2018===
-
-  const float voltage_to_turn_inverter_off = 12.55;
-  const float voltage_to_switch_to_stage_two = 13.80;
-
-  inverter_run_time++;
-
-  if (myIsItDaylightfunction() == false) {        //switch to initiate sleep mode if dark
-    mystatemachine.setState(MyStateMachine::STATE_INIT_SLEEP); //initiate sleep state -   //might be helpful for a charger stuck in "on" state
-    return;
-  }
-
-  if (voltmeter.getVoltage() >= voltage_to_switch_to_stage_two && !coundowntimer.getCounter()) {
-    mystatemachine.setState(MyStateMachine::STATE_INIT_INVERTER_STAGE_TWO);  //initiate stage two inverter
-    return;
-  }
-
-  if (voltmeter.getVoltage() <= voltage_to_turn_inverter_off) {
-    mystatemachine.setState(MyStateMachine::STATE_INIT_INVERTER_COOL_DOWN); //initiate inverter cooldown state, so a burst of solar energy does not short
-    //cycle the inverter
-    return;
-  }
-
-}
-//======================================================
-void myStateMachineInitStageTwoInverterStatefunction() {    //state 10
-  //==============================5.8.2018================
-  digitalWrite (Pin::battery_charger, LOW);  //battery charger off
-  digitalWrite (Pin::inverter, HIGH);         //inverter on
-  digitalWrite(Pin::stage_one_inverter_relay, HIGH);    // relay one on
-  digitalWrite(Pin::stage_two_inverter_relay, HIGH);    // relay two on
-  mystatemachine.setState(MyStateMachine::STATE_INIT_INVERTER_STAGE_TWO);
-}
-
-//==================================================
-void myStateMachineStageTwoInverterStatefunction() {        //state 11
-  //===========================5.8.2018===============
-
-  const float voltage_to_drop_back_to_stage_one = 12.70;
-
-  if (myIsItDaylightfunction() == false) {        //switch to initiate sleep mode if dark
-    mystatemachine.setState(MyStateMachine::STATE_INIT_SLEEP); //initiate sleep state -   //might be helpful for a charger stuck in "on" state
-    return;
-  }
-
-  inverter_run_time++;
-
-  if (voltmeter.getVoltage() <= voltage_to_drop_back_to_stage_one) {
-    mystatemachine.setState(MyStateMachine::STATE_INIT_INVERTER_STAGE_ONE);
-    return;
-  }
-
-}
-
-//================================================
-void myStateMachineInitDaytimeChargingfunction() {    //state 12
-  //====================================5.11.2018===
-  digitalWrite (Pin::battery_charger, HIGH);  //battery charger on
-  digitalWrite (Pin::inverter, LOW);         //inverter off
-  digitalWrite(Pin::stage_one_inverter_relay, LOW);    // relay one off
-  digitalWrite(Pin::stage_two_inverter_relay, LOW);    // relay two off
-  mystatemachine.setState(MyStateMachine::STATE_DAY_CHARGE);
-}
-//============================================
-void myStateMachineDaytimeChargingfunction() {  //state 13
-  //================================5.11.2018===
-
-  const float voltage_to_switch_off_charger = 13.40;
-
-  if (voltmeter.getVoltage() >= voltage_to_switch_off_charger) {
-    mystatemachine.setState(MyStateMachine::STATE_INIT_BALANCED); //switch to initbalanced
-    return;
-  }
-}
-
-//================================================
-void myStateMachineInitInverterCooldownfunction() {    //state 14
-  //====================================5.11.2018===
-
-  byte inverter_cooldown_time = 30;  //seconds
-  digitalWrite (Pin::battery_charger, LOW);  //battery charger off
-  digitalWrite (Pin::inverter, LOW);         //inverter off
-  digitalWrite(Pin::stage_one_inverter_relay, LOW);    // relay one off
-  digitalWrite(Pin::stage_two_inverter_relay, LOW);    // relay two off
-  coundowntimer.set(inverter_cooldown_time);
-  mystatemachine.setState(MyStateMachine::STATE_INVERTER_COOL_DOWN);
-}
-
-//================================================
-void myStateMachineInverterCooldownfunction() {    //state 15
-  //====================================5.11.2018===
-
-  if (!coundowntimer.getCounter()) {
-    mystatemachine.setState(MyStateMachine::STATE_INIT_BALANCED);  //init balanced
-  }
-}
