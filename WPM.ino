@@ -1437,7 +1437,7 @@ void MessageManager::sunriseSunsetMessage()
     const String sunrise_clock_string {calendar.getSunriseClockString()};
     const String top_line {"Sunrise " + sunrise_clock_string};
     const String sunset_clock_string {calendar.getSunsetClockString()};
-    const String bottom_line {"Sunset " + sunrise_clock_string};
+    const String bottom_line {"Sunset  " + sunset_clock_string};
     mylcd.dissolveThis(top_line, bottom_line);
     
 ////liquidcrystali2c.setCursor (0,1);
