@@ -1483,18 +1483,20 @@ void MessageManager::messageInverterRunTime()
         {
             bottom_line += 's';
         }
-        bottom_line += ' ';
-        const String run_minutes_string {remainder_minutes};
-        bottom_line += run_minutes_string;
-        bottom_line += " minute";
-        if (remainder_minutes > 1)
+        if (remainder_minutes)
         {
-            bottom_line += 's';
+            bottom_line += ' ';
+            const String run_minutes_string {remainder_minutes};
+            bottom_line += run_minutes_string;
+            bottom_line += " minute";
+            if (remainder_minutes > 1)
+            {
+                bottom_line += 's';
+            }
         }
     }    
     mylcd.dissolveThis(top_line, bottom_line);
 }
-
 
 void MessageManager::messageSunriseSunset()
 {
@@ -1520,14 +1522,11 @@ void MessageManager::messageVoltageExtremes()
     }
     mylcd.dissolveThis(message[0], message[1]);
 }
-
 //==end of MessageManager====================================================================
-
 
 byte          inverter_warm_up_timer = 0; //seconds
 int           balance_falling_countdown = 0;
 int           balance_rising_countdown = 0;
-
 
 boolean       LDR_data = false;
 boolean       LDR2_data = false;
@@ -1606,48 +1605,6 @@ void loop()
     Serial.println(); //end serial report, new line
     }
 }
-
-
-//}
-////*******************************
-//void myMessageSunrisefunction() {
-////*******************************
-  ////myClearMessageBoardfunction();
-  ////liquidcrystali2c.setCursor (0,1);
-  //////           "12345678901234567890"
-  ////liquidcrystali2c.print (F("   Sunrise "));
-  ////liquidcrystali2c.print (today_sunrise_hour);
-  ////liquidcrystali2c.print (F(":"));
-  ////if (today_sunrise_minute <= 9){
-   ////liquidcrystali2c.print(F("0"));
-  ////}
-  ////liquidcrystali2c.print (today_sunrise_minute);
-  ////liquidcrystali2c.print (F("am"));
-  ////liquidcrystali2c.setCursor (0,2);
-  //////           "12345678901234567890"
-  ////liquidcrystali2c.print (F("   Sunset  ")); 
-  ////liquidcrystali2c.print (today_sunset_hour - 12);
-  ////liquidcrystali2c.print (F(":"));
-  ////if (today_sunset_minute <= 9){
-   ////liquidcrystali2c.print(F("0"));
-  ////}
-  
-  ////liquidcrystali2c.print (sunset_minute[calendar.getWeekNumber(gRTC_reading)]);
-  ////liquidcrystali2c.print (F("pm"));
-//}
-
-
-//void myMessageWeekNumberfunction() {
-////----------------------------------
-
-   //myClearMessageBoardfunction();
-   //liquidcrystali2c.setCursor (0,1);
-   ////         "12345678901234567890"
-   //liquidcrystali2c.print (F("  Solar Week"));
-   //liquidcrystali2c.setCursor (0,2);
-   //liquidcrystali2c.print (F("        Number "));
-   //liquidcrystali2c.print (calendar.getWeekNumber(gRTC_reading));   
-//}
 
 //**************************************************************
 void myReadPotentiometerAndAdjustWorkbenchTrackLightsfunction(){
