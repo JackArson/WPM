@@ -174,3 +174,4 @@ idea:  a function that takes these parameters (min/max voltage allowable time mi
 03-26-19-17:44 MyStateMachine::getInverterRunTime
 03-26-19-18:28 messageInverterRunTime()
 03-26-19-18:34 made MessageManager function names more uniform
+03-26-19-18:48 messageInverterRunTime() removed minute info for round hours
