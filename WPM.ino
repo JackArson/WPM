@@ -510,18 +510,20 @@ private: //variables
     const byte mLCD_Width {20};
     String mMessageTopLine    {""};
     String mMessageBottomLine {""};
+    byte   mDissolveCountdown {0};
 public:
-    void drawDisplay        ();
-    void printDateSuffix    (const byte         day_of_month);
-    void printImportantDate (const Calendar::ImportantDate* importantdate);
-public:  // <-make this private when old public references are removed
-    void printClock         (const TimeElements time,
-                             const Coordinant   coordinant,
-                             const bool         right_justify);
-    void printDate          (const Coordinant   coordinant);
-    void printLDRresults    ();
-    void updateBacklight    ();
-    void centerText         (String &text);
+    void   drawDisplay        ();
+    void   dissolveEffect     ();
+    void   dissolveThis       (String top_line, String bottom_line);
+    void   printDateSuffix    (const byte         day_of_month);
+    void   printImportantDate (const Calendar::ImportantDate* importantdate);
+    void   printClock         (const TimeElements time,
+                               const Coordinant   coordinant,
+                               const bool         right_justify);
+    void   printDate          (const Coordinant   coordinant);
+    void   printLDRresults    ();
+    void   updateBacklight    ();
+    String centerText         (const String text);
 }mylcd;
 
 void MyLCD::drawDisplay()
@@ -533,6 +535,39 @@ void MyLCD::drawDisplay()
     coordinant = {0, 3};
     printDate(coordinant);
     printLDRresults();
+}
+
+void MyLCD::dissolveEffect()
+{
+    const int top_line_row    {1}; //messages start in row 1
+    const int bottom_line_row {2};
+    if (mDissolveCountdown) //range: mLCD_Width to 1
+    {
+        --mDissolveCountdown;//mLCD_Width - 1 to 1 - 1  = range: (19 to 0)
+        //top line dissolves from right to left
+        const char top_char {mMessageTopLine.charAt(mDissolveCountdown)};
+        liquidcrystali2c.setCursor(mDissolveCountdown, top_line_row);
+        liquidcrystali2c.print(top_char);
+        //bottom line dissolves from left to right
+        //invert counter
+        const int bottom_index {(mLCD_Width - 1) - mDissolveCountdown}; //= range: (0 - 19)
+        const char bottom_char {mMessageBottomLine.charAt(bottom_index)};
+        liquidcrystali2c.setCursor(bottom_index, bottom_line_row);
+        liquidcrystali2c.print(bottom_char);        
+    }
+}
+
+void MyLCD::dissolveThis(String top_line, String bottom_line)
+{
+    const String top    {centerText(top_line)};
+    const String bottom {centerText(bottom_line)};
+    mMessageTopLine    = top;
+    mMessageBottomLine = bottom;
+    mDissolveCountdown = mLCD_Width; //this triggers the dissolve
+    //Serial diagnostics
+    Serial.println("MyLCD::dissolveThis");
+    Serial.println(mMessageTopLine);
+    Serial.println(mMessageBottomLine);
 }
 
 void MyLCD::printDateSuffix(byte day_of_month)
@@ -569,14 +604,6 @@ void MyLCD::printImportantDate(const Calendar::ImportantDate* importantdate)
         default:
             break;
     }
-    centerText(top_line);
-    liquidcrystali2c.setCursor(0, 1);
-    liquidcrystali2c.print(top_line);
-    Serial.print("MyLCD::printImportantDate      topline: ");
-    Serial.println(top_line);
-    //load topline for dissolve effect
-    mMessageTopLine = top_line;
-
     //format bottom line
     String bottom_line ("");
     if (importantdate->day == day())
@@ -605,18 +632,12 @@ void MyLCD::printImportantDate(const Calendar::ImportantDate* importantdate)
         String date_suffix {calendar.getDaySuffix(event.Day)};
         bottom_line += date_suffix; //Wed, Sep 3rd
     }
-    centerText(bottom_line);
-    liquidcrystali2c.setCursor(0, 2);
-    liquidcrystali2c.print(bottom_line);
-    Serial.print("MyLCD::printImportantDate  bottom line: ");
-    Serial.println(bottom_line);
-    //load bottom line for dissolve effect
-    mMessageBottomLine = bottom_line;
+    dissolveThis(top_line, bottom_line);
 }
 
 //MyLCD private methods start here
 
-void MyLCD::centerText(String &text)
+String MyLCD::centerText(const String text)
 {
     //center the text in a 20 char (mLCD_Width) string by
     //padding the front and rear with spaces
@@ -625,16 +646,19 @@ void MyLCD::centerText(String &text)
     {
         //string is too long
         Serial.println("MyLCD::centerText  String is larger than screen width");
-        String end {text.substring(mLCD_Width)};
-        text.remove(mLCD_Width);
+        const String end {text.substring(mLCD_Width)};
+        const String front {text.substring(0, mLCD_Width - 1)};
         Serial.print("MyLCD::centerText  Removed \"");
         Serial.print(end);
         Serial.println("\"");
+        return front;
     }
     else if (string_length <= 0)
     {
         //string empty
         Serial.println("MyLCD::centerText  no string error");
+        //      01234567890123456789
+        return "---missing string---";
     }
     else
     {
@@ -652,7 +676,7 @@ void MyLCD::centerText(String &text)
         {
             rear += ' '; //add a space
         }
-        text = front + text + rear;
+        return front + text + rear;
     }
     
 }
@@ -1417,24 +1441,21 @@ void MessageManager::voltageRecordMessage()
     const int qty_voltrecord {2};
     const Voltmeter::VoltRecord voltrecord[qty_voltrecord] {voltmeter.getMin(),
                                                             voltmeter.getMax()};
+    String message[qty_voltrecord] {""};
     Serial.println("Voltage extremes:");                                                            
     for (int i = 0; i < qty_voltrecord; i++)
     {
         const String voltage_string  {voltrecord[i].voltage};
         const String clock_string    {calendar.getMyClockFormat(voltrecord[i].timestamp)};
-        String voltage_record_string {voltage_string + "v @ " + clock_string};
-        mylcd.centerText(voltage_record_string);
-        liquidcrystali2c.setCursor(0, i + 1);
-        liquidcrystali2c.print(voltage_record_string);
-        Serial.println(voltage_record_string);
+        message[i] = voltage_string + "v @ " + clock_string;
     }
+    mylcd.dissolveThis(message[0], message[1]);
 }
 
 //==end of MessageManager====================================================================
 
 
-boolean daylight_savings_time = true; // was false from fall to spring, now trying true for 
-                                      // spring to fall
+//boolean daylight_savings_time = true; // true for spring to fall
 
 //int  inverter_run_time  = 0;
 
@@ -1451,7 +1472,7 @@ int           balance_rising_countdown = 0;
 
 boolean       LDR_data = false;
 boolean       LDR2_data = false;
-boolean       DST = true;
+//boolean       DST = true;
 boolean       message_loaded [3]  = {false,false,false};
 byte reminder_message_pointer [3] = {false,false,false};
 byte dimmer_reference_number = 0;
@@ -1500,6 +1521,7 @@ void loop()
     if (millis() - gDissolveInterval  >= mDissolveTimestamp)
     {
         mDissolveTimestamp = millis(); //set up delay for next loop
+        mylcd.dissolveEffect();
     }
     //This code runs every second (1000ms)
     RTC.read(gRTC_reading);  //gathered from library by reference
