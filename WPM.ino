@@ -1376,12 +1376,12 @@ private: //variables
     byte         mCurrentMessageIndex   {0};
     time_t       mNextMessageTimestamp  {0};
     const time_t mMessageDuration       {5000}; //milliseconds
-    const byte   mQtySystemMessages     {5};        
+    const byte   mQtySystemMessages     {3};        
 public:  //methods
     void main();
     void messageInverterRunTime();
-    void sunriseSunsetMessage();
-    void voltageExtremesMessage();
+    void messageSunriseSunset();
+    void messageVoltageExtremes();
 }messagemanager;
 
 void MessageManager::main()
@@ -1407,13 +1407,13 @@ void MessageManager::main()
             switch (sytem_message_index)
             {
                 case 0: //voltage record high and low
-                    voltageExtremesMessage();
+                    messageVoltageExtremes();
                     break;
                 case 1:
-                    sunriseSunsetMessage();
+                    messageSunriseSunset();
                     break;
                 case 2:
-                    Serial.println(sytem_message_index);
+                    messageInverterRunTime();
                     break;
                 case 3:
                     Serial.println(sytem_message_index);
@@ -1496,7 +1496,7 @@ void MessageManager::messageInverterRunTime()
 }
 
 
-void MessageManager::sunriseSunsetMessage()
+void MessageManager::messageSunriseSunset()
 {
     const String sunrise_clock_string {calendar.getSunriseClockString()};
     const String top_line {"Sunrise " + sunrise_clock_string};
@@ -1505,7 +1505,7 @@ void MessageManager::sunriseSunsetMessage()
     mylcd.dissolveThis(top_line, bottom_line);
 }
 
-void MessageManager::voltageExtremesMessage()
+void MessageManager::messageVoltageExtremes()
 {
     const int qty_voltrecord {2};
     const Voltmeter::VoltRecord voltrecord[qty_voltrecord] {voltmeter.getMin(),
