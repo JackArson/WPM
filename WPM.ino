@@ -140,7 +140,7 @@ private: //variables continued
     bool mDaylightSavingsTime {true};
 public:  //methods
     void           init                    ();
-    const String   getMyClockFormat        (const tmElements_t time,
+    const String   getClockString        (const tmElements_t time,
                                             const bool right_justify = false);
     const char*    getDaySuffix            (byte day_number);
     const ImportantDate* getImportantDate  (const byte index);     
@@ -162,7 +162,7 @@ void Calendar::init()
     setSunriseSunset();
 }
 
-const String Calendar::getMyClockFormat(const tmElements_t time, const bool right_justify)
+const String Calendar::getClockString(const tmElements_t time, const bool right_justify)
 {
     int  format {0};
     String clock_string ("");
@@ -721,7 +721,7 @@ void MyLCD::printClock(const TimeElements time,
                        const Coordinant coordinant,
                        const bool right_justify)
 {
-    const String clock_string {(calendar.getMyClockFormat(time, right_justify))};
+    const String clock_string {(calendar.getClockString(time, right_justify))};
     liquidcrystali2c.setCursor(coordinant.x, coordinant.y);
     liquidcrystali2c.print(clock_string);
 }
@@ -1446,7 +1446,7 @@ void MessageManager::voltageRecordMessage()
     for (int i = 0; i < qty_voltrecord; i++)
     {
         const String voltage_string  {voltrecord[i].voltage};
-        const String clock_string    {calendar.getMyClockFormat(voltrecord[i].timestamp)};
+        const String clock_string    {calendar.getClockString(voltrecord[i].timestamp)};
         message[i] = voltage_string + "v @ " + clock_string;
     }
     mylcd.dissolveThis(message[0], message[1]);
@@ -1516,8 +1516,8 @@ void loop()
     myReadPotentiometerAndAdjustWorkbenchTrackLightsfunction();
     voltmeter.readVoltage();
     myserial.checkInput();
-    //This code runs every gDissolveInterval (100ms) 
-    const time_t gDissolveInterval {100}; 
+    //This code runs every gDissolveInterval 
+    const time_t gDissolveInterval {50}; //milliseconds 
     if (millis() - gDissolveInterval  >= mDissolveTimestamp)
     {
         mDissolveTimestamp = millis(); //set up delay for next loop
@@ -1554,16 +1554,6 @@ void loop()
     }
 }
 
-////---------------------------------
-//void myClearMessageBoardfunction(){
-////---------------------------------
-   ////                              "12345678901234567890"   
-   //liquidcrystali2c.setCursor (0,1); liquidcrystali2c.print (F("                    "));
-   //liquidcrystali2c.setCursor (0,2); liquidcrystali2c.print (F("                    "));
-//}
-
-
-
 ////-------------------------------
 //void myMessageInverterRunTimefunction(){
 ////-------------------------------   
@@ -1592,16 +1582,6 @@ void loop()
   ////}
 //}
 
-////-------------------------------
-//void myMessageReminderfunction(){
-////-------------------------------
-   //myClearMessageBoardfunction();
-   //liquidcrystali2c.setCursor (0,1);
-   ////           "12345678901234567890"
-   //liquidcrystali2c.print (F("   Did you MED-X?"));
-   //liquidcrystali2c.setCursor (0,2);
-   ////liquidcrystali2c.print (F("   eggs floss med-x?"));
-   
 //}
 ////*******************************
 //void myMessageSunrisefunction() {
