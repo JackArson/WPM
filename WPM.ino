@@ -1439,27 +1439,60 @@ void MessageManager::main()
 
 void MessageManager::messageInverterRunTime()
 {
-  ////if (inverter_run_time == 0) {
-               //////"12345678901234567890"
-     ////liquidcrystali2c.print(F("  Inverter Waiting"));
-     ////return;  
-  ////} 
-  ////if (inverter_run_time > 0 && inverter_run_time < 60) {
-               //////"12345678901234567890"
-     ////liquidcrystali2c.print(F(" Inverter harvested"));
-     ////liquidcrystali2c.setCursor (8,2);
-     ////liquidcrystali2c.print(inverter_run_time);
-     ////liquidcrystali2c.print("s");
-     ////return;  
-  ////}
-  ////if (inverter_run_time >= 60) {
-               //////"12345678901234567890"
-     ////liquidcrystali2c.print(F(" Inverter harvested"));
-     ////liquidcrystali2c.setCursor (8,2);
-     ////liquidcrystali2c.print(inverter_run_time/60);
-     ////liquidcrystali2c.print("m");
-     ////return;  
-  ////}
+    const int inverter_run_time {mystatemachine.getInverterRunTime()};
+    String top_line    {"Inverter harvested"};
+    String bottom_line {""};
+    const int one_minute     {60};
+    const int one_hour       {one_minute * 60};
+    if (inverter_run_time == 0)
+    {
+        top_line    = "Inverter waiting";
+        bottom_line = "for surplus energy";
+    }
+    //seconds
+    else if (inverter_run_time < one_minute)
+    {
+        const String seconds     {inverter_run_time};
+        bottom_line = seconds + " second";
+        if (inverter_run_time > 1)
+        {
+            bottom_line += 's';
+        }
+         
+    }
+    else if (inverter_run_time < one_hour)
+    {
+        const int minutes        {inverter_run_time / one_minute};
+        const String minutes_str {minutes};
+        bottom_line = minutes_str + " minute";
+        if (minutes > 1)
+        {
+            bottom_line += 's';
+        }
+        
+    }
+    else if (inverter_run_time >= one_hour)
+    {
+        const int  run_minutes        {inverter_run_time / one_minute};
+        const int  minutes_in_an_hour {60};
+        const int  run_hours          {run_minutes / minutes_in_an_hour};
+        const int  remainder_minutes  {run_minutes - (run_hours * minutes_in_an_hour)};
+        const String run_hours_string {run_hours};
+        bottom_line = run_hours_string + " hour"; 
+        if (run_hours > 1)
+        {
+            bottom_line += 's';
+        }
+        bottom_line += ' ';
+        const String run_minutes_string {remainder_minutes};
+        bottom_line += run_minutes_string;
+        bottom_line += " minute";
+        if (remainder_minutes > 1)
+        {
+            bottom_line += 's';
+        }
+    }    
+    mylcd.dissolveThis(top_line, bottom_line);
 }
 
 

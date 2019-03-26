@@ -172,3 +172,4 @@ idea:  a function that takes these parameters (min/max voltage allowable time mi
 03-26-19-11:19 sunrise sunset message
 03-26-19-11:36 sunset time fix
 03-26-19-17:44 MyStateMachine::getInverterRunTime
+03-26-19-18:28 messageInverterRunTime()
