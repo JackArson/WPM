@@ -24,8 +24,8 @@ LiquidCrystal_I2C  liquidcrystali2c(0x27, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);
 
 //globals
 tmElements_t       gRTC_reading;
-tmElements_t       gLast_RTC_reading;   //to control 1000ms loop
-time_t             mDissolveTimestamp  {0};  //for LCD 'dissolve' effect
+tmElements_t       gLast_RTC_reading;        //to control 1000ms loop
+time_t             mDissolveTimestamp  {0};  //for LCD 'dissolve' effect loop
 
 namespace Pin
 {                              
@@ -104,24 +104,28 @@ private: //variables
     const char* mDaySuffix[4] = {"st", "nd", "rd", "th"};
     //Sometimes there are more than 52 weeks in a year.
     //These tables are close enough to use year after year
-    const byte sunrise_hour[53]   = { 8,  8,  8,  8,  8,  8,  8,  8,  8,  7,
-                                      7,  7,  7,  7,  6,  6,  6,  6,  6,  6,
-                                      6,  6,  6,  5,  5,  6,  6,  6,  6,  6,
-                                      6,  6,  6,  6,  6,  6,  7,  7,  7,  7,
-                                      7,  7,  7,  7,  7,  8,  8,  8,  8,  8,
-                                      8,  8,  8}; 
+
+    //Why is there a 4:58am in this list when know the sun has never risen at 4:58am?
+    //Because this list has not had the Daylight Savings Time + 1 (spring forward)
+    //applied yet.  Near summer solstice it does rise at 5:58am!
+    const byte sunrise_hour[53]   = { 7,  7,  7,  7,  7,  7,  7,  7,  7,  6,
+                                      6,  6,  6,  6,  5,  5,  5,  5,  5,  5,
+                                      5,  5,  5,  4,  4,  5,  5,  5,  5,  5,
+                                      5,  5,  5,  5,  5,  5,  6,  6,  6,  6,
+                                      6,  6,  6,  6,  6,  7,  7,  7,  7,  7,
+                                      7,  7,  7}; 
     const byte sunrise_minute[53] = {47, 48, 46, 42, 37, 31, 23, 14,  4, 54,
                                      43, 32, 21, 10, 59, 48, 38, 29, 20, 13,
                                       7,  3,  0, 58, 58,  0,  3,  7, 12, 18,
                                      24, 30, 37, 43, 50, 56,  3,  9, 16, 23,
                                      29, 36, 44, 51, 59,  7, 15, 23, 30, 36,
                                      41, 45, 47};
-    const byte sunset_hour[53]    = {18, 18, 18, 18, 18, 18, 18, 19, 19, 19,
-                                     19, 19, 19, 19, 19, 20, 20, 20, 20, 20,
-                                     20, 20, 20, 20, 20, 20, 20, 20, 20, 20,
-                                     20, 20 ,20, 20, 20, 19, 19, 19, 19, 19,
-                                     18, 18, 18, 18, 18, 18, 18, 18, 18, 18,
-                                     18, 18, 18}; 
+    const byte sunset_hour[53]    = {17, 17, 17, 17, 17, 17, 17, 18, 18, 18,
+                                     18, 18, 18, 18, 18, 19, 19, 19, 19, 19,
+                                     19, 19, 19, 19, 19, 19, 19, 19, 19, 19,
+                                     19, 19 ,19, 19, 19, 18, 18, 18, 18, 18,
+                                     17, 17, 17, 17, 17, 17, 17, 17, 17, 17,
+                                     17, 17, 17}; 
     const byte sunset_minute[53]  = {13, 19, 26, 34, 43, 51, 59,  7, 15, 23,
                                      30, 37, 44, 51, 58,  5, 12, 19, 26, 33,
                                      39, 45, 50, 54, 57, 58, 58, 56, 53, 48,
@@ -135,16 +139,18 @@ private: //variables continued
     //mDatesToReportList array is large enough to hold pointers to every event if needed.
     byte mTodaySunriseHour   {0};
     byte mTodaySunriseMinute {0};
-    byte mTodaySunSetHour    {0};
-    byte mTodaySunSetMinute  {0};
+    byte mTodaySunsetHour    {0};
+    byte mTodaySunsetMinute  {0};
     bool mDaylightSavingsTime {true};
 public:  //methods
     void           init                    ();
-    const String   getClockString        (const tmElements_t time,
+    String         getClockString          (const tmElements_t time,
                                             const bool right_justify = false);
     const char*    getDaySuffix            (byte day_number);
     const ImportantDate* getImportantDate  (const byte index);     
     const char*    getMonthShortName       (const byte month_number);
+    String         getSunriseClockString   ();
+    String         getSunsetClockString    ();
     byte           getWeekNumber           (tmElements_t date);
     byte           getQtyImportantDates    ();
     bool           isAM                    (const tmElements_t time);
@@ -162,7 +168,7 @@ void Calendar::init()
     setSunriseSunset();
 }
 
-const String Calendar::getClockString(const tmElements_t time, const bool right_justify)
+String Calendar::getClockString(const tmElements_t time, const bool right_justify)
 {
     int  format {0};
     String clock_string ("");
@@ -265,6 +271,23 @@ const char* Calendar::getMonthShortName(const byte month_number)
     return mMonthShortName[month_number];
 }
 
+String Calendar::getSunriseClockString()
+{
+    tmElements_t sunrise {0};
+    sunrise.Hour   = mTodaySunriseHour;
+    sunrise.Minute = mTodaySunriseMinute;
+    return getClockString(sunrise);
+}
+
+String Calendar::getSunsetClockString()
+{
+    tmElements_t sunset {0};
+    sunset.Hour   = mTodaySunsetHour;
+    sunset.Minute = mTodaySunsetMinute;
+    return getClockString(sunset);
+}
+    
+
 byte Calendar::getWeekNumber(tmElements_t date)
 {
     //convert date to the first moment of the year
@@ -304,7 +327,7 @@ bool Calendar::isAM(const tmElements_t time)
 bool Calendar::isDaylight()
 {
     const int sunrise_minutes {(mTodaySunriseHour * 60) + mTodaySunriseMinute};
-    const int sunset_minutes  {(mTodaySunSetHour  * 60) + mTodaySunSetMinute};
+    const int sunset_minutes  {(mTodaySunsetHour  * 60) + mTodaySunsetMinute};
     const int now_minutes     {(hour()            * 60) + minute()};
     if (now_minutes >= sunrise_minutes &&
         now_minutes <  sunset_minutes)
@@ -389,10 +412,10 @@ void Calendar::serialPrintImportantDate(const ImportantDate importantdate)
 void Calendar::setSunriseSunset()
 {
     const int week_number {getWeekNumber(gRTC_reading)};
-    mTodaySunriseHour   = sunrise_hour[week_number] -1 + mDaylightSavingsTime;
+    mTodaySunriseHour   = sunrise_hour[week_number] + mDaylightSavingsTime;
     mTodaySunriseMinute = sunrise_minute[week_number];
-    mTodaySunSetHour    = sunset_hour[week_number] -1 +mDaylightSavingsTime;
-    mTodaySunSetMinute  = sunset_minute[week_number]; 
+    mTodaySunsetHour    = sunset_hour[week_number] + mDaylightSavingsTime;
+    mTodaySunsetMinute  = sunset_minute[week_number]; 
 }
 
 //==end of Calendar==========================================================================
@@ -1396,8 +1419,7 @@ void MessageManager::main()
                     //break;
                 default:
                     break;
-            }
-            
+            }            
         }
         //adjust index
         mCurrentMessageIndex++;
@@ -1411,6 +1433,13 @@ void MessageManager::main()
 
 void MessageManager::sunriseSunsetMessage()
 {
+
+    const String sunrise_clock_string {calendar.getSunriseClockString()};
+    const String top_line {"Sunrise " + sunrise_clock_string};
+    const String sunset_clock_string {calendar.getSunsetClockString()};
+    const String bottom_line {"Sunset " + sunrise_clock_string};
+    mylcd.dissolveThis(top_line, bottom_line);
+    
 ////liquidcrystali2c.setCursor (0,1);
   //////           "12345678901234567890"
   ////liquidcrystali2c.print (F("   Sunrise "));
