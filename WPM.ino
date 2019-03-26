@@ -1021,6 +1021,7 @@ private: //variables
 public:  //methods
     void  main                ();
     State getState            ();
+    int   getInverterRunTime  ();
     void  resetInverterRunTime();
     void  setState            (const State);
 private: //methods
@@ -1105,6 +1106,11 @@ void  MyStateMachine::main()
 MyStateMachine::State MyStateMachine::getState()
 {
     return mState;
+}
+
+int MyStateMachine::getInverterRunTime()
+{
+    return mInverterRunTime;
 }
 
 void MyStateMachine::resetInverterRunTime()
@@ -1373,8 +1379,9 @@ private: //variables
     const byte   mQtySystemMessages     {5};        
 public:  //methods
     void main();
+    void messageInverterRunTime();
     void sunriseSunsetMessage();
-    void voltageRecordMessage();
+    void voltageExtremesMessage();
 }messagemanager;
 
 void MessageManager::main()
@@ -1400,7 +1407,7 @@ void MessageManager::main()
             switch (sytem_message_index)
             {
                 case 0: //voltage record high and low
-                    voltageRecordMessage();
+                    voltageExtremesMessage();
                     break;
                 case 1:
                     sunriseSunsetMessage();
@@ -1427,45 +1434,45 @@ void MessageManager::main()
         {
             mCurrentMessageIndex = 0;
         }
-        
     }
 }
 
+void MessageManager::messageInverterRunTime()
+{
+  ////if (inverter_run_time == 0) {
+               //////"12345678901234567890"
+     ////liquidcrystali2c.print(F("  Inverter Waiting"));
+     ////return;  
+  ////} 
+  ////if (inverter_run_time > 0 && inverter_run_time < 60) {
+               //////"12345678901234567890"
+     ////liquidcrystali2c.print(F(" Inverter harvested"));
+     ////liquidcrystali2c.setCursor (8,2);
+     ////liquidcrystali2c.print(inverter_run_time);
+     ////liquidcrystali2c.print("s");
+     ////return;  
+  ////}
+  ////if (inverter_run_time >= 60) {
+               //////"12345678901234567890"
+     ////liquidcrystali2c.print(F(" Inverter harvested"));
+     ////liquidcrystali2c.setCursor (8,2);
+     ////liquidcrystali2c.print(inverter_run_time/60);
+     ////liquidcrystali2c.print("m");
+     ////return;  
+  ////}
+}
+
+
 void MessageManager::sunriseSunsetMessage()
 {
-
     const String sunrise_clock_string {calendar.getSunriseClockString()};
     const String top_line {"Sunrise " + sunrise_clock_string};
     const String sunset_clock_string {calendar.getSunsetClockString()};
     const String bottom_line {"Sunset  " + sunset_clock_string};
     mylcd.dissolveThis(top_line, bottom_line);
-    
-////liquidcrystali2c.setCursor (0,1);
-  //////           "12345678901234567890"
-  ////liquidcrystali2c.print (F("   Sunrise "));
-  ////liquidcrystali2c.print (today_sunrise_hour);
-  ////liquidcrystali2c.print (F(":"));
-  ////if (today_sunrise_minute <= 9){
-   ////liquidcrystali2c.print(F("0"));
-  ////}
-  ////liquidcrystali2c.print (today_sunrise_minute);
-  ////liquidcrystali2c.print (F("am"));
-  ////liquidcrystali2c.setCursor (0,2);
-  //////           "12345678901234567890"
-  ////liquidcrystali2c.print (F("   Sunset  ")); 
-  ////liquidcrystali2c.print (today_sunset_hour - 12);
-  ////liquidcrystali2c.print (F(":"));
-  ////if (today_sunset_minute <= 9){
-   ////liquidcrystali2c.print(F("0"));
-  ////}
-  
-  ////liquidcrystali2c.print (sunset_minute[calendar.getWeekNumber(gRTC_reading)]);
-  ////liquidcrystali2c.print (F("pm"));
-//}
-
 }
 
-void MessageManager::voltageRecordMessage()
+void MessageManager::voltageExtremesMessage()
 {
     const int qty_voltrecord {2};
     const Voltmeter::VoltRecord voltrecord[qty_voltrecord] {voltmeter.getMin(),
@@ -1484,16 +1491,6 @@ void MessageManager::voltageRecordMessage()
 //==end of MessageManager====================================================================
 
 
-//boolean daylight_savings_time = true; // true for spring to fall
-
-//int  inverter_run_time  = 0;
-
-//byte          today_sunrise_hour = 0;
-//byte          today_sunset_hour = 0;
-//byte          today_sunrise_minute = 0;
-//byte          today_sunset_minute = 0;
-byte          message_manager_next_message = 1;
-
 byte          inverter_warm_up_timer = 0; //seconds
 int           balance_falling_countdown = 0;
 int           balance_rising_countdown = 0;
@@ -1501,14 +1498,8 @@ int           balance_rising_countdown = 0;
 
 boolean       LDR_data = false;
 boolean       LDR2_data = false;
-//boolean       DST = true;
-boolean       message_loaded [3]  = {false,false,false};
-byte reminder_message_pointer [3] = {false,false,false};
 byte dimmer_reference_number = 0;
 
-//const unsigned long seconds_in_a_week = 604800;  
-
-// SETUP 
 void setup()
 {
     Serial.begin(250000);              // start the serial monitor
@@ -1583,33 +1574,6 @@ void loop()
     }
 }
 
-////-------------------------------
-//void myMessageInverterRunTimefunction(){
-////-------------------------------   
-  ////myClearMessageBoardfunction();
-  ////liquidcrystali2c.setCursor (0,1);
-  ////if (inverter_run_time == 0) {
-               //////"12345678901234567890"
-     ////liquidcrystali2c.print(F("  Inverter Waiting"));
-     ////return;  
-  ////} 
-  ////if (inverter_run_time > 0 && inverter_run_time < 60) {
-               //////"12345678901234567890"
-     ////liquidcrystali2c.print(F(" Inverter harvested"));
-     ////liquidcrystali2c.setCursor (8,2);
-     ////liquidcrystali2c.print(inverter_run_time);
-     ////liquidcrystali2c.print("s");
-     ////return;  
-  ////}
-  ////if (inverter_run_time >= 60) {
-               //////"12345678901234567890"
-     ////liquidcrystali2c.print(F(" Inverter harvested"));
-     ////liquidcrystali2c.setCursor (8,2);
-     ////liquidcrystali2c.print(inverter_run_time/60);
-     ////liquidcrystali2c.print("m");
-     ////return;  
-  ////}
-//}
 
 //}
 ////*******************************
