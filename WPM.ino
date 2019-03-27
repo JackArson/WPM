@@ -1622,8 +1622,8 @@ void TrackLight::setLightLevel()
     //invert the value because I hooked my potentiometer up backwards
     value_to_write = 255 - value_to_write;
     analogWrite(Pin::workbench_lighting, value_to_write);
-    Serial.print("TrackLight::setLightLevel value: ");
-    Serial.println(value_to_write);
+    Serial.print("TrackLight::setLightLevel new_setting: ");
+    Serial.println(new_setting);
 }
 
 //==end of TrackLight========================================================================
