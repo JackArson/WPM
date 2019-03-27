@@ -1498,27 +1498,26 @@ class TrackLight
 private: //enums
     enum TrackLightState
     {
-        TRACKLIGHTSTATE_GETTING_NEW_INPUT,
-        TRACKLIGHTSTATE_HOLDING_AT_ANCHOR_POINT,
+        TRACKLIGHTSTATE_READING_NEW_INPUT,
+        TRACKLIGHTSTATE_IGNORING_SMALL_INPUT_FLUCTUATIONS,
         MAX_TRACKLIGHTSTATE
     };
 private: //variables
-    TrackLightState mTrackLightState {TRACKLIGHTSTATE_GETTING_NEW_INPUT};
-    
-    //to prevent flicker, freeze light level if this many milliseconds have passed since
-    //the last mLargeAdjustment
-    
+    TrackLightState mTrackLightState {TRACKLIGHTSTATE_READING_NEW_INPUT};
+    //to prevent flicker drift, freeze light level if this many milliseconds 
+    //have passed since the last mLargeAdjustment
     time_t      mAdjustmentWindowTimestamp {millis()};
-    int         mLastSwitchReading         {0};
+    //Hold the input at mAnchorPoint unless there is a mLargeAdjustment
+    //Why? My poor quality potentiometer does not always produce a steady reading.
     int         mAnchorPoint               {0};
     
 public:  //methods
     void main();
 private: //methods
-    bool largeAdjustmentDetected(const int dimmer_reading);
-    void readDimmerSwitch();
-    int  regulateVoltage(const int input_level);
-    void setLightLevel();
+    bool largeAdjustmentDetected  (const int dimmer_reading);
+    void readDimmerSwitch         ();
+    int  regulateVoltage          (const int input_level);
+    void setLightLevel            ();
     
 }tracklight;
 
@@ -1542,7 +1541,6 @@ bool TrackLight::largeAdjustmentDetected(const int dimmer_reading)
     {
         return false;
     }
-    
 }
 
 void TrackLight::readDimmerSwitch()
@@ -1551,40 +1549,39 @@ void TrackLight::readDimmerSwitch()
     int dimmer_reading {analogRead(Pin::dimmer)};
     //invert the value because I hooked my potentiometer up backwards
     dimmer_reading = 1023 - dimmer_reading;
-    
-    if (mTrackLightState == TRACKLIGHTSTATE_HOLDING_AT_ANCHOR_POINT)
+    if (mTrackLightState == TRACKLIGHTSTATE_IGNORING_SMALL_INPUT_FLUCTUATIONS)
     {
         //check for a mLargeAdjustment in the dimmer switch
         if(largeAdjustmentDetected(dimmer_reading))
         {
-            mTrackLightState = TRACKLIGHTSTATE_GETTING_NEW_INPUT;
+            mTrackLightState = TRACKLIGHTSTATE_READING_NEW_INPUT;
             //set timer
             mAdjustmentWindowTimestamp = millis();
-            Serial.println("largeAdjustmentDetected");
         }
         else
         {
             return;
         }
     }
-    else if (mTrackLightState == TRACKLIGHTSTATE_GETTING_NEW_INPUT)
+    else if (mTrackLightState == TRACKLIGHTSTATE_READING_NEW_INPUT)
     {
+        //allow the reading to change
         mAnchorPoint = dimmer_reading;
-        //the adjustment_window is the amount of time that can pass without a
+        //check for large adjustments and extend adjustment window if detected.
+        //The adjustment_window is the amount of time that can pass without a
         //large adjustment.  The reading anchors itself after that
         const int adjustment_window {1000}; //milliseconds
-        //check for large adjustments and extend adjustment window if detected
         if (largeAdjustmentDetected(dimmer_reading))
         {
+            //extend time window
             mAdjustmentWindowTimestamp = millis();
         }
         else if (millis() - adjustment_window >= mAdjustmentWindowTimestamp)
         {
-            mTrackLightState = TRACKLIGHTSTATE_HOLDING_AT_ANCHOR_POINT;
-            Serial.println("TRACKLIGHTSTATE_HOLDING");
+            //out of time
+            mTrackLightState = TRACKLIGHTSTATE_IGNORING_SMALL_INPUT_FLUCTUATIONS;
         }
     }
-    mLastSwitchReading = dimmer_reading;
 }
 
 int TrackLight::regulateVoltage(const int input_level)
@@ -1592,21 +1589,20 @@ int TrackLight::regulateVoltage(const int input_level)
     //Keeps the light output consistent with varying input voltages.
     //The voltage at the bulb (post MOSFET) always measures -0.40 volts less than
     //the system voltage
-    
-    const float max_led_voltage      {12.00};
+    const float max_led_voltage      {12.50};
     const float voltage_loss         { 0.40};
     const float max_voltage          {max_led_voltage + voltage_loss};
     float system_voltage             {voltmeter.getVoltage()};
     if (system_voltage == 0.0) //avoid a division by zero error if voltage can't be read
     {
-        //send an error, but keep the light working
-        //assume max voltage present to protect LED
+        //send an error, but try to keep the light working
+        //assume a strong voltage is present to protect LEDs
         Serial.println(F("TrackLight::regulateVoltage  No voltage error."));
         const float system_normal_high {14.5};
         system_voltage = system_normal_high;
     }
-    const float voltage_adjustment_ratio {max_voltage / system_voltage};
-    return input_level * voltage_adjustment_ratio;
+    const float voltage_regulation_ratio {max_voltage / system_voltage};
+    return input_level * voltage_regulation_ratio;
 }
 
 void TrackLight::setLightLevel()
@@ -1615,7 +1611,7 @@ void TrackLight::setLightLevel()
     //the setting is a one byte value (0 - 255)
     //this is one fourth the value of the input reading
     int value_to_write {new_setting / 4};
-    //enforce maximum
+    //enforce min/maximum
     if (value_to_write > 255)
     {
         value_to_write = 255;
@@ -1624,15 +1620,12 @@ void TrackLight::setLightLevel()
     {
         value_to_write = 0;
     }
-    
-    Serial.print("TrackLight::setLightLevel new_setting: ");
-    Serial.println(new_setting);
     analogWrite(Pin::workbench_lighting, value_to_write);
 }
 
 //==end of TrackLight========================================================================
 
-byte          inverter_warm_up_timer = 0; //seconds
+//byte          inverter_warm_up_timer = 0; //seconds
 int           balance_falling_countdown = 0;
 int           balance_rising_countdown = 0;
 
@@ -1675,6 +1668,7 @@ void loop()
     //This code runs as fast as possible
     voltmeter.readVoltage();
     myserial.checkInput();
+    tracklight.main();
     
     //This code runs every gDissolveInterval 
     const time_t gDissolveInterval {50}; //milliseconds 
@@ -1682,7 +1676,7 @@ void loop()
     {
         mDissolveTimestamp = millis(); //set up delay for next loop
         mylcd.dissolveEffect();
-        tracklight.main();
+        
     }
     //This code runs every second (1000ms)
     RTC.read(gRTC_reading);  //gathered from library by reference
