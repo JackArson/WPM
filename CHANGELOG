@@ -179,3 +179,4 @@ idea:  a function that takes these parameters (min/max voltage allowable time mi
 03-27-19-07:36 Calendar::getDaySuffix condensed
 03-27-19-07:42 rm Calendar::serialPrintImportantDate - redundant
 03-27-19-11:37 added Tracklight class and methods
+03-27-19-11:50 add Tracklight diagnostics

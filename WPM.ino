@@ -1609,16 +1609,21 @@ void TrackLight::setLightLevel()
     const int new_setting {regulateVoltage(mAnchorPoint)};
     //the setting is a one byte value (0 - 255)
     //this is one fourth the value of the input reading
-    const int value_to_write {new_setting / 4};
+    int value_to_write {new_setting / 4};
     //enforce maximum
     if (value_to_write > 255)
     {
-        analogWrite(Pin::workbench_lighting, 255);
+        value_to_write = 255;
     }
-    else
+    else if (value_to_write < 0)
     {
-        analogWrite(Pin::workbench_lighting, value_to_write);
+        value_to_write = 0;
     }
+    //invert the value because I hooked my potentiometer up backwards
+    value_to_write = 255 - value_to_write;
+    analogWrite(Pin::workbench_lighting, value_to_write);
+    Serial.print("TrackLight::setLightLevel value: ");
+    Serial.println(value_to_write);
 }
 
 //==end of TrackLight========================================================================
@@ -1666,13 +1671,14 @@ void loop()
     //This code runs as fast as possible
     voltmeter.readVoltage();
     myserial.checkInput();
-    tracklight.main();
+    
     //This code runs every gDissolveInterval 
     const time_t gDissolveInterval {50}; //milliseconds 
     if (millis() - gDissolveInterval  >= mDissolveTimestamp)
     {
         mDissolveTimestamp = millis(); //set up delay for next loop
         mylcd.dissolveEffect();
+        tracklight.main();
     }
     //This code runs every second (1000ms)
     RTC.read(gRTC_reading);  //gathered from library by reference
