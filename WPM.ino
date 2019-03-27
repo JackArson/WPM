@@ -1534,7 +1534,7 @@ bool TrackLight::largeAdjustmentDetected(const int dimmer_reading)
 {
     const int large_adjustment {100}; //out of 1024
     if (mAnchorPoint - dimmer_reading > large_adjustment ||
-        mAnchorPoint - dimmer_reading < large_adjustment)
+        dimmer_reading - mAnchorPoint > large_adjustment)
     {
         return true;
     }
