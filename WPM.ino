@@ -30,8 +30,6 @@ LiquidCrystal_I2C  liquidcrystali2c(0x27, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);
 
 //globals
 tmElements_t       gRTC_reading;             //the current time
-tmElements_t       gLast_RTC_reading;        //to control 1000ms loop
-time_t             mDissolveTimestamp  {0};  //for LCD 'dissolve' effect loop
 
 namespace Pin
 {                              
@@ -356,7 +354,7 @@ void Calendar::loadImportantDates()
     {
         //build anniversary date of event
         tmElements_t event_anniversary {};
-        //clear Hours, Minutes, Seconds
+        //clear Hours, Minutes, OnceEverySecond
         event_anniversary.Hour   = 0;
         event_anniversary.Minute = 0;
         event_anniversary.Second = 0;
@@ -393,7 +391,7 @@ class MySerial
 private: //variables
     bool mUseLaptopOperatingVoltage{true};    
 public:
-    void checkInput();
+    void checkForUserInput();
     void printState(char const *text);
     void printTimestamp();
     void setClock();
@@ -403,7 +401,7 @@ private: //methods
     //void print
 }myserial;
 
-void MySerial::checkInput()
+void MySerial::checkForUserInput()
 {
     //check if the user wants to toggle 'c'orrected voltage    
     if (Serial.available())
@@ -728,26 +726,56 @@ void MyLCD::printDate(const Coordinant coordinant)
 
 //=========================================================================================================
 
-class CoundownTimer
+class Timing
 {
-private:
-    byte mCounter;
-  public:
-    CoundownTimer();
-    byte getCounter   ();
-    void update       ();
-    void set          (byte x); 
-}coundowntimer;
 
-CoundownTimer::CoundownTimer()
-{}
+private: //variables
+    byte         mCounter              {0};
+    time_t       mDissolveTimestamp    {0};
+    tmElements_t mOnceEverySecondLoopTimestamp {0};        //to control 1000ms loop
+public:  //methods
+    byte getCounter           ();
+    bool isDissolveReady      ();
+    bool isOnceEverySecondLoopReady   ();
+    void update               ();
+    void setCountdownTimer    (byte x); 
 
-byte CoundownTimer::getCounter()
+}timing;
+
+byte Timing::getCounter()
 {
     return mCounter;
 }
 
-void CoundownTimer::update()
+bool Timing::isDissolveReady()
+{
+    const time_t   dissolve_interval {50}; //milliseconds 
+    if (millis() - dissolve_interval  >= mDissolveTimestamp)
+    {
+        mDissolveTimestamp = millis(); //set up delay for next loop
+        return true;
+    }
+    else
+    {
+        return false;
+    }    
+}
+
+bool Timing::isOnceEverySecondLoopReady()
+{
+    if (mOnceEverySecondLoopTimestamp.Second != gRTC_reading.Second) 
+    {
+        //set up 1000ms delay for the next loop
+        mOnceEverySecondLoopTimestamp = gRTC_reading;
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+}
+
+void Timing::update()
 {
     liquidcrystali2c.setCursor(8, 0);
     if(mCounter) //if a countdown is running
@@ -765,7 +793,7 @@ void CoundownTimer::update()
     }
 }
 
-void CoundownTimer::set(byte x)
+void Timing::setCountdownTimer(byte x)
 {
     mCounter = x;
 }
@@ -1087,7 +1115,7 @@ void MyStateMachine::resetInverterRunTime()
 void MyStateMachine::setState(State state)
 {
     mState = state;
-    const char *start_string {" state set to "};
+    const char *start_string {" State changed to "};
     const char *finish_string {""};
     liquidcrystali2c.setCursor (0,0);
     switch (mState)
@@ -1223,13 +1251,13 @@ void MyStateMachine::initWarmUpInverterStatefunction()
     digitalWrite (Pin::inverter, HIGH);         //inverter on
     digitalWrite(Pin::stage_one_inverter_relay, LOW);    // relay one off
     digitalWrite(Pin::stage_two_inverter_relay, LOW);    // relay two off
-    coundowntimer.set(seconds_to_warm_up);
+    timing.setCountdownTimer(seconds_to_warm_up);
     setState(STATE_INVERTER_WARM_UP);
 }
 
 void MyStateMachine::warmUpInverterStatefunction()
 {
-    if (coundowntimer.getCounter())
+    if (timing.getCounter())
     {    
         //warming up during countdown
         return;
@@ -1247,7 +1275,7 @@ void MyStateMachine::initStageOneInverterStatefunction()
     digitalWrite (Pin::inverter, HIGH);                 //inverter on
     digitalWrite (Pin::stage_one_inverter_relay, HIGH); // relay one on
     digitalWrite (Pin::stage_two_inverter_relay, LOW);  // relay two off
-    coundowntimer.set(stage_two_switching_delay);
+    timing.setCountdownTimer(stage_two_switching_delay);
     setState(STATE_INVERTER_STAGE_ONE);
 }
 
@@ -1262,7 +1290,7 @@ void MyStateMachine::stageOneInverterStatefunction()
         setState(STATE_INIT_SLEEP);
     }
     else if (voltmeter.getVoltage() >= voltage_to_switch_to_stage_two &&
-             !coundowntimer.getCounter())
+             !timing.getCounter())
     {
         setState(STATE_INIT_INVERTER_STAGE_TWO);  
     }
@@ -1323,13 +1351,13 @@ void MyStateMachine::initInverterCooldownfunction()
     digitalWrite(Pin::inverter, LOW);                 //inverter off
     digitalWrite(Pin::stage_one_inverter_relay, LOW); //relay one off
     digitalWrite(Pin::stage_two_inverter_relay, LOW); //relay two off
-    coundowntimer.set(inverter_cooldown_time);
+    timing.setCountdownTimer(inverter_cooldown_time);
     setState(STATE_INVERTER_COOL_DOWN);
 }
 
 void MyStateMachine::inverterCooldownfunction()
 {
-    if (!coundowntimer.getCounter())
+    if (!timing.getCounter())
     {
         setState(STATE_INIT_BALANCED);
     }
@@ -1502,23 +1530,25 @@ private: //enums
         TRACKLIGHTSTATE_IGNORING_SMALL_INPUT_FLUCTUATIONS,
         MAX_TRACKLIGHTSTATE
     };
+    
 private: //variables
     TrackLightState mTrackLightState {TRACKLIGHTSTATE_READING_NEW_INPUT};
     //to prevent flicker drift, freeze light level if this many milliseconds 
     //have passed since the last mLargeAdjustment
     time_t      mAdjustmentWindowTimestamp {millis()};
-    //Hold the input at mAnchorPoint unless there is a mLargeAdjustment
+    //Hold the input at mInputAnchorPoint unless there is a mLargeAdjustment
     //Why? My poor quality potentiometer does not always produce a steady reading.
-    int         mAnchorPoint               {0};
+    int         mInputAnchorPoint               {0};
     
 public:  //methods
     void main();
+    
 private: //methods
     bool largeAdjustmentDetected  (const int dimmer_reading);
     void readDimmerSwitch         ();
     int  regulateVoltage          (const int input_level);
-    void setLightLevel            ();
-    
+    void setLightLevel            ();    
+
 }tracklight;
 
 void TrackLight::main()
@@ -1532,8 +1562,8 @@ void TrackLight::main()
 bool TrackLight::largeAdjustmentDetected(const int dimmer_reading)
 {
     const int large_adjustment {100}; //out of 1024
-    if (mAnchorPoint - dimmer_reading > large_adjustment ||
-        dimmer_reading - mAnchorPoint > large_adjustment)
+    if (mInputAnchorPoint - dimmer_reading > large_adjustment ||
+        dimmer_reading - mInputAnchorPoint > large_adjustment)
     {
         return true;
     }
@@ -1566,7 +1596,7 @@ void TrackLight::readDimmerSwitch()
     else if (mTrackLightState == TRACKLIGHTSTATE_READING_NEW_INPUT)
     {
         //allow the reading to change
-        mAnchorPoint = dimmer_reading;
+        mInputAnchorPoint = dimmer_reading;
         //check for large adjustments and extend adjustment window if detected.
         //The adjustment_window is the amount of time that can pass without a
         //large adjustment.  The reading anchors itself after that
@@ -1607,7 +1637,7 @@ int TrackLight::regulateVoltage(const int input_level)
 
 void TrackLight::setLightLevel()
 {
-    const int new_setting {regulateVoltage(mAnchorPoint)};
+    const int new_setting {regulateVoltage(mInputAnchorPoint)};
     //the setting is a one byte value (0 - 255)
     //this is one fourth the value of the input reading
     int value_to_write {new_setting / 4};
@@ -1622,7 +1652,6 @@ void TrackLight::setLightLevel()
     }
     analogWrite(Pin::workbench_lighting, value_to_write);
 }
-
 //==end of TrackLight========================================================================
 
 //byte          inverter_warm_up_timer = 0; //seconds
@@ -1665,29 +1694,22 @@ void setup()
                
 void loop()
 {
-    //This code runs as fast as possible
+    RTC.read(gRTC_reading);  //gRTC_reading set by reference
     voltmeter.readVoltage();
-    myserial.checkInput();
+    myserial.checkForUserInput();
     tracklight.main();
-    
-    //This code runs every gDissolveInterval 
-    const time_t gDissolveInterval {50}; //milliseconds 
-    if (millis() - gDissolveInterval  >= mDissolveTimestamp)
+    if (timing.isDissolveReady())
     {
-        mDissolveTimestamp = millis(); //set up delay for next loop
         mylcd.dissolveEffect();
-        
     }
     //This code runs every second (1000ms)
-    RTC.read(gRTC_reading);  //gathered from library by reference
-    if (gLast_RTC_reading.Second != gRTC_reading.Second) 
+    if (timing.isOnceEverySecondLoopReady())
     {
-        gLast_RTC_reading = gRTC_reading;  //set up 1000ms delay for the next loop
         if (RTC.read(gRTC_reading))        //gRTC_reading is gathered by reference
         {
             setTime(gRTC_reading.Hour,gRTC_reading.Minute,gRTC_reading.Second,gRTC_reading.Day,gRTC_reading.Month,gRTC_reading.Year-30);
         }
-        coundowntimer.update();
+        timing.update();
         mylcd.drawDisplay();
         messagemanager.main();
         
