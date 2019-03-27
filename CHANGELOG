@@ -177,3 +177,4 @@ idea:  a function that takes these parameters (min/max voltage allowable time mi
 03-26-19-18:48 messageInverterRunTime() removed minute info for round hours
 03-26-19-18:51 messageInverterRunTime() removed minute info for round hours
 03-27-19-07:36 Calendar::getDaySuffix condensed
+03-27-19-07:42 rm Calendar::serialPrintImportantDate - redundant

@@ -163,7 +163,7 @@ public:  //methods
     bool           isDaylight              ();
     bool           isWakeUpComplete        ();
     void           loadImportantDates      ();
-    void           serialPrintImportantDate(const ImportantDate importantdate);
+    //void           serialPrintImportantDate(const ImportantDate importantdate);
     void           setSunriseSunset        ();
 
 }calendar;
@@ -298,7 +298,7 @@ String Calendar::getSunsetClockString()
 }
     
 
-byte Calendar::getWeekNumber(tmElements_t date)
+byte Calendar::getWeekNumber(tmElements_t date)  //needed to read sunrise sunset table
 {
     //convert date to the first moment of the year
     date.Hour   = 0;
@@ -321,18 +321,18 @@ byte Calendar::getQtyImportantDates()
     return mQtyImportantDatesToReport;
 }
 
-//bool Calendar::isAM(const tmElements_t time)
-//{
-    ////the moment after the clock hits 12 noon the time is post merīdiem
-    //if (time.Hour < 12)
-    //{
-        //return true;
-    //}
-    //else
-    //{
-        //return false;
-    //}      
-//}
+bool Calendar::isAM(const tmElements_t time)
+{
+    //the moment after the clock hits 12 noon the time is post merīdiem
+    if (time.Hour < 12)
+    {
+        return true;
+    }
+    else
+    {
+        return false;
+    }      
+}
 
 bool Calendar::isDaylight()
 {
@@ -374,8 +374,8 @@ void Calendar::loadImportantDates()
         //see if date is in search window
         if (event > now() && event <= now() + search_window_secs)
         {
-            serialPrintImportantDate(mImportantDateList[i]);
-            //load a pointer to the important date into mDatesToReportList
+            //serialPrintImportantDate(mImportantDateList[i]);
+            //Fill mDatesToReportList with pointers to the important date table 
             const ImportantDate *pointer {&mImportantDateList[i]};
             mDatesToReportList[mQtyImportantDatesToReport] = pointer;
             ++mQtyImportantDatesToReport;
@@ -384,40 +384,40 @@ void Calendar::loadImportantDates()
     }
 }
 
-void Calendar::serialPrintImportantDate(const ImportantDate importantdate)
-{
-    //print the information to the serial monitor
-    Serial.print("Calendar::loadImportantDates: Detected ");
-    Serial.print(importantdate.text);
-    switch (importantdate.event_type)
-    {
-    case EVENTTYPE_ANNIVERSARY:
-        Serial.print(" anniversary ");
-        break;
-    case EVENTTYPE_BIRTHDAY:
-        Serial.print(" birthday ");
-        break;
-    case EVENTTYPE_APPOINTMENT:
-        Serial.print(" appointment ");
-        break;
-    case EVENTTYPE_HOLIDAY:
-        Serial.print(" holiday ");
-        break;
-    case MAX_EVENTTYPE:
-    default:
-        Serial.print(" event error ");
-        break;
-    };
-    Serial.print("on ");
-    const byte month_number  {importantdate.month};
-    const char *month_string_ptr {getMonthShortName(month_number)};
-    Serial.print(month_string_ptr);
-    Serial.print(", ");
-    Serial.print(importantdate.day);
-    const char *day_suffix {getDaySuffix(importantdate.day)};
-    Serial.print(day_suffix);
-    Serial.println();
-}
+//void Calendar::serialPrintImportantDate(const ImportantDate importantdate)
+//{
+    ////print the information to the serial monitor
+    //Serial.print(F("Calendar::loadImportantDates: Detected ");
+    //Serial.print(importantdate.text);
+    //switch (importantdate.event_type)
+    //{
+    //case EVENTTYPE_ANNIVERSARY:
+        //Serial.print(F(" anniversary ");
+        //break;
+    //case EVENTTYPE_BIRTHDAY:
+        //Serial.print(F(" birthday ");
+        //break;
+    //case EVENTTYPE_APPOINTMENT:
+        //Serial.print(F(" appointment ");
+        //break;
+    //case EVENTTYPE_HOLIDAY:
+        //Serial.print(" holiday ");
+        //break;
+    //case MAX_EVENTTYPE:
+    //default:
+        //Serial.print(" event error ");
+        //break;
+    //};
+    //Serial.print("on ");
+    //const byte month_number  {importantdate.month};
+    //const char *month_string_ptr {getMonthShortName(month_number)};
+    //Serial.print(month_string_ptr);
+    //Serial.print(", ");
+    //Serial.print(importantdate.day);
+    //const char *day_suffix {getDaySuffix(importantdate.day)};
+    //Serial.print(day_suffix);
+    //Serial.println();
+//}
 
 void Calendar::setSunriseSunset()
 {
