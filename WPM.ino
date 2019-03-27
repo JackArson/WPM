@@ -45,14 +45,11 @@ namespace Pin
     const byte stage_two_inverter_relay {9};  //circuit 'S'
     //analog pins
     const byte voltage_divider          {A0}; //green  wire lower cable
-    const byte potentiometer            {A1}; //yellow wire
+    const byte dimmer                   {A1}; //yellow wire
 }
-
 //==end of namespace Pin======================================================================
 
-void myReadPotentiometerAndAdjustWorkbenchTrackLightsfunction();
-
-//all caps indicate a COMPILE TIME CONSTANT 
+//all CAPS indicate a COMPILE TIME CONSTANT 
 const byte QTY_IMPORTANT_DATES = 23;  //this must be initialized in global space instead
                                       //of inside Calendar.  
 class Calendar
@@ -163,7 +160,6 @@ public:  //methods
     bool           isDaylight              ();
     bool           isWakeUpComplete        ();
     void           loadImportantDates      ();
-    //void           serialPrintImportantDate(const ImportantDate importantdate);
     void           setSunriseSunset        ();
 
 }calendar;
@@ -374,50 +370,13 @@ void Calendar::loadImportantDates()
         //see if date is in search window
         if (event > now() && event <= now() + search_window_secs)
         {
-            //serialPrintImportantDate(mImportantDateList[i]);
             //Fill mDatesToReportList with pointers to the important date table 
             const ImportantDate *pointer {&mImportantDateList[i]};
             mDatesToReportList[mQtyImportantDatesToReport] = pointer;
-            ++mQtyImportantDatesToReport;
-            
+            ++mQtyImportantDatesToReport;            
         }
     }
 }
-
-//void Calendar::serialPrintImportantDate(const ImportantDate importantdate)
-//{
-    ////print the information to the serial monitor
-    //Serial.print(F("Calendar::loadImportantDates: Detected ");
-    //Serial.print(importantdate.text);
-    //switch (importantdate.event_type)
-    //{
-    //case EVENTTYPE_ANNIVERSARY:
-        //Serial.print(F(" anniversary ");
-        //break;
-    //case EVENTTYPE_BIRTHDAY:
-        //Serial.print(F(" birthday ");
-        //break;
-    //case EVENTTYPE_APPOINTMENT:
-        //Serial.print(F(" appointment ");
-        //break;
-    //case EVENTTYPE_HOLIDAY:
-        //Serial.print(" holiday ");
-        //break;
-    //case MAX_EVENTTYPE:
-    //default:
-        //Serial.print(" event error ");
-        //break;
-    //};
-    //Serial.print("on ");
-    //const byte month_number  {importantdate.month};
-    //const char *month_string_ptr {getMonthShortName(month_number)};
-    //Serial.print(month_string_ptr);
-    //Serial.print(", ");
-    //Serial.print(importantdate.day);
-    //const char *day_suffix {getDaySuffix(importantdate.day)};
-    //Serial.print(day_suffix);
-    //Serial.println();
-//}
 
 void Calendar::setSunriseSunset()
 {
@@ -427,14 +386,11 @@ void Calendar::setSunriseSunset()
     mTodaySunsetHour    = sunset_hour[week_number] + mDaylightSavingsTime;
     mTodaySunsetMinute  = sunset_minute[week_number]; 
 }
-
 //==end of Calendar==========================================================================
-
 
 class MySerial
 {
 private: //variables
-    //choose the serial output 
     bool mUseLaptopOperatingVoltage{true};    
 public:
     void checkInput();
@@ -474,22 +430,22 @@ void MySerial::printTimestamp()
 {    
     if (gRTC_reading.Hour <= 9)
     {
-        Serial.print("0");
+        Serial.print(F("0"));
     }
     Serial.print(gRTC_reading.Hour);
-    Serial.print(":");
+    Serial.print(F(":"));
     if (gRTC_reading.Minute <= 9)
     {
-        Serial.print("0");
+        Serial.print(F("0"));
     }
     Serial.print(gRTC_reading.Minute);
-    Serial.print(":");
+    Serial.print(F(":"));
     if (gRTC_reading.Second <= 9)
     {
-        Serial.print("0");
+        Serial.print(F("0"));
    }
    Serial.print(gRTC_reading.Second);
-   Serial.print("  ");
+   Serial.print(F("  "));
 }
 
 void MySerial::setClock()
@@ -598,8 +554,8 @@ void MyLCD::dissolveThis(String top_line, String bottom_line)
     mMessageBottomLine = bottom;
     mDissolveCountdown = mLCD_Width; //this triggers the dissolve
     //Serial diagnostics
-    Serial.println("MyLCD::dissolveThis");
-    Serial.println(mMessageTopLine);
+    Serial.print(F("MyLCD::dissolveThis"));
+    Serial.print(mMessageTopLine);
     Serial.println(mMessageBottomLine);
 }
 
@@ -618,7 +574,7 @@ void MyLCD::printImportantDate(const Calendar::ImportantDate* importantdate)
         case Calendar::EVENTTYPE_ANNIVERSARY:
         case Calendar::EVENTTYPE_BIRTHDAY:
             {
-                top_line += "'s "; //Paul & Mena's
+                top_line += F("'s "); //Paul & Mena's
                 byte anniversary (year() - importantdate->year);
                 //fix end of year wrap around
                 if (month() == 12 && importantdate->month != 12)
@@ -638,14 +594,14 @@ void MyLCD::printImportantDate(const Calendar::ImportantDate* importantdate)
             break;
     }
     //format bottom line
-    String bottom_line ("");
+    String bottom_line (F(""));
     if (importantdate->day == day())
     {
-        bottom_line = "today";
+        bottom_line = F("today");
     }
     else if (importantdate->day == day() + 1)
     {
-        bottom_line = "tomorrow";
+        bottom_line = F("tomorrow");
     }
     else
     {
@@ -656,7 +612,7 @@ void MyLCD::printImportantDate(const Calendar::ImportantDate* importantdate)
         time_t event_unix {makeTime(event)};
         const byte day_of_week (weekday(event_unix));
         String day_str {dayShortStr(day_of_week)};
-        bottom_line = day_str + ", "; //Wed,
+        bottom_line = day_str + F(", "); //Wed,
         String month_str {calendar.getMonthShortName(event.Month)};
         bottom_line += month_str; //Wed, Sep 
         bottom_line += ' ';
@@ -678,20 +634,20 @@ String MyLCD::centerText(const String text)
     if (string_length > mLCD_Width)
     {
         //string is too long
-        Serial.println("MyLCD::centerText  String is larger than screen width");
+        Serial.println(F("MyLCD::centerText  String is larger than screen width"));
         const String end {text.substring(mLCD_Width)};
         const String front {text.substring(0, mLCD_Width - 1)};
-        Serial.print("MyLCD::centerText  Removed \"");
+        Serial.print(F("MyLCD::centerText  Removed \""));
         Serial.print(end);
-        Serial.println("\"");
+        Serial.println(F("\""));
         return front;
     }
     else if (string_length <= 0)
     {
         //string empty
-        Serial.println("MyLCD::centerText  no string error");
+        Serial.println(F("MyLCD::centerText  no string error"));
         //      01234567890123456789
-        return "---missing string---";
+        return F("---missing string---");
     }
     else
     {
@@ -718,20 +674,20 @@ void MyLCD::printLDRresults()
     liquidcrystali2c.setCursor (11,0);
     if (digitalRead(Pin::light_sensor_one))
     { 
-        liquidcrystali2c.print("A");
+        liquidcrystali2c.print(F("A"));
     }
     else
     {
-        liquidcrystali2c.print(" ");
+        liquidcrystali2c.print(F(" "));
     }
 
     if (digitalRead(Pin::light_sensor_two))
     {
-        liquidcrystali2c.print("S");
+        liquidcrystali2c.print(F("S"));
     }
     else
     {
-        liquidcrystali2c.print(" ");
+        liquidcrystali2c.print(F(" "));
     }
 }
 
@@ -763,11 +719,11 @@ void MyLCD::printDate(const Coordinant coordinant)
 {
     liquidcrystali2c.setCursor(coordinant.x, coordinant.y); 
     liquidcrystali2c.print(dayShortStr(weekday()));
-    liquidcrystali2c.print (", ");
-    liquidcrystali2c.print (calendar.getMonthShortName(gRTC_reading.Month));    
-    liquidcrystali2c.print(" ");
+    liquidcrystali2c.print(F(", "));
+    liquidcrystali2c.print(calendar.getMonthShortName(gRTC_reading.Month));    
+    liquidcrystali2c.print(F(" "));
     liquidcrystali2c.print((gRTC_reading.Day));
-    liquidcrystali2c.print(" ");  //this space to clear last digit when month rolls over (31 to 1) 
+    liquidcrystali2c.print(F(" "));  //this space to clear last digit when month rolls over (31 to 1) 
 }
 
 //=========================================================================================================
@@ -798,14 +754,14 @@ void CoundownTimer::update()
     {
         if(mCounter <= 9)
         {
-            liquidcrystali2c.print(" "); // clear the first space if a single digit
+            liquidcrystali2c.print(F(" ")); // clear the first space if a single digit
         }
         liquidcrystali2c.print(mCounter);                 // print the counter
         mCounter--;                          // counter decrements here
     }
     else
     {
-        liquidcrystali2c.print("  ");             // no counter, so clear the board
+        liquidcrystali2c.print(F("  "));             // no counter, so clear the board
     }
 }
 
@@ -1537,6 +1493,136 @@ void MessageManager::messageVoltageExtremes()
 }
 //==end of MessageManager====================================================================
 
+class TrackLight
+{
+private: //enums
+    enum TrackLightState
+    {
+        TRACKLIGHTSTATE_GETTING_NEW_INPUT,
+        TRACKLIGHTSTATE_HOLDING_AT_ANCHOR_POINT,
+        MAX_TRACKLIGHTSTATE
+    };
+private: //variables
+    TrackLightState mTrackLightState {TRACKLIGHTSTATE_GETTING_NEW_INPUT};
+    
+    //to prevent flicker, freeze light level if this many milliseconds have passed since
+    //the last mLargeAdjustment
+    
+    time_t      mAdjustmentWindowTimestamp {millis()};
+    int         mLastSwitchReading         {0};
+    int         mAnchorPoint               {0};
+    
+public:  //methods
+    void main();
+private: //methods
+    bool largeAdjustmentDetected(const int dimmer_reading);
+    void readDimmerSwitch();
+    int  regulateVoltage(const int input_level);
+    void setLightLevel();
+    
+}tracklight;
+
+void TrackLight::main()
+{
+    readDimmerSwitch();
+    setLightLevel();
+}
+
+//private methods
+
+bool TrackLight::largeAdjustmentDetected(const int dimmer_reading)
+{
+    const int large_adjustment {100}; //out of 1024
+    if (mAnchorPoint - dimmer_reading > large_adjustment ||
+        mAnchorPoint - dimmer_reading < large_adjustment)
+    {
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+    
+}
+
+void TrackLight::readDimmerSwitch()
+{
+    //the dimmer_reading range is integer values between 0 and 1023
+    const int dimmer_reading {analogRead(Pin::dimmer)};
+    if (mTrackLightState == TRACKLIGHTSTATE_HOLDING_AT_ANCHOR_POINT)
+    {
+        //check for a mLargeAdjustment in the dimmer switch
+        if(largeAdjustmentDetected(dimmer_reading))
+        {
+            mTrackLightState = TRACKLIGHTSTATE_GETTING_NEW_INPUT;
+            //set timer
+            mAdjustmentWindowTimestamp = millis();
+        }
+        else
+        {
+            return;
+        }
+    }
+    else if (mTrackLightState == TRACKLIGHTSTATE_GETTING_NEW_INPUT)
+    {
+        mAnchorPoint = dimmer_reading;
+        //the adjustment_window is the amount of time that can pass without a
+        //large adjustment.  The reading anchors itself after that
+        const int adjustment_window {1000}; //milliseconds
+        //check for large adjustments and extend adjustment window if detected
+        if (largeAdjustmentDetected(dimmer_reading))
+        {
+            mAdjustmentWindowTimestamp = millis();
+        }
+        else if (millis() - adjustment_window >= mAdjustmentWindowTimestamp)
+        {
+            mTrackLightState = TRACKLIGHTSTATE_HOLDING_AT_ANCHOR_POINT;
+        }
+    }
+    mLastSwitchReading = dimmer_reading;
+}
+
+int TrackLight::regulateVoltage(const int input_level)
+{
+    //Keeps the light output consistent with varying input voltages.
+    //The voltage at the bulb (post MOSFET) always measures -0.40 volts less than
+    //the system voltage
+    
+    const float max_led_voltage      {12.00};
+    const float voltage_loss         { 0.40};
+    const float max_voltage          {max_led_voltage + voltage_loss};
+    float system_voltage             {voltmeter.getVoltage()};
+    if (system_voltage == 0.0) //avoid a division by zero error if voltage can't be read
+    {
+        //send an error, but keep the light working
+        //assume max voltage present to protect LED
+        Serial.println(F("TrackLight::regulateVoltage  No voltage error."));
+        const float system_normal_high {14.5};
+        system_voltage = system_normal_high;
+    }
+    const float voltage_adjustment_ratio {max_voltage / system_voltage};
+    return input_level * voltage_adjustment_ratio;
+}
+
+void TrackLight::setLightLevel()
+{
+    const int new_setting {regulateVoltage(mAnchorPoint)};
+    //the setting is a one byte value (0 - 255)
+    //this is one fourth the value of the input reading
+    const int value_to_write {new_setting / 4};
+    //enforce maximum
+    if (value_to_write > 255)
+    {
+        analogWrite(Pin::workbench_lighting, 255);
+    }
+    else
+    {
+        analogWrite(Pin::workbench_lighting, value_to_write);
+    }
+}
+
+//==end of TrackLight========================================================================
+
 byte          inverter_warm_up_timer = 0; //seconds
 int           balance_falling_countdown = 0;
 int           balance_rising_countdown = 0;
@@ -1578,9 +1664,9 @@ void setup()
 void loop()
 {
     //This code runs as fast as possible
-    myReadPotentiometerAndAdjustWorkbenchTrackLightsfunction();
     voltmeter.readVoltage();
     myserial.checkInput();
+    tracklight.main();
     //This code runs every gDissolveInterval 
     const time_t gDissolveInterval {50}; //milliseconds 
     if (millis() - gDissolveInterval  >= mDissolveTimestamp)
@@ -1618,32 +1704,3 @@ void loop()
     Serial.println(); //end serial report, new line
     }
 }
-
-//**************************************************************
-void myReadPotentiometerAndAdjustWorkbenchTrackLightsfunction(){
-//**************************************************************
-  const float correction = -0.40;  // I arrived at this with direct measurement.  IDK why.  PN junction?
-  const float maximum_voltage = 12.00 + correction; // do not allow the bulbs more voltage than this number.
-  
-  float scaling_ratio = 1;
-  if (voltmeter.getVoltage() > maximum_voltage) {
-    //Serial.print ("stable voltage: ");
-    //Serial.print (stable_voltage);
-    scaling_ratio = maximum_voltage / voltmeter.getVoltage();  
-  }
-  
-  int potentiometer_reading = 0;
-  const byte stray_distance = 3; // increase to prevent flicker from potentiometer attenuation, 
-                                 // decrease for smoother transition 
-  for (byte x = 0; x <=9; x++){
-     potentiometer_reading = potentiometer_reading + (analogRead (Pin::potentiometer));
-  }
-  potentiometer_reading = potentiometer_reading / 40;
-  if (potentiometer_reading <= dimmer_reference_number - stray_distance) {
-    dimmer_reference_number = potentiometer_reading; 
-  }
-  if (potentiometer_reading >= dimmer_reference_number + stray_distance) {
-    dimmer_reference_number = potentiometer_reading; 
-  }
-  analogWrite (Pin::workbench_lighting, (255 - dimmer_reference_number) * scaling_ratio);  
-  }
