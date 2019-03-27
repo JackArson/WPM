@@ -1,3 +1,6 @@
+//Copyright (C) 2019 Paul R Bailey  aka  'Jack Arson'
+
+
 /* Workshop Power Manager controls my 12 volt solar power system in my workshop.
  * It monitors system voltage and can activate a battery charger or an inverter.
  * It also controls 2, 120 volt circuits and can switch them away from the grid
@@ -7,11 +10,14 @@
  * items communicate to the Mega through the i2c protocol.  I also built a 9 volt power
  * supply (drops to 5 volts after the Mega's regulator.)  I also built a voltage
  * divider.  The divider allows my 5 volt Mega to measure up to 20 volts.
- *     In addition to it's primary functions, it runs a small message system, and
- * a track lighting system.  The message system display's system statistics and
- * reminds me of important dates.  I converted the track lighting to 12 volts DC.
- * The controller keeps the LED lights below 12 volts using pulse width modulation.
- * It also reads a potentiometer I am using as a dimmer switch.       
+ *     In addition to it's primary functions, it runs a small message system, a
+ * a track lighting system, and it reads two LDR's (light-dependent resistors.)
+ * The message system display's system statistics and reminds me of important dates.
+   I converted the track lighting to 12 volts DC and bought 12 volt DC LED light bulbs
+   for it.  The controller keeps the LED lights below 12 volts using pulse width modulation.
+ * It also reads a potentiometer I am using as a dimmer switch.  Finally, the LDR display
+ * serves to alert me to any switching problems with my opto-coupler equipped circuit
+ * swapping relays.
 */
 
 #include <Time.h>
@@ -23,7 +29,7 @@
 LiquidCrystal_I2C  liquidcrystali2c(0x27, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);  
 
 //globals
-tmElements_t       gRTC_reading;
+tmElements_t       gRTC_reading;             //the current time
 tmElements_t       gLast_RTC_reading;        //to control 1000ms loop
 time_t             mDissolveTimestamp  {0};  //for LCD 'dissolve' effect loop
 
@@ -70,7 +76,7 @@ public:
     };
     
 private: //variables
-    const char* mMonthShortName[13] = {"-0-", "Jan", "Feb", "Mar", "Apr",
+    const char* mMonthShortName[13] =    {"", "Jan", "Feb", "Mar", "Apr",
                                               "May", "Jun", "Jul", "Aug",
                                               "Sep", "Oct", "Nov", "Dec"};
     //this compiler can't set array length so QTY_IMPORTANT_DATES (right above
@@ -101,7 +107,7 @@ private: //variables
         {"Christmas",    12, 25, 0,    EVENTTYPE_HOLIDAY},      //22
         {"Paul Crowned King", 3, 28, 2019, EVENTTYPE_APPOINTMENT} //23
     };
-    const char* mDaySuffix[4] = {"st", "nd", "rd", "th"};
+    const char* mDaySuffix[4] = {"th", "st", "nd", "rd"};
     //Sometimes there are more than 52 weeks in a year.
     //These tables are close enough to use year after year
 
@@ -179,33 +185,33 @@ String Calendar::getClockString(const tmElements_t time, const bool right_justif
     }
     if ((time.Hour) == 12 || (time.Hour) == 0)
     {
-        clock_string = "12";
+        clock_string = F("12");
     }
     else
     {
         //if a single digit, add a space
         if (time.Hour - format < 10 && right_justify == true)
         {             
-            clock_string = " ";
+            clock_string = F(" ");
         }
         const String hour_string (time.Hour - format); 
         clock_string += hour_string;
     }   
-    clock_string += ":";
+    clock_string += F(":");
     //if a single digit, add a zero
     if (time.Minute < 10)
     {  
-        clock_string += "0";
+        clock_string += F("0");
     }
     const String minute_string {time.Minute};   
     clock_string += minute_string;
     if (calendar.isAM(time))
     {
-        clock_string += "am";
+        clock_string += F("am");
     }
     else
     {                          
-        clock_string += "pm";
+        clock_string += F("pm");
     }
     return clock_string;    
 }
@@ -242,22 +248,26 @@ const char* Calendar::getDaySuffix(byte day_number)
         }
     }
     //day_of_month should now be between (1 and 20)
-    if (day_number == 1)
+    if (day_number < 4)
     {
-        //mDaySuffix[4] = {"st", "nd", "rd", "th"}
-        return mDaySuffix[0];
+        return mDaySuffix[day_number]; // 0th, 1st, 2nd, 3rd
     }
-    else if (day_number == 2)
-    {
-        return mDaySuffix[1];
-    }
-    else if (day_number == 3)
-    {
-        return mDaySuffix[2];
-    }
+    //if (day_number == 1)
+    //{
+        ////mDaySuffix[4] = {"th", "st", "nd", "rd"}
+        //return mDaySuffix[0];
+    //}
+    //else if (day_number == 2)
+    //{
+        //return mDaySuffix[1];
+    //}
+    //else if (day_number == 3)
+    //{
+        //return mDaySuffix[2];
+    //}
     else
     {
-        return mDaySuffix[3];
+        return mDaySuffix[0]; //th
     }
 }
 
@@ -311,18 +321,18 @@ byte Calendar::getQtyImportantDates()
     return mQtyImportantDatesToReport;
 }
 
-bool Calendar::isAM(const tmElements_t time)
-{
-    //the moment after the clock hits 12 noon the time is post merīdiem
-    if (time.Hour < 12)
-    {
-        return true;
-    }
-    else
-    {
-        return false;
-    }      
-}
+//bool Calendar::isAM(const tmElements_t time)
+//{
+    ////the moment after the clock hits 12 noon the time is post merīdiem
+    //if (time.Hour < 12)
+    //{
+        //return true;
+    //}
+    //else
+    //{
+        //return false;
+    //}      
+//}
 
 bool Calendar::isDaylight()
 {
@@ -1447,9 +1457,9 @@ void MessageManager::messageInverterRunTime()
     if (inverter_run_time == 0)
     {
         top_line    = "Inverter waiting";
-        bottom_line = "for surplus energy";
+        bottom_line = "nothing harvested";
     }
-    //seconds
+    //report in seconds
     else if (inverter_run_time < one_minute)
     {
         const String seconds     {inverter_run_time};
@@ -1460,6 +1470,7 @@ void MessageManager::messageInverterRunTime()
         }
          
     }
+    //report in minutes
     else if (inverter_run_time < one_hour)
     {
         const int minutes        {inverter_run_time / one_minute};
@@ -1471,6 +1482,7 @@ void MessageManager::messageInverterRunTime()
         }
         
     }
+    //report in hours and minutes
     else if (inverter_run_time >= one_hour)
     {
         const int  run_minutes        {inverter_run_time / one_minute};
@@ -1494,7 +1506,8 @@ void MessageManager::messageInverterRunTime()
                 bottom_line += 's';
             }
         }
-    }    
+    }
+    //formatting complete, send it to lcd    
     mylcd.dissolveThis(top_line, bottom_line);
 }
 
