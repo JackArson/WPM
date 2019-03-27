@@ -1548,7 +1548,10 @@ bool TrackLight::largeAdjustmentDetected(const int dimmer_reading)
 void TrackLight::readDimmerSwitch()
 {
     //the dimmer_reading range is integer values between 0 and 1023
-    const int dimmer_reading {analogRead(Pin::dimmer)};
+    int dimmer_reading {analogRead(Pin::dimmer)};
+    //invert the value because I hooked my potentiometer up backwards
+    dimmer_reading = 1023 - dimmer_reading;
+    
     if (mTrackLightState == TRACKLIGHTSTATE_HOLDING_AT_ANCHOR_POINT)
     {
         //check for a mLargeAdjustment in the dimmer switch
@@ -1557,6 +1560,7 @@ void TrackLight::readDimmerSwitch()
             mTrackLightState = TRACKLIGHTSTATE_GETTING_NEW_INPUT;
             //set timer
             mAdjustmentWindowTimestamp = millis();
+            Serial.println("largeAdjustmentDetected");
         }
         else
         {
@@ -1577,6 +1581,7 @@ void TrackLight::readDimmerSwitch()
         else if (millis() - adjustment_window >= mAdjustmentWindowTimestamp)
         {
             mTrackLightState = TRACKLIGHTSTATE_HOLDING_AT_ANCHOR_POINT;
+            Serial.println("TRACKLIGHTSTATE_HOLDING");
         }
     }
     mLastSwitchReading = dimmer_reading;
@@ -1619,11 +1624,10 @@ void TrackLight::setLightLevel()
     {
         value_to_write = 0;
     }
-    //invert the value because I hooked my potentiometer up backwards
-    value_to_write = 255 - value_to_write;
-    analogWrite(Pin::workbench_lighting, value_to_write);
+    
     Serial.print("TrackLight::setLightLevel new_setting: ");
     Serial.println(new_setting);
+    analogWrite(Pin::workbench_lighting, value_to_write);
 }
 
 //==end of TrackLight========================================================================
