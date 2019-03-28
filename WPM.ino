@@ -48,6 +48,53 @@ namespace Pin
 }
 //==end of namespace Pin======================================================================
 
+class Clock
+{
+public:  //methods
+    void        changeMinute          (int minute);
+    void        syncTimeWithRTC_Clock ();
+}clock;
+
+void Clock::changeMinute(int minute)
+{
+    constrain(minute, 0, 59);
+    //make a copy of current reading
+    tmElements_t current_RTC_reading {gRTC_reading};
+    //change minute
+    current_RTC_reading.Minute = minute;
+    //convert to time_t
+    time_t new_RTC_reading {makeTime(current_RTC_reading)};
+    RTC.set(new_RTC_reading);
+}
+
+
+void Clock::syncTimeWithRTC_Clock()
+{
+    if (RTC.read(gRTC_reading))
+    {
+        setTime (gRTC_reading.Hour,
+                 gRTC_reading.Minute,
+                 gRTC_reading.Second,
+                 gRTC_reading.Day,
+                 gRTC_reading.Month,
+                 gRTC_reading.Year - 30);
+    }
+    else
+    {
+        //if the time cannot be found.
+        if (RTC.chipPresent())
+        {
+            Serial.println(F("Time not set.  Possible RTC clock battery issue. Battery is LIR2032."));
+        }
+        else
+        {
+            Serial.println(F("I can't find the clock through the I2C connection, check wiring."));
+        } 
+    }
+}
+
+
+
 //all CAPS indicate a COMPILE TIME CONSTANT 
 const byte QTY_IMPORTANT_DATES = 23;  //this must be initialized in global space instead
                                       //of inside Calendar.  
@@ -247,19 +294,6 @@ const char* Calendar::getDaySuffix(byte day_number)
     {
         return mDaySuffix[day_number]; // 0th, 1st, 2nd, 3rd
     }
-    //if (day_number == 1)
-    //{
-        ////mDaySuffix[4] = {"th", "st", "nd", "rd"}
-        //return mDaySuffix[0];
-    //}
-    //else if (day_number == 2)
-    //{
-        //return mDaySuffix[1];
-    //}
-    //else if (day_number == 3)
-    //{
-        //return mDaySuffix[2];
-    //}
     else
     {
         return mDaySuffix[0]; //th
@@ -292,7 +326,6 @@ String Calendar::getSunsetClockString()
     return getClockString(sunset);
 }
     
-
 byte Calendar::getWeekNumber(tmElements_t date)  //needed to read sunrise sunset table
 {
     //convert date to the first moment of the year
@@ -395,7 +428,6 @@ public:
     void checkForUserInput();
     void printState(char const *text);
     void printTimestamp();
-    void setClock();
     bool usingLaptopOperatingVoltage();
 private: //methods
     int  getIntegerInput();
@@ -425,8 +457,8 @@ void MySerial::checkForUserInput()
         {
             //could be start of change minute command, look for a numeral
             const int value {getIntegerInput()};
-            Serial.print("MySerial::checkForUserInput  Got a ");
-            Serial.println(value);
+            clock.changeMinute(value);
+            
         }
         else if ((input == 'h' || input == 'H'))
         {
@@ -436,10 +468,6 @@ void MySerial::checkForUserInput()
         else if ((input == 's' || input == 'S'))
         {
             //could be start of change second command, look for a numeral
-            
-        }
-        {
-            
         }
         
     }
@@ -466,31 +494,6 @@ void MySerial::printTimestamp()
    }
    Serial.print(gRTC_reading.Second);
    Serial.print(F("  "));
-}
-
-void MySerial::setClock()
-{
-    if (RTC.read(gRTC_reading))
-    {
-        setTime (gRTC_reading.Hour,
-                 gRTC_reading.Minute,
-                 gRTC_reading.Second,
-                 gRTC_reading.Day,
-                 gRTC_reading.Month,
-                 gRTC_reading.Year - 30);
-    }
-    else
-    {
-        //if the time cannot be found.
-        if (RTC.chipPresent())
-        {
-            Serial.println(F("Time not set.  Possible RTC clock battery issue. Battery is LIR2032."));
-        }
-        else
-        {
-            Serial.println(F("I can't find the clock through the I2C connection, check wiring."));
-        } 
-    }
 }
 
 bool MySerial::usingLaptopOperatingVoltage()
@@ -1721,7 +1724,7 @@ void setup()
     Serial.println();
     Wire.begin();                      // start the Wire library
     liquidcrystali2c.begin(20, 4);     // start the LiquidCrystal_I2C library
-    myserial.setClock();
+    clock.syncTimeWithRTC_Clock();
     voltmeter.readVoltage();
     voltmeter.initDailyStatistics();
     calendar.init();
@@ -1749,10 +1752,10 @@ void loop()
     }
     if (timing.hasOneSecondPassed())   //This code runs every second (1000ms)
     {
-        setTime(gRTC_reading.Hour,gRTC_reading.Minute,gRTC_reading.Second,gRTC_reading.Day,gRTC_reading.Month,gRTC_reading.Year-30);
+        clock.syncTimeWithRTC_Clock();
         timing.update();           //update countdown timer
         mylcd.drawDisplay();
-        messagemanager.main();     //print messages
+        messagemanager.main();     //print messages if any are ready
         //begin serial report
         myserial.printTimestamp(); //print timestamp
         voltmeter.main();          //print voltage

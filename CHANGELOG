@@ -187,3 +187,4 @@ idea:  a function that takes these parameters (min/max voltage allowable time mi
 03-28-19-09:25 constrained TrackLight output
 03-28-19-10:16 2AM loop timing
 03-28-19-11:10 serial input experiment
+03-28-19-11:44 change clock with serial command experiment
