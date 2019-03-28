@@ -398,7 +398,7 @@ public:
     void setClock();
     bool usingLaptopOperatingVoltage();
 private: //methods
-    
+    int  getIntegerInput();
     //void print
 }myserial;
 
@@ -421,6 +421,27 @@ void MySerial::checkForUserInput()
                 Serial.println(F("Switched to laptop operating voltage."));
             }
         }
+        else if ((input == 'm' || input == 'M'))
+        {
+            //could be start of change minute command, look for a numeral
+            const int value {getIntegerInput()};
+            Serial.print("MySerial::checkForUserInput  Got a ");
+            Serial.println(value);
+        }
+        else if ((input == 'h' || input == 'H'))
+        {
+            //could be start of change hour command, look for a numeral
+            
+        }
+        else if ((input == 's' || input == 'S'))
+        {
+            //could be start of change second command, look for a numeral
+            
+        }
+        {
+            
+        }
+        
     }
 }
 
@@ -477,6 +498,13 @@ bool MySerial::usingLaptopOperatingVoltage()
     return mUseLaptopOperatingVoltage;
 }
 
+//private MySerial methods
+int MySerial::getIntegerInput()
+{
+    String numeral   {Serial.readString()};    
+    long int integer {numeral.toInt()};
+    return integer;
+}
 //==end of MySerial=========================================================================
 
 struct Coordinant
@@ -732,12 +760,12 @@ class Timing
 
 private: //variables
     byte         mCounter              {0};
-    time_t       mDissolveTimestamp    {0};
+    time_t       mDissolveTimestamp            {0};
     time_t       m2AM_Timestamp         {0};
-    tmElements_t mOnceEverySecondLoopTimestamp {0};        //to control 1000ms loop
+    tmElements_t mOneHertzLoopTimestamp {0};        //to control 1000ms loop
 public:  //methods
     byte getCounter           ();
-    bool is2AM                (); 
+    bool isIt2AM                (); 
     bool isDissolveReady      ();
     bool hasOneSecondPassed   ();
     void update               ();
@@ -753,7 +781,7 @@ byte Timing::getCounter()
     return mCounter;
 }
 
-bool Timing::is2AM()
+bool Timing::isIt2AM()
 {
     
     if (gRTC_reading.Hour   == 2 &&
@@ -761,9 +789,7 @@ bool Timing::is2AM()
         gRTC_reading.Second == 0 &&
         skip2AM() == false)
     {
-        Serial.print("Timing::is2AM  Setting timestamp ");
         m2AM_Timestamp = now();
-        Serial.println(m2AM_Timestamp);
     }
 }
 
@@ -783,10 +809,10 @@ bool Timing::isDissolveReady()
 
 bool Timing::hasOneSecondPassed()
 {
-    if (mOnceEverySecondLoopTimestamp.Second != gRTC_reading.Second) 
+    if (mOneHertzLoopTimestamp.Second != gRTC_reading.Second) 
     {
         //set up 1000ms delay for the next loop
-        mOnceEverySecondLoopTimestamp = gRTC_reading;
+        mOneHertzLoopTimestamp = gRTC_reading;
         return true;
     }
     else
@@ -824,7 +850,6 @@ bool Timing::skip2AM(time_t lockout_seconds)
     if (now() < m2AM_Timestamp + lockout_seconds)
     {
         return true;
-        Serial.println("Timing::skip2AM  Skipping");
     }
     else
     {
@@ -1722,25 +1747,23 @@ void loop()
     {
         mylcd.dissolveEffect();
     }
-    // This code runs at 2:00am 
-    if (timing.is2AM())
-    {
-        Serial.println("main loop  2AM = true"); //end serial report, new line
-        mystatemachine.resetInverterRunTime();
-        voltmeter.initDailyStatistics();            
-        calendar.init();
-    }
     if (timing.hasOneSecondPassed())   //This code runs every second (1000ms)
     {
         setTime(gRTC_reading.Hour,gRTC_reading.Minute,gRTC_reading.Second,gRTC_reading.Day,gRTC_reading.Month,gRTC_reading.Year-30);
-        timing.update();
+        timing.update();           //update countdown timer
         mylcd.drawDisplay();
-        messagemanager.main();
+        messagemanager.main();     //print messages
         //begin serial report
-        myserial.printTimestamp();
-        voltmeter.main();
-        mystatemachine.main();
-        //end serial report, new line
+        myserial.printTimestamp(); //print timestamp
+        voltmeter.main();          //print voltage
+        mystatemachine.main();     //print state changes
+        //end of serial report,      print new line
         Serial.println();
+    }
+    if (timing.isIt2AM())
+    {
+        mystatemachine.resetInverterRunTime();
+        voltmeter.initDailyStatistics();  //resets daily voltage highs and lows           
+        calendar.init();
     }
 }
