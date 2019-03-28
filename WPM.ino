@@ -1,5 +1,6 @@
 //Copyright (C) 2019 Paul R Bailey  aka  'Jack Arson'
-
+//Written on a Raspberry Pi (Linux) using Arduino-1.8.9
+//also runs fine on Windows with Arduino-1.8.8
 
 /* Workshop Power Manager controls my 12 volt solar power system in my workshop.
  * It monitors system voltage and can activate a battery charger or an inverter.
@@ -43,7 +44,7 @@ namespace Pin
     const byte stage_two_inverter_relay {9};  //circuit 'S'
     //analog pins
     const byte voltage_divider          {A0}; //green  wire lower cable
-    const byte dimmer                   {A1}; //yellow wire
+    const byte dimmer_potentiometer                   {A1}; //yellow wire
 }
 //==end of namespace Pin======================================================================
 
@@ -736,7 +737,7 @@ private: //variables
 public:  //methods
     byte getCounter           ();
     bool isDissolveReady      ();
-    bool isOnceEverySecondLoopReady   ();
+    bool hasOneSecondPassed   ();
     void update               ();
     void setCountdownTimer    (byte x); 
 
@@ -761,7 +762,7 @@ bool Timing::isDissolveReady()
     }    
 }
 
-bool Timing::isOnceEverySecondLoopReady()
+bool Timing::hasOneSecondPassed()
 {
     if (mOnceEverySecondLoopTimestamp.Second != gRTC_reading.Second) 
     {
@@ -1541,42 +1542,19 @@ private: //variables
     int         mInputAnchorPoint               {0};
     
 public:  //methods
-    void main();
-    
+    void readDimmerSwitch         ();
+    void setLightLevel            ();
 private: //methods
     bool largeAdjustmentDetected  (const int dimmer_reading);
-    void readDimmerSwitch         ();
     int  regulateVoltage          (const int input_level);
-    void setLightLevel            ();    
+    
 
 }tracklight;
-
-void TrackLight::main()
-{
-    readDimmerSwitch();
-    setLightLevel();
-}
-
-//private methods
-
-bool TrackLight::largeAdjustmentDetected(const int dimmer_reading)
-{
-    const int large_adjustment {100}; //out of 1024
-    if (mInputAnchorPoint - dimmer_reading > large_adjustment ||
-        dimmer_reading - mInputAnchorPoint > large_adjustment)
-    {
-        return true;
-    }
-    else
-    {
-        return false;
-    }
-}
 
 void TrackLight::readDimmerSwitch()
 {
     //the dimmer_reading range is integer values between 0 and 1023
-    int dimmer_reading {analogRead(Pin::dimmer)};
+    int dimmer_reading {analogRead(Pin::dimmer_potentiometer)};
     //invert the value because I hooked my potentiometer up backwards
     dimmer_reading = 1023 - dimmer_reading;
     if (mTrackLightState == TRACKLIGHTSTATE_IGNORING_SMALL_INPUT_FLUCTUATIONS)
@@ -1614,6 +1592,34 @@ void TrackLight::readDimmerSwitch()
     }
 }
 
+void TrackLight::setLightLevel()
+{
+    const int new_setting {regulateVoltage(mInputAnchorPoint)};
+    //the setting is a one byte value (0 - 255)
+    //this is one fourth the value of the input reading
+    int value_to_write {new_setting / 4};
+    //enforce range min/maximum
+    constrain(value_to_write, 0, 255);
+    analogWrite(Pin::workbench_lighting, value_to_write);
+}
+
+//private methods
+
+bool TrackLight::largeAdjustmentDetected(const int dimmer_reading)
+{
+    const int large_adjustment {100}; //out of 1024
+    int difference {abs(mInputAnchorPoint - dimmer_reading)};
+    if (difference > large_adjustment)
+    {
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+}
+
+
 int TrackLight::regulateVoltage(const int input_level)
 {
     //Keeps the light output consistent with varying input voltages.
@@ -1633,24 +1639,6 @@ int TrackLight::regulateVoltage(const int input_level)
     }
     const float voltage_regulation_ratio {max_voltage / system_voltage};
     return input_level * voltage_regulation_ratio;
-}
-
-void TrackLight::setLightLevel()
-{
-    const int new_setting {regulateVoltage(mInputAnchorPoint)};
-    //the setting is a one byte value (0 - 255)
-    //this is one fourth the value of the input reading
-    int value_to_write {new_setting / 4};
-    //enforce min/maximum
-    if (value_to_write > 255)
-    {
-        value_to_write = 255;
-    }
-    else if (value_to_write < 0)
-    {
-        value_to_write = 0;
-    }
-    analogWrite(Pin::workbench_lighting, value_to_write);
 }
 //==end of TrackLight========================================================================
 
@@ -1697,18 +1685,16 @@ void loop()
     RTC.read(gRTC_reading);  //gRTC_reading set by reference
     voltmeter.readVoltage();
     myserial.checkForUserInput();
-    tracklight.main();
+    tracklight.readDimmerSwitch();
+    tracklight.setLightLevel();
     if (timing.isDissolveReady())
     {
         mylcd.dissolveEffect();
     }
     //This code runs every second (1000ms)
-    if (timing.isOnceEverySecondLoopReady())
+    if (timing.hasOneSecondPassed())
     {
-        if (RTC.read(gRTC_reading))        //gRTC_reading is gathered by reference
-        {
-            setTime(gRTC_reading.Hour,gRTC_reading.Minute,gRTC_reading.Second,gRTC_reading.Day,gRTC_reading.Month,gRTC_reading.Year-30);
-        }
+        setTime(gRTC_reading.Hour,gRTC_reading.Minute,gRTC_reading.Second,gRTC_reading.Day,gRTC_reading.Month,gRTC_reading.Year-30);
         timing.update();
         mylcd.drawDisplay();
         messagemanager.main();
