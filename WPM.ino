@@ -51,9 +51,23 @@ namespace Pin
 class Clock
 {
 public:  //methods
+    void        changeHour            (int hour);
     void        changeMinute          (int minute);
+    void        changeSecond          (int second);
     void        syncTimeWithRTC_Clock ();
 }clock;
+
+void Clock::changeHour(int hour)
+{
+    constrain(hour, 0, 23);
+    //make a copy of current reading
+    tmElements_t current_RTC_reading {gRTC_reading};
+    //change hour
+    current_RTC_reading.Hour = hour;
+    //convert to time_t
+    time_t new_RTC_reading {makeTime(current_RTC_reading)};
+    RTC.set(new_RTC_reading);
+}
 
 void Clock::changeMinute(int minute)
 {
@@ -67,6 +81,17 @@ void Clock::changeMinute(int minute)
     RTC.set(new_RTC_reading);
 }
 
+void Clock::changeSecond(int second)
+{
+    constrain(second, 0, 59);
+    //make a copy of current reading
+    tmElements_t current_RTC_reading {gRTC_reading};
+    //change second
+    current_RTC_reading.Second = second;
+    //convert to time_t
+    time_t new_RTC_reading {makeTime(current_RTC_reading)};
+    RTC.set(new_RTC_reading);
+}
 
 void Clock::syncTimeWithRTC_Clock()
 {
@@ -204,6 +229,7 @@ public:  //methods
     byte           getQtyImportantDates    ();
     bool           isAM                    (const tmElements_t time);
     bool           isDaylight              ();
+    bool           isDaylightSavingsTime   ();
     bool           isWakeUpComplete        ();
     void           loadImportantDates      ();
     void           setSunriseSunset        ();
@@ -375,6 +401,69 @@ bool Calendar::isDaylight()
     else
     {
         return false;
+    }
+}
+
+bool Calendar::isDaylightSavingsTime()
+{  
+    //By the Energy Policy Act of 2005, daylight saving time (DST)
+    //was extended in the United States beginning in 2007.  As from that year,
+    //DST begins on the second Sunday of March and
+    //ends on the first Sunday of November.
+    
+    //first, calculate the second Sunday of March
+    //set month year and time
+    tmElements_t second_sunday_of_march {};
+    second_sunday_of_march.Year = gRTC_reading.Year;//that sets the year to this year
+    second_sunday_of_march.Month =  3;              //that sets the month
+    second_sunday_of_march.Hour =   2;              //2am
+    second_sunday_of_march.Minute = 0;              //2am
+    second_sunday_of_march.Second = 0;              //2am 
+    //find the first Sunday by checking March 1st through 7th for 'weekday 1'  
+    for (int test_date = 1; test_date <= 7; test_date++)
+    {
+        second_sunday_of_march.Day = test_date;
+        //convert to a time_t
+        const time_t make_test_date {makeTime(second_sunday_of_march)};
+        const int sunday {1};   
+        if (weekday(make_test_date) == sunday)
+        {        
+            //A Sunday was confirmed!  Now add a week to find the 2nd Sunday
+            second_sunday_of_march.Day = (test_date + 7);
+            //done, exit loop 
+            break;
+        }    
+    }
+    //calculate the first Sunday of November
+    tmElements_t first_sunday_of_november {};
+    first_sunday_of_november.Year = gRTC_reading.Year; //that sets the year to this year
+    first_sunday_of_november.Month =  11;             //that sets the month
+    first_sunday_of_november.Hour =   2;              //2am
+    first_sunday_of_november.Minute = 0;              //2am
+    first_sunday_of_november.Second = 0;              //2am 
+    //find the first Sunday
+    for (int test_date = 1; test_date <= 7; test_date++)
+    {
+        first_sunday_of_november.Day = test_date;
+        //convert to a time_t
+        const time_t make_test_date {makeTime(first_sunday_of_november)};
+        const int sunday {1};
+        if (weekday(make_test_date) == sunday)
+        {
+            //A Sunday was confirmed!
+            break;
+        }    
+    }
+    
+    const time_t dst_begins = makeTime(second_sunday_of_march);
+    const time_t dst_ends   = makeTime(first_sunday_of_november);    
+    if (now() < dst_begins || now() >= dst_ends)
+    {
+        return false;
+    }
+    else
+    {
+        return true;
     }
 }
 
