@@ -733,19 +733,38 @@ class Timing
 private: //variables
     byte         mCounter              {0};
     time_t       mDissolveTimestamp    {0};
+    time_t       m2AM_Timestamp         {0};
     tmElements_t mOnceEverySecondLoopTimestamp {0};        //to control 1000ms loop
 public:  //methods
     byte getCounter           ();
+    bool is2AM                (); 
     bool isDissolveReady      ();
     bool hasOneSecondPassed   ();
     void update               ();
     void setCountdownTimer    (byte x); 
+private: //methods
+    bool skip2AM              (time_t lockout_seconds = 1);
+
 
 }timing;
 
 byte Timing::getCounter()
 {
     return mCounter;
+}
+
+bool Timing::is2AM()
+{
+    
+    if (gRTC_reading.Hour   == 2 &&
+        gRTC_reading.Minute == 0 &&
+        gRTC_reading.Second == 0 &&
+        skip2AM() == false)
+    {
+        Serial.print("Timing::is2AM  Setting timestamp ");
+        m2AM_Timestamp = now();
+        Serial.println(m2AM_Timestamp);
+    }
 }
 
 bool Timing::isDissolveReady()
@@ -799,7 +818,19 @@ void Timing::setCountdownTimer(byte x)
     mCounter = x;
 }
 
-
+//private methods here
+bool Timing::skip2AM(time_t lockout_seconds)
+{
+    if (now() < m2AM_Timestamp + lockout_seconds)
+    {
+        return true;
+        Serial.println("Timing::skip2AM  Skipping");
+    }
+    else
+    {
+        return false;
+    }    
+}
 
 
 
@@ -1691,28 +1722,25 @@ void loop()
     {
         mylcd.dissolveEffect();
     }
-    //This code runs every second (1000ms)
-    if (timing.hasOneSecondPassed())
+    // This code runs at 2:00am 
+    if (timing.is2AM())
+    {
+        Serial.println("main loop  2AM = true"); //end serial report, new line
+        mystatemachine.resetInverterRunTime();
+        voltmeter.initDailyStatistics();            
+        calendar.init();
+    }
+    if (timing.hasOneSecondPassed())   //This code runs every second (1000ms)
     {
         setTime(gRTC_reading.Hour,gRTC_reading.Minute,gRTC_reading.Second,gRTC_reading.Day,gRTC_reading.Month,gRTC_reading.Year-30);
         timing.update();
         mylcd.drawDisplay();
         messagemanager.main();
-        
         //begin serial report
         myserial.printTimestamp();
         voltmeter.main();
         mystatemachine.main();
-        
-        // This code runs at 2:00am 
-        if (gRTC_reading.Hour   == 2 &&
-            gRTC_reading.Minute == 0 &&
-            gRTC_reading.Second == 0)
-        {
-            mystatemachine.resetInverterRunTime();
-            voltmeter.initDailyStatistics();            
-            calendar.init();
-        }
-    Serial.println(); //end serial report, new line
+        //end serial report, new line
+        Serial.println();
     }
 }
