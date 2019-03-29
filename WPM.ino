@@ -253,6 +253,7 @@ void Calendar::init()
 {
     loadImportantDates();
     setSunriseSunset();
+    mDaylightSavingsTime = isDaylightSavingsTime();
 }
 
 String Calendar::getClockString(const tmElements_t time, const bool right_justify)
@@ -260,20 +261,25 @@ String Calendar::getClockString(const tmElements_t time, const bool right_justif
     int  format {0};
     String clock_string ("");
     //change to 12 hour format
+    if (calendar.isDaylightSavingsTime())
+    {
+        clock_string += '*';
+    }
+    
     if ((time.Hour) >= 12)
     {      
         format = 12;
     }
     if ((time.Hour) == 12 || (time.Hour) == 0)
     {
-        clock_string = F("12");
+        clock_string += F("12");
     }
     else
     {
         //if a single digit, add a space
         if (time.Hour - format < 10 && right_justify == true)
         {             
-            clock_string = F(" ");
+            clock_string = ' ' + clock_string;
         }
         const String hour_string (time.Hour - format); 
         clock_string += hour_string;
@@ -344,9 +350,9 @@ time_t Calendar::get1stMonthlyOccurence (const Weekdays weekday_to_find,
                                          const uint8_t  search_year_offset)
 {
     //A note about the search_year_offset parameter.
-    //The Time library makeTime and breakTime
+    //The Time library makeTime and breakTime methods
     //"expects year argument as years offset from 1970"
-    //
+
 
     //Example calculate the first Sunday of March 2019
     //First, create a blank tmElements_t object named time_elements 
@@ -355,13 +361,6 @@ time_t Calendar::get1stMonthlyOccurence (const Weekdays weekday_to_find,
     time_elements.Month = search_month;  //Example month March = 3
     //Example year 2019.  Offset from 1970 is: 49
     time_elements.Year  = search_year_offset;   
-    Serial.print("get1stMonthlyOccurence time_elements.Hour: ");
-    Serial.println(time_elements.Hour);
-    Serial.print("get1stMonthlyOccurence time_elements.Minute: ");
-    Serial.println(time_elements.Minute);
-    Serial.print("get1stMonthlyOccurence time_elements.Second: ");
-    Serial.println(time_elements.Second);
-        
     //Third, iterate through the first week of that month.
     //The 1st through the 7th
     for (int test_date = 1; test_date <= 7; test_date++)
@@ -370,8 +369,6 @@ time_t Calendar::get1stMonthlyOccurence (const Weekdays weekday_to_find,
         time_elements.Day = test_date;
         //Fifth, convert the object into time_t format (a four byte unsigned integer)
         const time_t time_integer {makeTime(time_elements)};
-        Serial.print("get1stMonthlyOccurence size of time_t: ");
-        Serial.println(sizeof(time_integer));
         //Sixth, test the time_t integer with the 'weekday' function from the time library
         if (weekday(time_integer) == weekday_to_find)
         {        
@@ -466,54 +463,27 @@ bool Calendar::isDaylightSavingsTime()
     //Rules for my area (Ohio, USA)
     //DST begins on the second Sunday of March at 2AM and
     //ends on the first Sunday of November at 2AM.
+
+    //time_t numbers are the number of seconds that have elapsed since January 1st 1970.
     
-    //first, calculate the second Sunday of March
-    //set month year and time
-    tmElements_t second_sunday_of_march {};
-    second_sunday_of_march.Year = gRTC_reading.Year;//that sets the year to this year
-    second_sunday_of_march.Month =  3;              //that sets the month
-    second_sunday_of_march.Hour =   2;              //2am
-    second_sunday_of_march.Minute = 0;              //2am
-    second_sunday_of_march.Second = 0;              //2am 
-    //find the first Sunday by checking March 1st through 7th for 'weekday 1'  
-    for (int test_date = 1; test_date <= 7; test_date++)
-    {
-        second_sunday_of_march.Day = test_date;
-        //convert to a time_t
-        const time_t make_test_date {makeTime(second_sunday_of_march)};
-        const int sunday {1};   
-        if (weekday(make_test_date) == sunday)
-        {        
-            //A Sunday was confirmed!  Now add a week to find the 2nd Sunday
-            second_sunday_of_march.Day = (test_date + 7);
-            //done, exit loop 
-            break;
-        }    
-    }
-    //calculate the first Sunday of November
-    tmElements_t first_sunday_of_november {};
-    first_sunday_of_november.Year = gRTC_reading.Year; //that sets the year to this year
-    first_sunday_of_november.Month =  11;             //that sets the month
-    first_sunday_of_november.Hour =   2;              //2am
-    first_sunday_of_november.Minute = 0;              //2am
-    first_sunday_of_november.Second = 0;              //2am 
-    //find the first Sunday
-    for (int test_date = 1; test_date <= 7; test_date++)
-    {
-        first_sunday_of_november.Day = test_date;
-        //convert to a time_t
-        const time_t make_test_date {makeTime(first_sunday_of_november)};
-        const int sunday {1};
-        if (weekday(make_test_date) == sunday)
-        {
-            //A Sunday was confirmed!
-            break;
-        }    
-    }
-    
-    const time_t dst_begins = makeTime(second_sunday_of_march);
-    const time_t dst_ends   = makeTime(first_sunday_of_november);    
-    if (now() < dst_begins || now() >= dst_ends)
+    //1) Get the FIRST Sunday of March
+    const uint8_t March {3}; //March is the 3rd month of the year
+    const time_t first_sunday_of_march {get1stMonthlyOccurence
+                 (Weekdays::WEEKDAYS_SUNDAY, March, gRTC_reading.Year)};    
+    Serial.print("Calendar::isDaylightSavingsTime Year: ");
+    Serial.println(gRTC_reading.Year);
+    //2)  Determine the number of seconds in one week
+    const time_t seconds_in_a_week {604800}; // = days * hours * minutes * seconds
+    //3) Add one weeks worth of seconds to the time_t first_sunday_of_march
+    //   to get the 2nd Sunday of March.
+    const time_t second_sunday_of_march {first_sunday_of_march + seconds_in_a_week};
+    //4) Get the first Sunday of November
+    const uint8_t November {11}; //November is the 11th month of the year
+    const time_t first_sunday_of_november {get1stMonthlyOccurence
+                 (Weekdays::WEEKDAYS_SUNDAY, November, gRTC_reading.Year)};
+    //5) See if the time_t now() is before DST begins, or after it ends and return
+    //   the result! 
+    if (now() < second_sunday_of_march || now() >= first_sunday_of_november)
     {
         return false;
     }
@@ -1882,17 +1852,6 @@ void setup()
     pinMode (Pin::workbench_lighting, OUTPUT);
     pinMode (Pin::stage_one_inverter_relay, OUTPUT);
     pinMode (Pin::stage_two_inverter_relay, OUTPUT);
-
-    time_t first {calendar.get1stMonthlyOccurence
-                 (Calendar::Weekdays::WEEKDAYS_FRIDAY,3, 49)};
-    tmElements_t test_elements {};
-    breakTime(first, test_elements);
-    Serial.print("Year: ");
-    Serial.println(test_elements.Year);
-    Serial.print("Month: ");
-    Serial.println(test_elements.Month);
-    Serial.print("Day: ");
-    Serial.println(test_elements.Day);
 }
                
 void loop()
@@ -1926,3 +1885,6 @@ void loop()
         calendar.init();
     }
 }
+
+//Serial.print("Year: ");
+//Serial.println(test_elements.Year);
