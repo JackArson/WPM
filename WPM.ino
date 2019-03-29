@@ -261,16 +261,11 @@ void Calendar::init()
     mDaylightSavingsTime = isDaylightSavingsTime();
 }
 
-String Calendar::getClockString(const tmElements_t time, const bool right_justify)
+String Calendar::getClockString(const tmElements_t time,
+                                const bool right_justify)
 {
     int  format {0};
     String clock_string ("");
-    //change to 12 hour format
-    if (calendar.isDaylightSavingsTime())
-    {
-        clock_string += '*';
-    }
-    
     if ((time.Hour) >= 12)
     {      
         format = 12;
@@ -281,7 +276,7 @@ String Calendar::getClockString(const tmElements_t time, const bool right_justif
     }
     else
     {
-        //if a single digit, add a space
+        //if a single digit AND right_justify add a leading space
         if (time.Hour - format < 10 && right_justify == true)
         {             
             clock_string = " " + clock_string;
@@ -290,20 +285,30 @@ String Calendar::getClockString(const tmElements_t time, const bool right_justif
         clock_string += hour_string;
     }   
     clock_string += F(":");
-    //if a single digit, add a zero
+    //if a single digit, add a leading zero
     if (time.Minute < 10)
     {  
         clock_string += F("0");
     }
     const String minute_string {time.Minute};   
     clock_string += minute_string;
-    if (calendar.isAM(time))
+    //print am, AM, pm or PM.  CAPS to indicate this time is DST modified
+    if (calendar.isAM(time)      == true && calendar.isDaylightSavingsTime() == false)
     {
         clock_string += F("am");
     }
-    else
+    else if (calendar.isAM(time) == true && calendar.isDaylightSavingsTime() == true)
+    {
+        //Capitalize AM to indicate this time is DST modified
+        clock_string += F("AM"); 
+    }
+    else if (calendar.isAM(time) == false && calendar.isDaylightSavingsTime() == false)
     {                          
         clock_string += F("pm");
+    }
+    else if (calendar.isAM(time) == false && calendar.isDaylightSavingsTime() == true)
+    {                          
+        clock_string += F("PM");
     }
     return clock_string;    
 }

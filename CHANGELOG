@@ -194,3 +194,4 @@ idea:  a function that takes these parameters (min/max voltage allowable time mi
 03-29-19-10:24 Calendar::get1stMonthlyOccurence testing
 03-29-19-11:43 Calendar::DST testing, added * to indicate DST modification
 03-29-19-12:02 Calendar::DST testing activated serial hour, second change commands
+03-29-19-18:28 Calendar::getClockString DST indicator refinement
