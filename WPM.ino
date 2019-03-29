@@ -1865,6 +1865,30 @@ void setup()
     pinMode (Pin::workbench_lighting, OUTPUT);
     pinMode (Pin::stage_one_inverter_relay, OUTPUT);
     pinMode (Pin::stage_two_inverter_relay, OUTPUT);
+    
+    
+    //First, create a blank tmElements_t object named time_elements 
+    tmElements_t time_elements{};
+    //Second, fill out the month and year from the input parameters
+    time_elements.Month = 3;  //Example month March = 3
+    //Example year 2019.  Offset from 1970 is: 49
+    time_elements.Year  = 49;   
+    //3) Set the day to the 1st.
+    time_elements.Day   = 1;
+    //4) convert this day to a time_t
+    time_t march1 {makeTime(time_elements)};
+
+    time_t march_sunday {nextSunday(march1)};
+    tmElements_t march_sunday_elements {};
+    breakTime(march_sunday, march_sunday_elements);
+    Serial.print("Year: ");
+    Serial.println(march_sunday_elements.Year);
+    Serial.print("Month: ");
+    Serial.println(march_sunday_elements.Month);
+    Serial.print("Day: ");
+    Serial.println(march_sunday_elements.Day);
+
+    
 }
                
 void loop()
