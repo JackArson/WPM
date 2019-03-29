@@ -97,12 +97,17 @@ void Clock::syncTimeWithRTC_Clock()
 {
     if (RTC.read(gRTC_reading))
     {
-        setTime (gRTC_reading.Hour,
+        /*setTime (gRTC_reading.Hour,
                  gRTC_reading.Minute,
                  gRTC_reading.Second,
                  gRTC_reading.Day,
                  gRTC_reading.Month,
-                 gRTC_reading.Year - 30);
+                 gRTC_reading.Year - 30);  //the setTime method in the time library adds 30
+                 //years. "<sic> it is converted to years since 1970."
+                 //However, the RTC_clock is already set to Unix time.  This 
+                 //30 year correction, therefore, must itself be corrected.
+                 //Subtract 30 years from the Year element. */
+        setTime(RTC.get());
     }
     else
     {
