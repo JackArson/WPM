@@ -480,8 +480,6 @@ bool Calendar::isDaylightSavingsTime()
     const uint8_t March {3}; //March is the 3rd month of the year
     const time_t first_sunday_of_march {get1stMonthlyOccurence
                  (Weekdays::WEEKDAYS_SUNDAY, March, gRTC_reading.Year)};    
-    Serial.print("Calendar::isDaylightSavingsTime Year: ");
-    Serial.println(gRTC_reading.Year);
     //2)  Determine the number of seconds in one week
     const time_t seconds_in_a_week {604800}; // = days * hours * minutes * seconds
     //3) Add one weeks worth of seconds to the time_t first_sunday_of_march
