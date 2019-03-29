@@ -279,7 +279,7 @@ String Calendar::getClockString(const tmElements_t time, const bool right_justif
         //if a single digit, add a space
         if (time.Hour - format < 10 && right_justify == true)
         {             
-            clock_string = ' ' + clock_string;
+            clock_string = " " + clock_string;
         }
         const String hour_string (time.Hour - format); 
         clock_string += hour_string;
@@ -578,11 +578,14 @@ void MySerial::checkForUserInput()
         else if ((input == 'h' || input == 'H'))
         {
             //could be start of change hour command, look for a numeral
-            
+             const int value {getIntegerInput()};
+             clock.changeHour(value);
         }
         else if ((input == 's' || input == 'S'))
         {
             //could be start of change second command, look for a numeral
+             const int value {getIntegerInput()};
+             clock.changeSecond(value);
         }
         
     }
@@ -663,7 +666,7 @@ public:
 void MyLCD::drawDisplay()
 {
     updateBacklight();
-    Coordinant coordinant {13, 3};
+    Coordinant coordinant {12, 3};
     const bool right_justify    {true};
     printClock(gRTC_reading, coordinant, right_justify);
     coordinant = {0, 3};
