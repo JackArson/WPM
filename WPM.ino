@@ -709,8 +709,7 @@ void MyLCD::dissolveThis(String top_line, String bottom_line)
     mMessageTopLine    = top;
     mMessageBottomLine = bottom;
     mDissolveCountdown = mLCD_Width; //this triggers the dissolve
-    //Serial diagnostics
-    Serial.print(F("MyLCD::dissolveThis"));
+    //send a copy of the message to the serial monitor 
     Serial.print(mMessageTopLine);
     Serial.println(mMessageBottomLine);
 }
@@ -1627,7 +1626,7 @@ void MessageManager::messageInverterRunTime()
     if (inverter_run_time == 0)
     {
         top_line    = "Inverter waiting";
-        bottom_line = "nothing harvested";
+        bottom_line = "no harvest yet";
     }
     //report in seconds
     else if (inverter_run_time < one_minute)
@@ -1868,23 +1867,28 @@ void setup()
     //First, create a blank tmElements_t object named time_elements 
     tmElements_t time_elements{};
     //Second, fill out the month and year from the input parameters
-    time_elements.Month = 3;  //Example month March = 3
+    time_elements.Month = 1;  //Example month March = 3
     //Example year 2019.  Offset from 1970 is: 49
     time_elements.Year  = 49;   
-    //3) Set the day to the 1st.
-    time_elements.Day   = 1;
+    //3) The time library has a 'nextSunday' macro
+    //   Set the day to the 0th. (It should be already.)
+    //   This will allow Sunday's that fall on the 1st of the month
+    //   to qualify as a 'nextSunday'
+    time_elements.Day   = 0;
     //4) convert this day to a time_t
-    time_t march1 {makeTime(time_elements)};
-
-    time_t march_sunday {nextSunday(march1)};
-    tmElements_t march_sunday_elements {};
-    breakTime(march_sunday, march_sunday_elements);
+    time_t month_start {makeTime(time_elements)};
+    //5) use the nextSunday macro to find the first Sunday of the month
+    time_t first_sunday {nextSunday(month_start)};
+    tmElements_t first_sunday_elements {};
+    breakTime(first_sunday, first_sunday_elements);
     Serial.print("Year: ");
-    Serial.println(march_sunday_elements.Year);
+    Serial.println(first_sunday_elements.Year);
     Serial.print("Month: ");
-    Serial.println(march_sunday_elements.Month);
+    Serial.println(first_sunday_elements.Month);
     Serial.print("Day: ");
-    Serial.println(march_sunday_elements.Day);
+    Serial.println(first_sunday_elements.Day);
+    Serial.print("SECS_PER_WEEK: ");
+    Serial.println(SECS_PER_WEEK);
 
     
 }
