@@ -232,8 +232,8 @@ public:  //methods
                                             const bool right_justify = false);
     const char*    getDaySuffix            (byte day_number);
     time_t         get1stMonthlyOccurence  (const Weekdays weekday,
-                                            const int search_year,
-                                            const int search_month);
+                                            const uint8_t search_year_offset,
+                                            const uint8_t search_month);
     const ImportantDate* getImportantDate  (const byte index);     
     const char*    getMonthShortName       (const byte month_number);
     String         getSunriseClockString   ();
@@ -340,15 +340,21 @@ const char* Calendar::getDaySuffix(byte day_number)
 }
 
 time_t Calendar::get1stMonthlyOccurence (const Weekdays weekday_to_find,
-                                         const int search_month,
-                                         const int search_year)
+                                         const uint8_t  search_month,
+                                         const uint8_t  search_year_offset)
 {
-    //Example calculate the first Sunday of March
+    //A note about the search_year_offset parameter.
+    //The Time library makeTime and breakTime
+    //"expects year argument as years offset from 1970"
+    //
+
+    //Example calculate the first Sunday of March 2019
     //First, create a blank tmElements_t object named time_elements 
     tmElements_t time_elements{};
     //Second, fill out the month and year from the input parameters
     time_elements.Month = search_month;  //Example month March = 3
-    time_elements.Year  = search_year;   //Example year  2019
+    //Example year 2019.  Offset from 1970 is: 49
+    time_elements.Year  = search_year_offset;   
     Serial.print("get1stMonthlyOccurence time_elements.Hour: ");
     Serial.println(time_elements.Hour);
     Serial.print("get1stMonthlyOccurence time_elements.Minute: ");
@@ -1878,7 +1884,7 @@ void setup()
     pinMode (Pin::stage_two_inverter_relay, OUTPUT);
 
     time_t first {calendar.get1stMonthlyOccurence
-                 (Calendar::Weekdays::WEEKDAYS_FRIDAY,3, 2019)};
+                 (Calendar::Weekdays::WEEKDAYS_FRIDAY,3, 49)};
     tmElements_t test_elements {};
     breakTime(first, test_elements);
     Serial.print("Year: ");
