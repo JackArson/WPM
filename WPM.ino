@@ -134,6 +134,16 @@ public:
         EVENTTYPE_HOLIDAY,
         MAX_EVENTTYPE 
     };
+    enum Weekdays
+    {
+        WEEKDAYS_SUNDAY    = 1,
+        WEEKDAYS_MONDAY    = 2,
+        WEEKDAYS_TUESDAY   = 3,
+        WEEKDAYS_WEDNESDAY = 4,
+        WEEKDAYS_THURSDAY  = 5,
+        WEEKDAYS_FRIDAY    = 6,
+        WEEKDAYS_SATURDAY  = 7
+    };
     struct ImportantDate
     {
         const char *text;
@@ -221,6 +231,9 @@ public:  //methods
     String         getClockString          (const tmElements_t time,
                                             const bool right_justify = false);
     const char*    getDaySuffix            (byte day_number);
+    time_t         get1stMonthlyOccurence  (const Weekdays weekday,
+                                            const int search_year,
+                                            const int search_month);
     const ImportantDate* getImportantDate  (const byte index);     
     const char*    getMonthShortName       (const byte month_number);
     String         getSunriseClockString   ();
@@ -326,6 +339,44 @@ const char* Calendar::getDaySuffix(byte day_number)
     }
 }
 
+time_t Calendar::get1stMonthlyOccurence (const Weekdays weekday_to_find,
+                                         const int search_month,
+                                         const int search_year)
+{
+    //Example calculate the first Sunday of March
+    //First, create a blank tmElements_t object named time_elements 
+    tmElements_t time_elements{};
+    //Second, fill out the month and year from the input parameters
+    time_elements.Month = search_month;  //Example month March = 3
+    time_elements.Year  = search_year;   //Example year  2019
+    Serial.print("get1stMonthlyOccurence time_elements.Hour: ");
+    Serial.println(time_elements.Hour);
+    Serial.print("get1stMonthlyOccurence time_elements.Minute: ");
+    Serial.println(time_elements.Minute);
+    Serial.print("get1stMonthlyOccurence time_elements.Second: ");
+    Serial.println(time_elements.Second);
+        
+    //Third, iterate through the first week of that month.
+    //The 1st through the 7th
+    for (int test_date = 1; test_date <= 7; test_date++)
+    {
+        //Fourth step, insert the test date day into the tmElements_t object
+        time_elements.Day = test_date;
+        //Fifth, convert the object into time_t format (a four byte unsigned integer)
+        const time_t time_integer {makeTime(time_elements)};
+        Serial.print("get1stMonthlyOccurence size of time_t: ");
+        Serial.println(sizeof(time_integer));
+        //Sixth, test the time_t integer with the 'weekday' function from the time library
+        if (weekday(time_integer) == weekday_to_find)
+        {        
+            //The day has been found!
+            //Final step, return the time_t form of the date
+            return time_integer;
+        }    
+    }
+    return 0; //this statement should never execute
+}
+
 const Calendar::ImportantDate* Calendar::getImportantDate(const byte index)
 {
     return mDatesToReportList[index];
@@ -406,10 +457,9 @@ bool Calendar::isDaylight()
 
 bool Calendar::isDaylightSavingsTime()
 {  
-    //By the Energy Policy Act of 2005, daylight saving time (DST)
-    //was extended in the United States beginning in 2007.  As from that year,
-    //DST begins on the second Sunday of March and
-    //ends on the first Sunday of November.
+    //Rules for my area (Ohio, USA)
+    //DST begins on the second Sunday of March at 2AM and
+    //ends on the first Sunday of November at 2AM.
     
     //first, calculate the second Sunday of March
     //set month year and time
@@ -1826,6 +1876,17 @@ void setup()
     pinMode (Pin::workbench_lighting, OUTPUT);
     pinMode (Pin::stage_one_inverter_relay, OUTPUT);
     pinMode (Pin::stage_two_inverter_relay, OUTPUT);
+
+    time_t first {calendar.get1stMonthlyOccurence
+                 (Calendar::Weekdays::WEEKDAYS_FRIDAY,3, 2019)};
+    tmElements_t test_elements {};
+    breakTime(first, test_elements);
+    Serial.print("Year: ");
+    Serial.println(test_elements.Year);
+    Serial.print("Month: ");
+    Serial.println(test_elements.Month);
+    Serial.print("Day: ");
+    Serial.println(test_elements.Day);
 }
                
 void loop()
