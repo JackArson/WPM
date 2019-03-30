@@ -97,16 +97,6 @@ void Clock::syncTimeWithRTC_Clock()
 {
     if (RTC.read(gRTC_reading))
     {
-        /*setTime (gRTC_reading.Hour,
-                 gRTC_reading.Minute,
-                 gRTC_reading.Second,
-                 gRTC_reading.Day,
-                 gRTC_reading.Month,
-                 gRTC_reading.Year - 30);  //the setTime method in the time library adds 30
-                 //years. "<sic> it is converted to years since 1970."
-                 //However, the RTC_clock is already set to Unix time.  This 
-                 //30 year correction, therefore, must itself be corrected.
-                 //Subtract 30 years from the Year element. */
         setTime(RTC.get());
     }
     else
@@ -188,7 +178,7 @@ private: //variables
         {"Erik",         12,  4, 1999, EVENTTYPE_BIRTHDAY},     //20
         {"Mathew",       12, 17, 1995, EVENTTYPE_BIRTHDAY},     //21
         {"Christmas",    12, 25, 0,    EVENTTYPE_HOLIDAY},      //22
-        {"Paul Crowned King", 3, 28, 2019, EVENTTYPE_APPOINTMENT} //23
+        {"Paul's Coronation", 4, 1, 2019, EVENTTYPE_APPOINTMENT} //23
     };
     const char* mDaySuffix[4] = {"th", "st", "nd", "rd"};
     //Sometimes there are more than 52 weeks in a year.
@@ -236,9 +226,6 @@ public:  //methods
     String         getClockString          (const tmElements_t time,
                                             const bool right_justify = false);
     const char*    getDaySuffix            (byte day_number);
-    time_t         get1stMonthlyOccurence  (const Weekdays weekday,
-                                            const uint8_t search_year_offset,
-                                            const uint8_t search_month);
     const ImportantDate* getImportantDate  (const byte index);     
     const char*    getMonthShortName       (const byte month_number);
     String         getSunriseClockString   ();
@@ -247,7 +234,7 @@ public:  //methods
     byte           getQtyImportantDates    ();
     bool           isAM                    (const tmElements_t time);
     bool           isDaylight              ();
-    bool           isDaylightSavingsTime   ();
+    bool           isDaylightSavingsTime   (tmElements_t input_date);
     bool           isWakeUpComplete        ();
     void           loadImportantDates      ();
     void           setSunriseSunset        ();
@@ -258,7 +245,7 @@ void Calendar::init()
 {
     loadImportantDates();
     setSunriseSunset();
-    mDaylightSavingsTime = isDaylightSavingsTime();
+    mDaylightSavingsTime = isDaylightSavingsTime(gRTC_reading);
 }
 
 String Calendar::getClockString(const tmElements_t time,
@@ -293,20 +280,20 @@ String Calendar::getClockString(const tmElements_t time,
     const String minute_string {time.Minute};   
     clock_string += minute_string;
     //print am, AM, pm or PM.  CAPS to indicate this time is DST modified
-    if (calendar.isAM(time)      == true && calendar.isDaylightSavingsTime() == false)
+    if (isAM(time)      == true && mDaylightSavingsTime == false)
     {
         clock_string += F("am");
     }
-    else if (calendar.isAM(time) == true && calendar.isDaylightSavingsTime() == true)
+    else if (isAM(time) == true && mDaylightSavingsTime == true)
     {
         //Capitalize AM to indicate this time is DST modified
         clock_string += F("AM"); 
     }
-    else if (calendar.isAM(time) == false && calendar.isDaylightSavingsTime() == false)
+    else if (isAM(time) == false && mDaylightSavingsTime == false)
     {                          
         clock_string += F("pm");
     }
-    else if (calendar.isAM(time) == false && calendar.isDaylightSavingsTime() == true)
+    else if (isAM(time) == false && mDaylightSavingsTime == true)
     {                          
         clock_string += F("PM");
     }
@@ -353,41 +340,6 @@ const char* Calendar::getDaySuffix(byte day_number)
     {
         return mDaySuffix[0]; //th
     }
-}
-
-time_t Calendar::get1stMonthlyOccurence (const Weekdays weekday_to_find,
-                                         const uint8_t  search_month,
-                                         const uint8_t  search_year_offset)
-{
-    //A note about the search_year_offset parameter.
-    //The Time library makeTime and breakTime methods
-    //"expects year argument as years offset from 1970"
-
-
-    //Example calculate the first Sunday of March 2019
-    //First, create a blank tmElements_t object named time_elements 
-    tmElements_t time_elements{};
-    //Second, fill out the month and year from the input parameters
-    time_elements.Month = search_month;  //Example month March = 3
-    //Example year 2019.  Offset from 1970 is: 49
-    time_elements.Year  = search_year_offset;   
-    //Third, iterate through the first week of that month.
-    //The 1st through the 7th
-    for (int test_date = 1; test_date <= 7; test_date++)
-    {
-        //Fourth step, insert the test date day into the tmElements_t object
-        time_elements.Day = test_date;
-        //Fifth, convert the object into time_t format (a four byte unsigned integer)
-        const time_t time_integer {makeTime(time_elements)};
-        //Sixth, test the time_t integer with the 'weekday' function from the time library
-        if (weekday(time_integer) == weekday_to_find)
-        {        
-            //The day has been found!
-            //Final step, return the time_t form of the date
-            return time_integer;
-        }    
-    }
-    return 0; //this statement should never execute
 }
 
 const Calendar::ImportantDate* Calendar::getImportantDate(const byte index)
@@ -468,36 +420,63 @@ bool Calendar::isDaylight()
     }
 }
 
-bool Calendar::isDaylightSavingsTime()
+bool Calendar::isDaylightSavingsTime(tmElements_t input_date)
 {  
     //Rules for my area (Ohio, USA)
     //DST begins on the second Sunday of March at 2AM and
     //ends on the first Sunday of November at 2AM.
-
-    //time_t numbers are the number of seconds that have elapsed since January 1st 1970.
     
-    //1) Get the FIRST Sunday of March
-    const uint8_t March {3}; //March is the 3rd month of the year
-    const time_t first_sunday_of_march {get1stMonthlyOccurence
-                 (Weekdays::WEEKDAYS_SUNDAY, March, gRTC_reading.Year)};    
-    //2)  Determine the number of seconds in one week
-    const time_t seconds_in_a_week {604800}; // = days * hours * minutes * seconds
-    //3) Add one weeks worth of seconds to the time_t first_sunday_of_march
-    //   to get the 2nd Sunday of March.
-    const time_t second_sunday_of_march {first_sunday_of_march + seconds_in_a_week};
-    //4) Get the first Sunday of November
-    const uint8_t November {11}; //November is the 11th month of the year
-    const time_t first_sunday_of_november {get1stMonthlyOccurence
-                 (Weekdays::WEEKDAYS_SUNDAY, November, gRTC_reading.Year)};
-    //5) See if the time_t now() is before DST begins, or after it ends and return
-    //   the result! 
-    if (now() < second_sunday_of_march || now() >= first_sunday_of_november)
+    //Find the FIRST Sunday of March
+    //Create a blank tmElements_t object, it's a six part time and date.   
+    tmElements_t march_start{0, 0, 0, 0, 0, 0};
+    //March is the 3rd march of the year
+    const uint8_t march {3}; 
+    //Set the month
+    march_start.Month = march;
+    //Set the year to the year from the input_date parameter 
+    march_start.Year  = input_date.Year;
+    //time_t numbers are the number of seconds that have elapsed since January 1st 1970.
+    //Use the time library makeTime function to convert the tmElements_t object
+    //into a time_t so some time library math can be done.  
+    time_t start_march {makeTime(march_start)};
+    //The time library has a 'nextSunday' function
+    //Since the march_start.Day variable was set to the 0th,  
+    //Sunday's that fall on the 1st of the march will 
+    //qualify as 'nextSunday' as well as any Sunday that falls on the 2nd through 7th.
+    //Use the nextSunday function to find the first Sunday of the month
+    time_t first_sunday_of_march {nextSunday(start_march)};
+    //Add one weeks worth of seconds to the time_t first_sunday
+    //to get the 2nd Sunday of March.  SECS_PER_WEEK is defined in the time library.
+    //Also, add two hours worth of seconds to change the time from midnight to 2AM.
+    //It is important to change the time to 2AM AFTER the nextSunday function has run 
+    //SECS_PER_HOUR is also defined in the time library.
+    const time_t second_sunday_of_march_2AM
+                {first_sunday_of_march + SECS_PER_WEEK + SECS_PER_HOUR * 2};
+    //Now find the first Sunday of November in a similar manner.
+    tmElements_t november_start{0, 0, 0, 0, 0, 0};
+    //November is the 11th march of the year
+    const uint8_t november {11};
+    //Set the month
+    november_start.Month = november;
+    //Set the year to the year from the input_date parameter 
+    november_start.Year  = input_date.Year;
+    //Convert the tmElements_t to a time_t
+    const time_t start_november {makeTime(november_start)};   
+    //Use the nextSunday function to find the first Sunday of the month
+    const time_t first_sunday_of_november {nextSunday(start_november)};
+    //Add two hours worth of seconds to change the time from midnight to 2AM.
+    const time_t first_sunday_of_november_2AM  {first_sunday_of_november + SECS_PER_HOUR * 2};
+    //Convert the input parameter to a time_t number for comparison
+    const time_t date_input {makeTime(input_date)};
+    //Compare results and return the answer
+    if (date_input >= second_sunday_of_march_2AM &&
+        date_input <  first_sunday_of_november_2AM)
     {
-        return false;
+        return true;
     }
     else
     {
-        return true;
+        return false;
     }
 }
 

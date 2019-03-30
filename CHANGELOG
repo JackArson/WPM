@@ -197,3 +197,4 @@ idea:  a function that takes these parameters (min/max voltage allowable time mi
 03-29-19-18:28 Calendar::getClockString DST indicator refinement
 03-29-19-18:44 time library nextSunday experiment
 03-29-19-18:46 removed old diagnostic line
+03-30-19-18:49 refactored Calendar::isDaylightSavingsTime
