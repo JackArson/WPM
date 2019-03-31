@@ -54,6 +54,9 @@ public:  //methods
     void        changeHour            (int hour);
     void        changeMinute          (int minute);
     void        changeSecond          (int second);
+    void        changeDay             (int day);
+    void        changeMonth           (int month);
+    void        changeYear            (int year);
     void        syncTimeWithRTC_Clock ();
 }clock;
 
@@ -88,6 +91,41 @@ void Clock::changeSecond(int second)
     tmElements_t current_RTC_reading {gRTC_reading};
     //change second
     current_RTC_reading.Second = second;
+    //convert to time_t
+    time_t new_RTC_reading {makeTime(current_RTC_reading)};
+    RTC.set(new_RTC_reading);
+}
+
+void Clock::changeDay(int day)
+{
+    constrain(day, 0, 31);
+    //make a copy of current reading
+    tmElements_t current_RTC_reading {gRTC_reading};
+    //change second
+    current_RTC_reading.Day = day;
+    //convert to time_t
+    time_t new_RTC_reading {makeTime(current_RTC_reading)};
+    RTC.set(new_RTC_reading);
+}
+
+void Clock::changeMonth(int month)
+{
+    constrain(month, 1, 12);
+    //make a copy of current reading
+    tmElements_t current_RTC_reading {gRTC_reading};
+    //change second
+    current_RTC_reading.Month = month;
+    //convert to time_t
+    time_t new_RTC_reading {makeTime(current_RTC_reading)};
+    RTC.set(new_RTC_reading);
+}
+
+void Clock::changeYear(int year)
+{
+    //make a copy of current reading
+    tmElements_t current_RTC_reading {gRTC_reading};
+    //change second
+    current_RTC_reading.Year = year;
     //convert to time_t
     time_t new_RTC_reading {makeTime(current_RTC_reading)};
     RTC.set(new_RTC_reading);
@@ -538,42 +576,112 @@ private: //methods
 
 void MySerial::checkForUserInput()
 {
+    //A simple interface that accepts single character commands,
+    //or single character commands with a numeric argument. 
+
+    //example commands: (case insensitive)
+    //'c'     toggle voltage 'c'orrection
+    //'m6'    change the 'm'inute to 6
+    //'h14'   change the 'h'our to 2PM (24 hour format)
+    //'s28'   change the 's'econds to 28
+    //'s'     change the 's'econds to 0
+    //'d4'    change the 'd'ay to the 4th
+    //'n3'    change the mo'n'th to March, because 'm' was already taken
+    //'y56'   change the year to 2056
+    //'y2020' change the year to 2020
+
     //check if the user wants to toggle 'c'orrected voltage    
     if (Serial.available())
     {
         const char input {static_cast<char>(Serial.read())};
-        if (input == 'c' || input == 'C')
+        const int  value {getIntegerInput()};
+        switch (input)
         {
-            if (mUseLaptopOperatingVoltage == true)
-            {
-                mUseLaptopOperatingVoltage = false;
-                Serial.println(F("Switched to normal operating voltage."));
-            }
-            else
-            {
-                mUseLaptopOperatingVoltage = true;
-                Serial.println(F("Switched to laptop operating voltage."));
-            }
-        }
-        else if ((input == 'm' || input == 'M'))
-        {
-            //could be start of change minute command, look for a numeral
-            const int value {getIntegerInput()};
-            clock.changeMinute(value);
+            case 'c':
+            case 'C':
+                if (mUseLaptopOperatingVoltage == true)
+                {
+                    mUseLaptopOperatingVoltage = false;
+                    Serial.println(F("Switched to normal operating voltage."));
+                }
+                else
+                {
+                    mUseLaptopOperatingVoltage = true;
+                    Serial.println(F("Switched to laptop operating voltage."));
+                }
+                break;
+            case 'm':
+            case 'M':
+                {
+                    //const int value {getIntegerInput()};
+                    clock.changeMinute(value);
+                }
+                break;
+            case 'h':
+            case 'H':
+                {
+                     //const int value {getIntegerInput()};
+                     clock.changeHour(value);
+                }
+                break;
+            case 's':
+            case 'S':
+                {
+                     //const int value {getIntegerInput()};
+                     clock.changeSecond(value);
+                }
+                break;
+            case 'd':
+            case 'D':
+                clock.changeDay(value);
+                break;
+            case 'n':
+            case 'N':
+                clock.changeMonth(value);
+                break;
+            case 'y':
+            case 'Y':
+                clock.changeYear(value);
+                break;
             
+            default:
+                break;
         }
-        else if ((input == 'h' || input == 'H'))
-        {
-            //could be start of change hour command, look for a numeral
-             const int value {getIntegerInput()};
-             clock.changeHour(value);
-        }
-        else if ((input == 's' || input == 'S'))
-        {
-            //could be start of change second command, look for a numeral
-             const int value {getIntegerInput()};
-             clock.changeSecond(value);
-        }
+         
+
+        //if (input == 'c' || input == 'C')
+        //{
+            //if (mUseLaptopOperatingVoltage == true)
+            //{
+                //mUseLaptopOperatingVoltage = false;
+                //Serial.println(F("Switched to normal operating voltage."));
+            //}
+            //else
+            //{
+                //mUseLaptopOperatingVoltage = true;
+                //Serial.println(F("Switched to laptop operating voltage."));
+            //}
+        //}
+        //else if ((input == 'm' || input == 'M'))
+        //{
+            ////could be start of change minute command, look for a numeral
+            //const int value {getIntegerInput()};
+            //clock.changeMinute(value);
+            
+        //}
+        //else if ((input == 'h' || input == 'H'))
+        //{
+            ////could be start of change hour command, look for a numeral
+             //const int value {getIntegerInput()};
+             //clock.changeHour(value);
+        //}
+        //else if ((input == 's' || input == 'S'))
+        //{
+            ////could be start of change second command, look for a numeral
+             //const int value {getIntegerInput()};
+             //clock.changeSecond(value);
+        //}
+        
         
     }
 }
@@ -1811,14 +1919,6 @@ int TrackLight::regulateVoltage(const int input_level)
 }
 //==end of TrackLight========================================================================
 
-//byte          inverter_warm_up_timer = 0; //seconds
-int           balance_falling_countdown = 0;
-int           balance_rising_countdown = 0;
-
-boolean       LDR_data = false;
-boolean       LDR2_data = false;
-byte dimmer_reference_number = 0;
-
 void setup()
 {
     Serial.begin(250000);              // start the serial monitor
@@ -1847,35 +1947,6 @@ void setup()
     pinMode (Pin::workbench_lighting, OUTPUT);
     pinMode (Pin::stage_one_inverter_relay, OUTPUT);
     pinMode (Pin::stage_two_inverter_relay, OUTPUT);
-    
-    
-    //First, create a blank tmElements_t object named time_elements 
-    tmElements_t time_elements{};
-    //Second, fill out the month and year from the input parameters
-    time_elements.Month = 1;  //Example month March = 3
-    //Example year 2019.  Offset from 1970 is: 49
-    time_elements.Year  = 49;   
-    //3) The time library has a 'nextSunday' macro
-    //   Set the day to the 0th. (It should be already.)
-    //   This will allow Sunday's that fall on the 1st of the month
-    //   to qualify as a 'nextSunday'
-    time_elements.Day   = 0;
-    //4) convert this day to a time_t
-    time_t month_start {makeTime(time_elements)};
-    //5) use the nextSunday macro to find the first Sunday of the month
-    time_t first_sunday {nextSunday(month_start)};
-    tmElements_t first_sunday_elements {};
-    breakTime(first_sunday, first_sunday_elements);
-    Serial.print("Year: ");
-    Serial.println(first_sunday_elements.Year);
-    Serial.print("Month: ");
-    Serial.println(first_sunday_elements.Month);
-    Serial.print("Day: ");
-    Serial.println(first_sunday_elements.Day);
-    Serial.print("SECS_PER_WEEK: ");
-    Serial.println(SECS_PER_WEEK);
-
-    
 }
                
 void loop()
