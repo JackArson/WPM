@@ -422,9 +422,9 @@ bool Calendar::isDaylight()
 
 bool Calendar::isDaylightSavingsTime(tmElements_t input_date)
 {  
-    //Rules for my area (Ohio, USA)
-    //DST begins on the second Sunday of March at 2AM and
-    //ends on the first Sunday of November at 2AM.
+    //Rules for my area (Ohio, USA) and most of United States
+    //DST begins on the second Sunday of March    at 2AM and
+    //       ends on the first Sunday of November at 2AM.
     
     //Find the FIRST Sunday of March
     //Create a blank tmElements_t object, it's a six part time and date.   
@@ -440,16 +440,16 @@ bool Calendar::isDaylightSavingsTime(tmElements_t input_date)
     //into a time_t so some time library math can be done.  
     time_t start_march {makeTime(march_start)};
     //The time library has a 'nextSunday' function
-    //Since the march_start.Day variable was set to the 0th,  
-    //Sunday's that fall on the 1st of the march will 
+    //Since the march_start.Day variable was set to the 0th, (when
+    //the object was declared,) Sunday's that fall on the 1st of the march will 
     //qualify as 'nextSunday' as well as any Sunday that falls on the 2nd through 7th.
-    //Use the nextSunday function to find the first Sunday of the month
+    //Use the nextSunday function to find the first Sunday of the month.
     time_t first_sunday_of_march {nextSunday(start_march)};
-    //Add one weeks worth of seconds to the time_t first_sunday
+    //Add one weeks worth of seconds to the time_t first_sunday_of_march
     //to get the 2nd Sunday of March.  SECS_PER_WEEK is defined in the time library.
     //Also, add two hours worth of seconds to change the time from midnight to 2AM.
-    //It is important to change the time to 2AM AFTER the nextSunday function has run 
-    //SECS_PER_HOUR is also defined in the time library.
+    //It is important to change the time to 2AM AFTER the nextSunday function has
+    //been called, and not before. SECS_PER_HOUR is also defined in the time library.
     const time_t second_sunday_of_march_2AM
                 {first_sunday_of_march + SECS_PER_WEEK + SECS_PER_HOUR * 2};
     //Now find the first Sunday of November in a similar manner.
@@ -872,7 +872,7 @@ private: //variables
     tmElements_t mOneHertzLoopTimestamp {0};        //to control 1000ms loop
 public:  //methods
     byte getCounter           ();
-    bool isIt2AM                (); 
+    bool isIt2AM              (); 
     bool isDissolveReady      ();
     bool hasOneSecondPassed   ();
     void update               ();
@@ -897,7 +897,13 @@ bool Timing::isIt2AM()
         skip2AM() == false)
     {
         m2AM_Timestamp = now();
+        return true;
     }
+    else
+    {
+        return false;
+    }
+    
 }
 
 bool Timing::isDissolveReady()
