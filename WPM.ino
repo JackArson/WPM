@@ -159,6 +159,13 @@ const byte QTY_IMPORTANT_DATES = 23;  //this must be initialized in global space
 class Calendar
 {
 public:
+    enum DST_Action
+    {
+        DST_ACTION_NONE,
+        DST_ACTION_CLOCK_FELL_BACK,
+        DST_ACTION_CLOCK_SPRUNG_FORWARD,
+        MAX_DST_ACTION
+    };
     enum EventType
     {
         EVENTTYPE_ANNIVERSARY,
@@ -261,6 +268,7 @@ private: //variables continued
     bool mDaylightSavingsTime {true};
 public:  //methods
     void           init                    ();
+    DST_Action     daylightSavingCheck     ();
     String         getClockString          (const tmElements_t time,
                                             const bool right_justify = false);
     const char*    getDaySuffix            (byte day_number);
@@ -284,6 +292,32 @@ void Calendar::init()
     loadImportantDates();
     setSunriseSunset();
     mDaylightSavingsTime = isDaylightSavingsTime(gRTC_reading);
+}
+
+Calendar::DST_Action Calendar::daylightSavingCheck()
+{
+    bool last_DST_reading {mDaylightSavingsTime};
+    bool this_DST_reading {isDaylightSavingsTime(gRTC_reading)};
+    if      (last_DST_reading == true && this_DST_reading == true)
+    {
+        return Calendar::DST_Action::DST_ACTION_NONE;
+    }
+    else if (last_DST_reading == false && this_DST_reading == false)
+    {
+        return Calendar::DST_Action::DST_ACTION_NONE;
+    }
+    else if (last_DST_reading == true && this_DST_reading == false)
+    {
+        Serial.println(F("Calendar::daylightSavingCheck  Fall back occured"));
+        clock.changeHour(1); //set clock to 1AM 
+        return Calendar::DST_Action::DST_ACTION_CLOCK_FELL_BACK;
+    }
+    else
+    {
+        Serial.println(F("Calendar::daylightSavingCheck  Spring forward occured"));
+        clock.changeHour(3); //set clock to 3AM
+        return Calendar::DST_Action::DST_ACTION_CLOCK_SPRUNG_FORWARD;
+    }
 }
 
 String Calendar::getClockString(const tmElements_t time,
@@ -982,26 +1016,26 @@ void MyLCD::printDate(const Coordinant coordinant)
     liquidcrystali2c.print((gRTC_reading.Day));
     liquidcrystali2c.print(F(" "));  //this space to clear last digit when month rolls over (31 to 1) 
 }
-
-//=========================================================================================================
+//==end of MyLCD=============================================================================
 
 class Timing
 {
-
 private: //variables
-    byte         mCounter              {0};
-    time_t       mDissolveTimestamp            {0};
+    byte         mCounter               {0};
+    time_t       mDissolveTimestamp     {0};
     time_t       m2AM_Timestamp         {0};
     tmElements_t mOneHertzLoopTimestamp {0};        //to control 1000ms loop
+    time_t       mLockoutExpires        {0};
 public:  //methods
     byte getCounter           ();
     bool isIt2AM              (); 
     bool isDissolveReady      ();
     bool hasOneSecondPassed   ();
+    void lockout2AM_Check     (time_t lockout_milliseconds);
     void update               ();
     void setCountdownTimer    (byte x); 
 private: //methods
-    bool skip2AM              (time_t lockout_seconds = 1);
+    
 
 
 }timing;
@@ -1013,13 +1047,20 @@ byte Timing::getCounter()
 
 bool Timing::isIt2AM()
 {
+    if (millis() > mLockoutExpires)
+    {
+        Serial.print("L");
+    }
     
+
+
     if (gRTC_reading.Hour   == 2 &&
         gRTC_reading.Minute == 0 &&
         gRTC_reading.Second == 0 &&
-        skip2AM() == false)
+        millis() > mLockoutExpires)
     {
-        m2AM_Timestamp = now();
+        mLockoutExpires = millis() + 1000;
+        Serial.println("Timing::isIt2AM() = true!"); 
         return true;
     }
     else
@@ -1057,6 +1098,14 @@ bool Timing::hasOneSecondPassed()
     }
 }
 
+void Timing::lockout2AM_Check(time_t lockout_milliseconds)
+{
+    mLockoutExpires = millis() + lockout_milliseconds;
+    Serial.print("Timing::lockout2AM_Check  mLockoutExpires in ");
+    Serial.print(lockout_milliseconds);
+    Serial.print(" milliseconds");
+}
+
 void Timing::update()
 {
     liquidcrystali2c.setCursor(8, 0);
@@ -1079,21 +1128,7 @@ void Timing::setCountdownTimer(byte x)
 {
     mCounter = x;
 }
-
-//private methods here
-bool Timing::skip2AM(time_t lockout_seconds)
-{
-    if (now() < m2AM_Timestamp + lockout_seconds)
-    {
-        return true;
-    }
-    else
-    {
-        return false;
-    }    
-}
-
-
+//==end of Timing============================================================================
 
 class Voltmeter
 {
@@ -1991,6 +2026,12 @@ void loop()
     {
         mystatemachine.resetInverterRunTime();
         voltmeter.initDailyStatistics();  //resets daily voltage highs and lows           
+        if (calendar.daylightSavingCheck() == Calendar::DST_ACTION_CLOCK_FELL_BACK)
+        {
+            const time_t milliseconds {1000};
+            const time_t over_an_hour (milliseconds * SECS_PER_HOUR + SECS_PER_MIN);
+            timing.lockout2AM_Check(over_an_hour);
+        }
         calendar.init();
     }
 }

@@ -203,3 +203,4 @@ idea:  a function that takes these parameters (min/max voltage allowable time mi
 04-01-19-09:28 MySerial::checkForUserInput added feedback
 04-01-19-10:18 fix MyLCD end of month tomorrow bug
 04-01-19-10:59 added MySerial::printFullDateTime
+04-01-19-12:33 added Calendar::daylightSavingCheck()
