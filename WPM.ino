@@ -581,7 +581,8 @@ void Calendar::loadImportantDates()
         //convert tmElements_t to time_t
         time_t event = makeTime(event_anniversary);
         //see if date is in search window
-        if (event > now() && event <= now() + search_window_secs)
+        time_t today_start {previousMidnight(now())};
+        if (event >= today_start && event <= now() + search_window_secs)
         {
             //Fill mDatesToReportList with pointers to the important date table 
             const ImportantDate *pointer {&mImportantDateList[i]};
