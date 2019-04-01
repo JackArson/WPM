@@ -465,8 +465,8 @@ bool Calendar::isDaylightSavingsTime(tmElements_t input_date)
     //       ends on the first Sunday of November at 2AM.
     
     //Find the FIRST Sunday of March
-    //Create a blank tmElements_t object, it's a six part time and date.   
-    tmElements_t march_start{0, 0, 0, 0, 0, 0};
+    //Create a blank tmElements_t object, it's a seven part time and date.   
+    tmElements_t march_start{};
     //March is the 3rd march of the year
     const uint8_t march {3}; 
     //Set the month
@@ -491,7 +491,7 @@ bool Calendar::isDaylightSavingsTime(tmElements_t input_date)
     const time_t second_sunday_of_march_2AM
                 {first_sunday_of_march + SECS_PER_WEEK + SECS_PER_HOUR * 2};
     //Now find the first Sunday of November in a similar manner.
-    tmElements_t november_start{0, 0, 0, 0, 0, 0};
+    tmElements_t november_start{};
     //November is the 11th march of the year
     const uint8_t november {11};
     //Set the month
@@ -809,11 +809,21 @@ void MyLCD::printImportantDate(const Calendar::ImportantDate* importantdate)
     }
     //format bottom line
     String bottom_line (F(""));
+    //build a time_t of event for a tommorrow comparison
+    tmElements_t event {};
+    event.Year  = year();
+    event.Month = importantdate->month;
+    event.Day   = importantdate->day;
+    time_t event_time_t {makeTime(event)};
+    time_t right_now {now()};
+    time_t tommorrow_begins {nextMidnight(right_now)};
+    time_t tommorrow_ends   {nextMidnight(right_now) + SECS_PER_DAY};
     if (importantdate->day == day())
     {
         bottom_line = F("today");
     }
-    else if (importantdate->day == day() + 1)
+    else if (event_time_t >= tommorrow_begins &&
+             event_time_t <  tommorrow_ends)
     {
         bottom_line = F("tomorrow");
     }
@@ -1643,7 +1653,6 @@ void MessageManager::main()
             const Calendar::ImportantDate *importantdate{};
             importantdate = calendar.getImportantDate(mCurrentMessageIndex);
             mylcd.printImportantDate(importantdate);
-            //myserial.printImportantDate(importantdate);
         }
         else //system messages
         {

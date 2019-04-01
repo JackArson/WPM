@@ -201,3 +201,4 @@ idea:  a function that takes these parameters (min/max voltage allowable time mi
 03-31-19-11:56 bugfix Timing::isIt2AM()
 03-31-19-19:08 added commands to change day, month and year from serial monitor
 04-01-19-09:28 MySerial::checkForUserInput added feedback
+04-01-19-10:18 fix MyLCD end of month tomorrow bug
