@@ -566,6 +566,7 @@ private: //variables
     bool mUseLaptopOperatingVoltage{true};    
 public:
     void checkForUserInput();
+    void printFullTimestamp();
     void printState(char const *text);
     void printTimestamp();
     bool usingLaptopOperatingVoltage();
@@ -577,7 +578,8 @@ private: //methods
 void MySerial::checkForUserInput()
 {
     //A simple interface that accepts single character commands,
-    //or single character commands with a numeric argument. 
+    //or single character commands with a numeric argument from the serial
+    //monitor input box
 
     //example commands: (case insensitive)
     //'c'     toggle voltage 'c'orrection
@@ -593,8 +595,9 @@ void MySerial::checkForUserInput()
     //check if the user wants to toggle 'c'orrected voltage    
     if (Serial.available())
     {
-        const char input {static_cast<char>(Serial.read())};
-        const int  value {getIntegerInput()};
+        const char input  {static_cast<char>(Serial.read())};
+        const int  value  {getIntegerInput()};
+        String time_command_feedback {""};
         switch (input)
         {
             case 'c':
@@ -612,76 +615,45 @@ void MySerial::checkForUserInput()
                 break;
             case 'm':
             case 'M':
-                {
-                    //const int value {getIntegerInput()};
-                    clock.changeMinute(value);
-                }
+                clock.changeMinute(value);
+                time_command_feedback = "Minute";
                 break;
             case 'h':
             case 'H':
-                {
-                     //const int value {getIntegerInput()};
-                     clock.changeHour(value);
-                }
+                clock.changeHour(value);
+                time_command_feedback = "Hour";
                 break;
             case 's':
             case 'S':
-                {
-                     //const int value {getIntegerInput()};
-                     clock.changeSecond(value);
-                }
+                clock.changeSecond(value);
+                time_command_feedback = "Second";
                 break;
             case 'd':
             case 'D':
                 clock.changeDay(value);
+                time_command_feedback = "Day";
                 break;
             case 'n':
             case 'N':
                 clock.changeMonth(value);
+                time_command_feedback = "Month";
                 break;
             case 'y':
             case 'Y':
                 clock.changeYear(value);
+                time_command_feedback = "Year";
                 break;
             
             default:
                 break;
-        }
-         
-
-        //if (input == 'c' || input == 'C')
-        //{
-            //if (mUseLaptopOperatingVoltage == true)
-            //{
-                //mUseLaptopOperatingVoltage = false;
-                //Serial.println(F("Switched to normal operating voltage."));
-            //}
-            //else
-            //{
-                //mUseLaptopOperatingVoltage = true;
-                //Serial.println(F("Switched to laptop operating voltage."));
-            //}
-        //}
-        //else if ((input == 'm' || input == 'M'))
-        //{
-            ////could be start of change minute command, look for a numeral
-            //const int value {getIntegerInput()};
-            //clock.changeMinute(value);
             
-        //}
-        //else if ((input == 'h' || input == 'H'))
-        //{
-            ////could be start of change hour command, look for a numeral
-             //const int value {getIntegerInput()};
-             //clock.changeHour(value);
-        //}
-        //else if ((input == 's' || input == 'S'))
-        //{
-            ////could be start of change second command, look for a numeral
-             //const int value {getIntegerInput()};
-             //clock.changeSecond(value);
-        //}
-        
+        }
+        if (time_command_feedback != "")
+        {
+            time_command_feedback += " changed to ";
+            time_command_feedback += value;
+            Serial.println(time_command_feedback);
+        }
         
     }
 }
