@@ -70,6 +70,7 @@ void Clock::changeHour(int hour)
     //convert to time_t
     time_t new_RTC_reading {makeTime(current_RTC_reading)};
     RTC.set(new_RTC_reading);
+    syncTimeWithRTC_Clock();
 }
 
 void Clock::changeMinute(int minute)
@@ -82,6 +83,7 @@ void Clock::changeMinute(int minute)
     //convert to time_t
     time_t new_RTC_reading {makeTime(current_RTC_reading)};
     RTC.set(new_RTC_reading);
+    syncTimeWithRTC_Clock();
 }
 
 void Clock::changeSecond(int second)
@@ -94,6 +96,7 @@ void Clock::changeSecond(int second)
     //convert to time_t
     time_t new_RTC_reading {makeTime(current_RTC_reading)};
     RTC.set(new_RTC_reading);
+    syncTimeWithRTC_Clock();
 }
 
 void Clock::changeDay(int day)
@@ -106,6 +109,7 @@ void Clock::changeDay(int day)
     //convert to time_t
     time_t new_RTC_reading {makeTime(current_RTC_reading)};
     RTC.set(new_RTC_reading);
+    syncTimeWithRTC_Clock();
 }
 
 void Clock::changeMonth(int month)
@@ -118,6 +122,7 @@ void Clock::changeMonth(int month)
     //convert to time_t
     time_t new_RTC_reading {makeTime(current_RTC_reading)};
     RTC.set(new_RTC_reading);
+    syncTimeWithRTC_Clock();
 }
 
 void Clock::changeYear(int year)
@@ -129,6 +134,7 @@ void Clock::changeYear(int year)
     //convert to time_t
     time_t new_RTC_reading {makeTime(current_RTC_reading)};
     RTC.set(new_RTC_reading);
+    syncTimeWithRTC_Clock();
 }
 
 void Clock::syncTimeWithRTC_Clock()
@@ -667,16 +673,19 @@ void MySerial::checkForUserInput()
             case 'D':
                 clock.changeDay(value);
                 time_command_feedback = "Day";
+                calendar.init();
                 break;
             case 'n':
             case 'N':
                 clock.changeMonth(value);
                 time_command_feedback = "Month";
+                calendar.init();
                 break;
             case 'y':
             case 'Y':
                 clock.changeYear(value);
                 time_command_feedback = "Year";
+                calendar.init();
                 break;
             
             default:
@@ -1047,7 +1056,7 @@ byte Timing::getCounter()
 
 bool Timing::isIt2AM()
 {
-    if (millis() > mLockoutExpires)
+    if (millis() < mLockoutExpires)
     {
         Serial.print("L");
     }
