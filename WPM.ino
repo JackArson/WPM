@@ -566,7 +566,8 @@ private: //variables
     bool mUseLaptopOperatingVoltage{true};    
 public:
     void checkForUserInput();
-    void printFullTimestamp();
+    void printFullDateTime(const tmElements_t timestamp);
+    void printFullDateTime(const time_t timestamp);
     void printState(char const *text);
     void printTimestamp();
     bool usingLaptopOperatingVoltage();
@@ -653,9 +654,41 @@ void MySerial::checkForUserInput()
             time_command_feedback += " changed to ";
             time_command_feedback += value;
             Serial.println(time_command_feedback);
+            Serial.println("Now: ");
+            printFullDateTime(now());
         }
         
     }
+}
+
+void MySerial::printFullDateTime (const tmElements_t timestamp)
+{
+    //Tuesday
+    String fullDateTime {dayStr(timestamp.Wday)};
+    //Tuesday,
+    fullDateTime += ", ";
+    //Tuesday, May
+    fullDateTime += monthStr(timestamp.Month);
+    fullDateTime += " ";
+    //Tuesday, May 3
+    fullDateTime += timestamp.Day;
+    //Tuesday, May 3rd
+    fullDateTime += calendar.getDaySuffix(timestamp.Day);
+    fullDateTime += " ";
+    //Tuesday, May 3rd 2019
+    fullDateTime += 1970 + timestamp.Year;
+    fullDateTime += " ";
+    //Tuesday, May 3rd 2019 01:23:07
+    Serial.print(fullDateTime);
+    printTimestamp();
+    Serial.println();
+}
+
+void MySerial::printFullDateTime (const time_t timestamp)
+{
+    tmElements_t timestamp_elements {};
+    breakTime(timestamp, timestamp_elements);
+    printFullDateTime(timestamp_elements);
 }
 
 
