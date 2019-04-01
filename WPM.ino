@@ -296,9 +296,9 @@ public:  //methods
 void Calendar::init()
 {
     mQtyImportantDatesToReport = 0;
+    mDaylightSavingsTime = isDaylightSavingsTime(gRTC_reading);
     loadImportantDates();
     setSunriseSunset();
-    mDaylightSavingsTime = isDaylightSavingsTime(gRTC_reading);
 }
 
 Calendar::DST_Action Calendar::daylightSavingCheck()
