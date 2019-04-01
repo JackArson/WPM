@@ -180,16 +180,16 @@ public:
         EVENTTYPE_HOLIDAY,
         MAX_EVENTTYPE 
     };
-    enum Weekdays
-    {
-        WEEKDAYS_SUNDAY    = 1,
-        WEEKDAYS_MONDAY    = 2,
-        WEEKDAYS_TUESDAY   = 3,
-        WEEKDAYS_WEDNESDAY = 4,
-        WEEKDAYS_THURSDAY  = 5,
-        WEEKDAYS_FRIDAY    = 6,
-        WEEKDAYS_SATURDAY  = 7
-    };
+    //enum Weekdays
+    //{
+        //WEEKDAYS_SUNDAY    = 1,
+        //WEEKDAYS_MONDAY    = 2,
+        //WEEKDAYS_TUESDAY   = 3,
+        //WEEKDAYS_WEDNESDAY = 4,
+        //WEEKDAYS_THURSDAY  = 5,
+        //WEEKDAYS_FRIDAY    = 6,
+        //WEEKDAYS_SATURDAY  = 7
+    //};
     struct ImportantDate
     {
         const char *text;
@@ -264,7 +264,7 @@ private: //variables
                                       4,  7, 13};
 
 private: //variables continued
-    byte mQtyImportantDatesToReport              {};
+    byte mQtyImportantDatesToReport              {0};
     ImportantDate const * mDatesToReportList[QTY_IMPORTANT_DATES] {};
     //mDatesToReportList array is large enough to hold pointers to every event if needed.
     byte mTodaySunriseHour   {0};
@@ -295,6 +295,7 @@ public:  //methods
 
 void Calendar::init()
 {
+    mQtyImportantDatesToReport = 0;
     loadImportantDates();
     setSunriseSunset();
     mDaylightSavingsTime = isDaylightSavingsTime(gRTC_reading);

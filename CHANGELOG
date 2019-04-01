@@ -205,3 +205,4 @@ idea:  a function that takes these parameters (min/max voltage allowable time mi
 04-01-19-10:59 added MySerial::printFullDateTime
 04-01-19-12:33 added Calendar::daylightSavingCheck()
 04-01-19-13:16 clock sync and calendar.init added to manual time adjustments
+04-01-19-18:49 fixed incorrect events after manual time change
