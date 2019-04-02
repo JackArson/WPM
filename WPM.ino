@@ -27,10 +27,8 @@
 #include <DS1307RTC.h> //object pre-initialized as 'RTC' in header file 
 #include <Wire.h>
 
+//create liquidcrystali2c object
 LiquidCrystal_I2C  liquidcrystali2c(0x27, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);  
-
-//globals
-//tmElements_t       gRTC_reading;             //the current time
 
 namespace Pin
 {                              
@@ -51,7 +49,7 @@ namespace Pin
 class Clock
 {
 private: //variables
-    tmElements_t       mRTC_Reading;             //the current time
+    tmElements_t mRTC_Reading;             //the current time
 public:  //methods
     void         changeHour            (int hour);
     void         changeMinute          (int minute);
@@ -59,7 +57,8 @@ public:  //methods
     void         changeDay             (int day);
     void         changeMonth           (int month);
     void         changeYear            (int year);
-    tmElements_t getNowElements        ();
+    tmElements_t getElements           ();
+    int          getHour               ();
     void         syncTimeWithRTC_Clock ();
 }clock;
 
@@ -140,9 +139,14 @@ void Clock::changeYear(int year)
     syncTimeWithRTC_Clock();
 }
 
-tmElements_t Clock::getNowElements()
+tmElements_t Clock::getElements()
 {
     return mRTC_Reading;
+}
+
+int Clock::getHour()
+{
+    return mRTC_Reading.Hour;
 }
 
 
@@ -296,7 +300,7 @@ public:  //methods
 void Calendar::init()
 {
     mQtyImportantDatesToReport = 0;
-    mDaylightSavingsTime = isDaylightSavingsTime(clock.getNowElements());
+    mDaylightSavingsTime = isDaylightSavingsTime(clock.getElements());
     loadImportantDates();
     setSunriseSunset();
 }
@@ -304,7 +308,7 @@ void Calendar::init()
 Calendar::DST_Action Calendar::daylightSavingCheck()
 {
     bool last_DST_reading {mDaylightSavingsTime};
-    bool this_DST_reading {isDaylightSavingsTime(clock.getNowElements())};
+    bool this_DST_reading {isDaylightSavingsTime(clock.getElements())};
     if      (last_DST_reading == true && this_DST_reading == true)
     {
         return Calendar::DST_Action::DST_ACTION_NONE;
@@ -572,7 +576,7 @@ void Calendar::loadImportantDates()
         event_anniversary.Minute = 0;
         event_anniversary.Second = 0;
         //align year
-        event_anniversary.Year   = clock.getNowElements().Year;
+        event_anniversary.Year   = clock.getElements().Year;
         //get day and month
         event_anniversary.Day    = mImportantDateList[i].day;
         event_anniversary.Month  = mImportantDateList[i].month;
@@ -592,7 +596,7 @@ void Calendar::loadImportantDates()
 
 void Calendar::setSunriseSunset()
 {
-    const int week_number {getWeekNumber(clock.getNowElements())};
+    const int week_number {getWeekNumber(clock.getElements())};
     mTodaySunriseHour   = mTableSunriseHours[week_number] + mDaylightSavingsTime;
     mTodaySunriseMinute = mTableSunriseMinutes[week_number];
     mTodaySunsetHour    = mTableSunsetHours[week_number] + mDaylightSavingsTime;
@@ -737,23 +741,23 @@ void MySerial::printFullDateTime (const time_t timestamp)
 
 void MySerial::printTimestamp()
 {    
-    if (clock.getNowElements().Hour <= 9)
+    if (clock.getHour() <= 9)
     {
         Serial.print(F("0"));
     }
-    Serial.print(clock.getNowElements().Hour);
+    Serial.print(clock.getElements().Hour);
     Serial.print(F(":"));
-    if (clock.getNowElements().Minute <= 9)
+    if (clock.getElements().Minute <= 9)
     {
         Serial.print(F("0"));
     }
-    Serial.print(clock.getNowElements().Minute);
+    Serial.print(clock.getElements().Minute);
     Serial.print(F(":"));
-    if (clock.getNowElements().Second <= 9)
+    if (clock.getElements().Second <= 9)
     {
         Serial.print(F("0"));
    }
-   Serial.print(clock.getNowElements().Second);
+   Serial.print(clock.getElements().Second);
    Serial.print(F("  "));
 }
 
@@ -812,7 +816,7 @@ void MyLCD::drawDisplay()
     //updateBacklight();
     Coordinant coordinant {12, 3};
     const bool right_justify    {true};
-    printClock(clock.getNowElements(), coordinant, right_justify);
+    printClock(clock.getElements(), coordinant, right_justify);
     coordinant = {0, 3};
     printDate(coordinant);
     printLDRresults();
@@ -888,14 +892,14 @@ void MyLCD::printImportantDate(const Calendar::ImportantDate* importantdate)
     String bottom_line (F(""));
     //build a time_t of event for a tommorrow comparison
     tmElements_t event {};
-    event.Year  = clock.getNowElements().Year;
+    event.Year  = clock.getElements().Year;
     event.Month = importantdate->month;
     event.Day   = importantdate->day;
     time_t event_time_t {makeTime(event)};
     time_t right_now {now()};
     time_t tommorrow_begins {nextMidnight(right_now)};
     time_t tommorrow_ends   {nextMidnight(right_now) + SECS_PER_DAY};
-    if (importantdate->day == clock.getNowElements().Day)
+    if (importantdate->day == clock.getElements().Day)
     {        
         bottom_line = F("today");
     }
@@ -910,7 +914,7 @@ void MyLCD::printImportantDate(const Calendar::ImportantDate* importantdate)
         //event.Hour  = 0;
         event.Day   = importantdate->day;
         event.Month = importantdate->month;
-        event.Year  = clock.getNowElements().Year;
+        event.Year  = clock.getElements().Year;
         time_t event_unix {makeTime(event)};
         myserial.printFullDateTime(event_unix);
         const byte day_of_week (weekday(event_unix));
@@ -1009,21 +1013,6 @@ void MyLCD::printStateChangeDelayCounter(const int timer_value)
     liquidcrystali2c.print(timer_value); // print the counter
 }
 
-//void MyLCD::updateBacklight()
-//{
-    //byte hour_to_turn_on_backlight  {4};
-    //byte hour_to_turn_off_backlight {21};
-    //if (gRTC_reading.Hour >= hour_to_turn_on_backlight &&
-        //gRTC_reading.Hour < hour_to_turn_off_backlight)
-    //{ 
-        //liquidcrystali2c.backlight();
-    //}
-    //else
-    //{
-        //liquidcrystali2c.noBacklight();
-    //}
-//}
-
 void MyLCD::printClock(const TimeElements time,
                        const Coordinant coordinant,
                        const bool right_justify)
@@ -1038,9 +1027,9 @@ void MyLCD::printDate(const Coordinant coordinant)
     liquidcrystali2c.setCursor(coordinant.x, coordinant.y); 
     liquidcrystali2c.print(dayShortStr(weekday()));
     liquidcrystali2c.print(F(", "));
-    liquidcrystali2c.print(calendar.getMonthShortName(clock.getNowElements().Month));    
+    liquidcrystali2c.print(calendar.getMonthShortName(clock.getElements().Month));    
     liquidcrystali2c.print(F(" "));
-    liquidcrystali2c.print((clock.getNowElements().Day));
+    liquidcrystali2c.print((clock.getElements().Day));
     liquidcrystali2c.print(F(" "));  //this space to clear last digit when month rolls over (31 to 1) 
 }
 //==end of MyLCD=============================================================================
@@ -1080,9 +1069,9 @@ bool Timing::isIt2AM()
     {
         Serial.print("L");
     }    
-    if (clock.getNowElements().Hour   == 2 &&
-        clock.getNowElements().Minute == 0 &&
-        clock.getNowElements().Second == 0 &&
+    if (clock.getElements().Hour   == 2 &&
+        clock.getElements().Minute == 0 &&
+        clock.getElements().Second == 0 &&
         m2AM_LockoutCounter == false)
     {
         //set m2AM_LockoutCounter for one second so this won't check again until
@@ -1205,13 +1194,13 @@ void Voltmeter::main()
     if (mVoltage > mMax.voltage)
     { 
         mMax.voltage   = mVoltage;
-        mMax.timestamp = clock.getNowElements();
+        mMax.timestamp = clock.getElements();
         Serial.print(" New daily high just set.");
     }
     if (mVoltage < mMin.voltage)
     {
         mMin.voltage   = mVoltage; 
-        mMin.timestamp = clock.getNowElements();
+        mMin.timestamp = clock.getElements();
         Serial.print(" New daily low just set.");
     }   
 }
@@ -1236,9 +1225,9 @@ void Voltmeter::initDailyStatistics()
     if (mVoltage)
     {
         mMin.voltage = mVoltage;
-        mMin.timestamp = clock.getNowElements();
+        mMin.timestamp = clock.getElements();
         mMax.voltage = mVoltage;
-        mMax.timestamp = clock.getNowElements();
+        mMax.timestamp = clock.getElements();
     }
     else
     {
