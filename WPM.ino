@@ -30,7 +30,7 @@
 LiquidCrystal_I2C  liquidcrystali2c(0x27, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);  
 
 //globals
-tmElements_t       gRTC_reading;             //the current time
+//tmElements_t       gRTC_reading;             //the current time
 
 namespace Pin
 {                              
@@ -50,21 +50,24 @@ namespace Pin
 
 class Clock
 {
+private: //variables
+    tmElements_t       mRTC_Reading;             //the current time
 public:  //methods
-    void        changeHour            (int hour);
-    void        changeMinute          (int minute);
-    void        changeSecond          (int second);
-    void        changeDay             (int day);
-    void        changeMonth           (int month);
-    void        changeYear            (int year);
-    void        syncTimeWithRTC_Clock ();
+    void         changeHour            (int hour);
+    void         changeMinute          (int minute);
+    void         changeSecond          (int second);
+    void         changeDay             (int day);
+    void         changeMonth           (int month);
+    void         changeYear            (int year);
+    tmElements_t getNowElements        ();
+    void         syncTimeWithRTC_Clock ();
 }clock;
 
 void Clock::changeHour(int hour)
 {
     constrain(hour, 0, 23);
     //make a copy of current reading
-    tmElements_t current_RTC_reading {gRTC_reading};
+    tmElements_t current_RTC_reading {mRTC_Reading};
     //change hour
     current_RTC_reading.Hour = hour;
     //convert to time_t
@@ -77,7 +80,7 @@ void Clock::changeMinute(int minute)
 {
     constrain(minute, 0, 59);
     //make a copy of current reading
-    tmElements_t current_RTC_reading {gRTC_reading};
+    tmElements_t current_RTC_reading {mRTC_Reading};
     //change minute
     current_RTC_reading.Minute = minute;
     //convert to time_t
@@ -90,7 +93,7 @@ void Clock::changeSecond(int second)
 {
     constrain(second, 0, 59);
     //make a copy of current reading
-    tmElements_t current_RTC_reading {gRTC_reading};
+    tmElements_t current_RTC_reading {mRTC_Reading};
     //change second
     current_RTC_reading.Second = second;
     //convert to time_t
@@ -103,7 +106,7 @@ void Clock::changeDay(int day)
 {
     constrain(day, 0, 31);
     //make a copy of current reading
-    tmElements_t current_RTC_reading {gRTC_reading};
+    tmElements_t current_RTC_reading {mRTC_Reading};
     //change second
     current_RTC_reading.Day = day;
     //convert to time_t
@@ -116,7 +119,7 @@ void Clock::changeMonth(int month)
 {
     constrain(month, 1, 12);
     //make a copy of current reading
-    tmElements_t current_RTC_reading {gRTC_reading};
+    tmElements_t current_RTC_reading {mRTC_Reading};
     //change second
     current_RTC_reading.Month = month;
     //convert to time_t
@@ -128,7 +131,7 @@ void Clock::changeMonth(int month)
 void Clock::changeYear(int year)
 {
     //make a copy of current reading
-    tmElements_t current_RTC_reading {gRTC_reading};
+    tmElements_t current_RTC_reading {mRTC_Reading};
     //change second
     current_RTC_reading.Year = year;
     //convert to time_t
@@ -137,12 +140,17 @@ void Clock::changeYear(int year)
     syncTimeWithRTC_Clock();
 }
 
+tmElements_t Clock::getNowElements()
+{
+    return mRTC_Reading;
+}
+
+
 void Clock::syncTimeWithRTC_Clock()
 {
-    if (RTC.read(gRTC_reading))
+    if (RTC.read(mRTC_Reading))
     {
-        setTime(RTC.get());
-        
+        setTime(RTC.get());        
     }
     else
     {
@@ -288,7 +296,7 @@ public:  //methods
 void Calendar::init()
 {
     mQtyImportantDatesToReport = 0;
-    mDaylightSavingsTime = isDaylightSavingsTime(gRTC_reading);
+    mDaylightSavingsTime = isDaylightSavingsTime(clock.getNowElements());
     loadImportantDates();
     setSunriseSunset();
 }
@@ -296,7 +304,7 @@ void Calendar::init()
 Calendar::DST_Action Calendar::daylightSavingCheck()
 {
     bool last_DST_reading {mDaylightSavingsTime};
-    bool this_DST_reading {isDaylightSavingsTime(gRTC_reading)};
+    bool this_DST_reading {isDaylightSavingsTime(clock.getNowElements())};
     if      (last_DST_reading == true && this_DST_reading == true)
     {
         return Calendar::DST_Action::DST_ACTION_NONE;
@@ -564,7 +572,7 @@ void Calendar::loadImportantDates()
         event_anniversary.Minute = 0;
         event_anniversary.Second = 0;
         //align year
-        event_anniversary.Year   = gRTC_reading.Year;
+        event_anniversary.Year   = clock.getNowElements().Year;
         //get day and month
         event_anniversary.Day    = mImportantDateList[i].day;
         event_anniversary.Month  = mImportantDateList[i].month;
@@ -584,7 +592,7 @@ void Calendar::loadImportantDates()
 
 void Calendar::setSunriseSunset()
 {
-    const int week_number {getWeekNumber(gRTC_reading)};
+    const int week_number {getWeekNumber(clock.getNowElements())};
     mTodaySunriseHour   = mTableSunriseHours[week_number] + mDaylightSavingsTime;
     mTodaySunriseMinute = mTableSunriseMinutes[week_number];
     mTodaySunsetHour    = mTableSunsetHours[week_number] + mDaylightSavingsTime;
@@ -689,14 +697,10 @@ bool MySerial::checkForUserInput()
             time_command_feedback += " changed to ";
             time_command_feedback += value;
             Serial.println(time_command_feedback);
-            Serial.println("Now: ");
+            Serial.print("Now: ");
             printFullDateTime(now());
+            calendar.init();
         }
-        return true;    
-    }
-    else
-    {
-        return false;  
     }
 }
 
@@ -733,23 +737,23 @@ void MySerial::printFullDateTime (const time_t timestamp)
 
 void MySerial::printTimestamp()
 {    
-    if (gRTC_reading.Hour <= 9)
+    if (clock.getNowElements().Hour <= 9)
     {
         Serial.print(F("0"));
     }
-    Serial.print(gRTC_reading.Hour);
+    Serial.print(clock.getNowElements().Hour);
     Serial.print(F(":"));
-    if (gRTC_reading.Minute <= 9)
+    if (clock.getNowElements().Minute <= 9)
     {
         Serial.print(F("0"));
     }
-    Serial.print(gRTC_reading.Minute);
+    Serial.print(clock.getNowElements().Minute);
     Serial.print(F(":"));
-    if (gRTC_reading.Second <= 9)
+    if (clock.getNowElements().Second <= 9)
     {
         Serial.print(F("0"));
    }
-   Serial.print(gRTC_reading.Second);
+   Serial.print(clock.getNowElements().Second);
    Serial.print(F("  "));
 }
 
@@ -808,7 +812,7 @@ void MyLCD::drawDisplay()
     //updateBacklight();
     Coordinant coordinant {12, 3};
     const bool right_justify    {true};
-    printClock(gRTC_reading, coordinant, right_justify);
+    printClock(clock.getNowElements(), coordinant, right_justify);
     coordinant = {0, 3};
     printDate(coordinant);
     printLDRresults();
@@ -884,14 +888,14 @@ void MyLCD::printImportantDate(const Calendar::ImportantDate* importantdate)
     String bottom_line (F(""));
     //build a time_t of event for a tommorrow comparison
     tmElements_t event {};
-    event.Year  = gRTC_reading.Year;
+    event.Year  = clock.getNowElements().Year;
     event.Month = importantdate->month;
     event.Day   = importantdate->day;
     time_t event_time_t {makeTime(event)};
     time_t right_now {now()};
     time_t tommorrow_begins {nextMidnight(right_now)};
     time_t tommorrow_ends   {nextMidnight(right_now) + SECS_PER_DAY};
-    if (importantdate->day == gRTC_reading.Day)
+    if (importantdate->day == clock.getNowElements().Day)
     {        
         bottom_line = F("today");
     }
@@ -906,7 +910,7 @@ void MyLCD::printImportantDate(const Calendar::ImportantDate* importantdate)
         //event.Hour  = 0;
         event.Day   = importantdate->day;
         event.Month = importantdate->month;
-        event.Year  = gRTC_reading.Year;
+        event.Year  = clock.getNowElements().Year;
         time_t event_unix {makeTime(event)};
         myserial.printFullDateTime(event_unix);
         const byte day_of_week (weekday(event_unix));
@@ -1034,9 +1038,9 @@ void MyLCD::printDate(const Coordinant coordinant)
     liquidcrystali2c.setCursor(coordinant.x, coordinant.y); 
     liquidcrystali2c.print(dayShortStr(weekday()));
     liquidcrystali2c.print(F(", "));
-    liquidcrystali2c.print(calendar.getMonthShortName(gRTC_reading.Month));    
+    liquidcrystali2c.print(calendar.getMonthShortName(clock.getNowElements().Month));    
     liquidcrystali2c.print(F(" "));
-    liquidcrystali2c.print((gRTC_reading.Day));
+    liquidcrystali2c.print((clock.getNowElements().Day));
     liquidcrystali2c.print(F(" "));  //this space to clear last digit when month rolls over (31 to 1) 
 }
 //==end of MyLCD=============================================================================
@@ -1076,9 +1080,9 @@ bool Timing::isIt2AM()
     {
         Serial.print("L");
     }    
-    if (gRTC_reading.Hour   == 2 &&
-        gRTC_reading.Minute == 0 &&
-        gRTC_reading.Second == 0 &&
+    if (clock.getNowElements().Hour   == 2 &&
+        clock.getNowElements().Minute == 0 &&
+        clock.getNowElements().Second == 0 &&
         m2AM_LockoutCounter == false)
     {
         //set m2AM_LockoutCounter for one second so this won't check again until
@@ -1201,13 +1205,13 @@ void Voltmeter::main()
     if (mVoltage > mMax.voltage)
     { 
         mMax.voltage   = mVoltage;
-        mMax.timestamp = gRTC_reading;
+        mMax.timestamp = clock.getNowElements();
         Serial.print(" New daily high just set.");
     }
     if (mVoltage < mMin.voltage)
     {
         mMin.voltage   = mVoltage; 
-        mMin.timestamp = gRTC_reading;
+        mMin.timestamp = clock.getNowElements();
         Serial.print(" New daily low just set.");
     }   
 }
@@ -1232,9 +1236,9 @@ void Voltmeter::initDailyStatistics()
     if (mVoltage)
     {
         mMin.voltage = mVoltage;
-        mMin.timestamp = gRTC_reading;
+        mMin.timestamp = clock.getNowElements();
         mMax.voltage = mVoltage;
-        mMax.timestamp = gRTC_reading;
+        mMax.timestamp = clock.getNowElements();
     }
     else
     {
@@ -2015,14 +2019,9 @@ void setup()
                
 void loop()
 {
-    RTC.read(gRTC_reading);  //gRTC_reading set by reference
+    clock.syncTimeWithRTC_Clock();  
     voltmeter.readVoltage();
-    if (myserial.checkForUserInput())
-    {
-        //prevent messagemanager from pointing to missing messages
-        //after serial time changes
-        messagemanager.init();  
-    }
+    myserial.checkForUserInput();
     tracklight.readDimmerSwitch();
     tracklight.setLightLevel();
     if (timing.isDissolveReady())
@@ -2032,7 +2031,7 @@ void loop()
     //This code runs every second (1000ms)
     if (timing.hasOneSecondPassed())   
     {
-        clock.syncTimeWithRTC_Clock();
+        //clock.syncTimeWithRTC_Clock();
         timing.updateCounters();    
         mylcd.drawDisplay();
         //print messages (if any are ready)
@@ -2055,6 +2054,7 @@ void loop()
             const int for_over_an_hour (SECS_PER_HOUR + 1); //one hour one second
             timing.lockout2AM(for_over_an_hour);
         }
+        messagemanager.init();  
         calendar.init();
     }
 }
