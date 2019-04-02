@@ -1048,17 +1048,16 @@ private: //variables
     int          m2AM_LockoutCounter      {};
     //timestamps
     time_t       mDissolveTimestamp       {};
-    //time_t       m2AM_Timestamp           {};
-    tmElements_t mOneSecondTimestamp      {};        //to control 1000ms loop
+    time_t       mOneSecondTimestamp      {}; //to control 1s loop
     
 public:  //methods
     byte getStateChangeDelayCounter           ();
+    bool hasOneSecondPassed   ();
     bool isIt2AM              (); 
     bool isDissolveReady      ();
-    bool hasOneSecondPassed   ();
-    void lockout2AM           (int lockout_seconds);
-    void update               ();
-    void setCountdownTimer    (byte x); 
+    void lockout2AM           (int lockout_seconds);    
+    void setCountdownTimer    (byte x);
+    void updateCounters       ();
 private: //methods
     
 
@@ -1110,10 +1109,10 @@ bool Timing::isDissolveReady()
 
 bool Timing::hasOneSecondPassed()
 {
-    if (mOneSecondTimestamp.Second != gRTC_reading.Second) 
+    if (mOneSecondTimestamp != now()) 
     {
         //set up 1000ms delay for the next loop
-        mOneSecondTimestamp = gRTC_reading;
+        mOneSecondTimestamp = now();
         return true;
     }
     else
@@ -1130,9 +1129,14 @@ void Timing::lockout2AM(int lockout_seconds)
     Serial.print(" seconds");
 }
 
-void Timing::update()
+void Timing::setCountdownTimer(byte x)
 {
-    //this runs once per second
+    mStateChangeDelayCounter = x;
+}
+
+void Timing::updateCounters()
+{
+    //this runs once every second
     mylcd.printStateChangeDelayCounter(mStateChangeDelayCounter);
     //decrement counters
     if (mStateChangeDelayCounter > 0)
@@ -1143,11 +1147,6 @@ void Timing::update()
     {
         --m2AM_LockoutCounter;
     }
-}
-
-void Timing::setCountdownTimer(byte x)
-{
-    mStateChangeDelayCounter = x;
 }
 //==end of Timing============================================================================
 
@@ -1755,26 +1754,19 @@ void MessageManager::main()
             const int sytem_message_index {mCurrentMessageIndex - calendar_messages};
             switch (sytem_message_index)
             {
-                case 0: //voltage record high and low
-                    messageVoltageExtremes();
-                    break;
-                case 1:
-                    messageSunriseSunset();
-                    break;
-                case 2:
-                    messageInverterRunTime();
-                    break;
-                case 3:
-                    Serial.println(sytem_message_index);
-                    break;
-                case 4:
-                    Serial.println(sytem_message_index);
-                    break;
-                //case 5:
-                    //Serial.println(sytem_message_index);
-                    //break;
-                default:
-                    break;
+            case 0: //voltage record high and low
+                messageVoltageExtremes();
+                break;
+            case 1:
+                messageSunriseSunset();
+                break;
+            case 2:
+                messageInverterRunTime();
+                break;
+            default:
+                Serial.println(F("MessageManager::main  Message index was too high"));
+                mCurrentMessageIndex = 0;
+                break;
             }            
         }
         //adjust index
@@ -1789,60 +1781,56 @@ void MessageManager::main()
 void MessageManager::messageInverterRunTime()
 {
     const int inverter_run_time {mystatemachine.getInverterRunTime()};
-    String top_line    {"Inverter harvested"};
+    String top_line    {F("Inverter harvested")};
     String bottom_line {""};
-    const int one_minute     {60};
-    const int one_hour       {one_minute * 60};
     if (inverter_run_time == 0)
     {
-        top_line    = "Inverter waiting";
-        bottom_line = "no harvest yet";
+        top_line    = F("Inverter waiting");
+        bottom_line = F("no harvest yet");
     }
-    //report in seconds
-    else if (inverter_run_time < one_minute)
+    //report run time in seconds
+    else if (inverter_run_time < SECS_PER_MIN)
     {
         const String seconds     {inverter_run_time};
-        bottom_line = seconds + " second";
+        bottom_line = seconds + F(" second");
         if (inverter_run_time > 1)
         {
-            bottom_line += 's';
-        }
-         
+            bottom_line += F("s");
+        }         
     }
-    //report in minutes
-    else if (inverter_run_time < one_hour)
+    //report run time in minutes
+    else if (inverter_run_time < SECS_PER_HOUR)
     {
-        const int minutes        {inverter_run_time / one_minute};
+        const int minutes        (inverter_run_time / SECS_PER_MIN);
         const String minutes_str {minutes};
-        bottom_line = minutes_str + " minute";
+        bottom_line = minutes_str + F(" minute");
         if (minutes > 1)
         {
-            bottom_line += 's';
+            bottom_line += F("s");
         }
-        
     }
-    //report in hours and minutes
-    else if (inverter_run_time >= one_hour)
+    //report run time in hours and minutes
+    else if (inverter_run_time >= SECS_PER_HOUR)
     {
-        const int  run_minutes        {inverter_run_time / one_minute};
-        const int  minutes_in_an_hour {60};
-        const int  run_hours          {run_minutes / minutes_in_an_hour};
-        const int  remainder_minutes  {run_minutes - (run_hours * minutes_in_an_hour)};
-        const String run_hours_string {run_hours};
-        bottom_line = run_hours_string + " hour"; 
+        const int     run_minutes        (inverter_run_time / SECS_PER_MIN);
+        const int     minutes_in_an_hour {60};
+        const int     run_hours          {run_minutes / minutes_in_an_hour};
+        const int     remainder_minutes  {run_minutes - (run_hours * minutes_in_an_hour)};
+        const String  run_hours_string   {run_hours};
+        bottom_line = run_hours_string + F(" hour"); 
         if (run_hours > 1)
         {
-            bottom_line += 's';
+            bottom_line += F("s");
         }
         if (remainder_minutes)
         {
-            bottom_line += ' ';
+            bottom_line += F(" ");
             const String run_minutes_string {remainder_minutes};
             bottom_line += run_minutes_string;
-            bottom_line += " minute";
+            bottom_line += F(" minute");
             if (remainder_minutes > 1)
             {
-                bottom_line += 's';
+                bottom_line += F("s");
             }
         }
     }
@@ -1852,10 +1840,12 @@ void MessageManager::messageInverterRunTime()
 
 void MessageManager::messageSunriseSunset()
 {
+    const String sunrise {F("Sunrise ")};
     const String sunrise_clock_string {calendar.getSunriseClockString()};
-    const String top_line {"Sunrise " + sunrise_clock_string};
+    const String top_line {sunrise + sunrise_clock_string};
+    const String sunset {F("Sunset ")};
     const String sunset_clock_string {calendar.getSunsetClockString()};
-    const String bottom_line {"Sunset  " + sunset_clock_string};
+    const String bottom_line {sunset + sunset_clock_string};
     mylcd.dissolveThis(top_line, bottom_line);
 }
 
@@ -1916,13 +1906,10 @@ void TrackLight::readDimmerSwitch()
         //check for a mLargeAdjustment in the dimmer switch
         if(largeAdjustmentDetected(dimmer_reading))
         {
+            //change state
             mTrackLightState = TRACKLIGHTSTATE_READING_NEW_INPUT;
             //set timer
             mAdjustmentWindowTimestamp = millis();
-        }
-        else
-        {
-            return;
         }
     }
     else if (mTrackLightState == TRACKLIGHTSTATE_READING_NEW_INPUT)
@@ -1973,7 +1960,6 @@ bool TrackLight::largeAdjustmentDetected(const int dimmer_reading)
     }
 }
 
-
 int TrackLight::regulateVoltage(const int input_level)
 {
     //Keeps the light output consistent with varying input voltages.
@@ -2009,8 +1995,12 @@ void setup()
     Serial.println(F("controller."));
     Serial.println(F("                                                   -Paul 03.22.2019"));
     Serial.println();
-    Wire.begin();                      // start the Wire library
-    liquidcrystali2c.begin(20, 4);     // start the LiquidCrystal_I2C library
+    //start the Wire library
+    Wire.begin();
+    //start the LiquidCrystal_I2C library
+    const int lcd_columns {20};
+    const int lcd_rows    { 4};
+    liquidcrystali2c.begin(lcd_columns, lcd_rows);
     clock.syncTimeWithRTC_Clock();
     voltmeter.readVoltage();
     voltmeter.initDailyStatistics();
@@ -2024,7 +2014,6 @@ void setup()
     pinMode (Pin::workbench_lighting, OUTPUT);
     pinMode (Pin::stage_one_inverter_relay, OUTPUT);
     pinMode (Pin::stage_two_inverter_relay, OUTPUT);
-    //Serial.print(year());
 }
                
 void loop()
@@ -2033,8 +2022,8 @@ void loop()
     voltmeter.readVoltage();
     if (myserial.checkForUserInput())
     {
-        //prevents messagemanager from pointing to missing messages
-        //after a serial time changes
+        //prevent messagemanager from pointing to missing messages
+        //after serial time changes
         messagemanager.init();  
     }
     tracklight.readDimmerSwitch();
@@ -2043,17 +2032,17 @@ void loop()
     {
         mylcd.dissolveEffect();
     }
-    if (timing.hasOneSecondPassed())   //This code runs every second (1000ms)
+    //This code runs every second (1000ms)
+    if (timing.hasOneSecondPassed())   
     {
         clock.syncTimeWithRTC_Clock();
-        timing.update();           //update countdown timer
+        timing.updateCounters();    
         mylcd.drawDisplay();
-        messagemanager.main();     //print messages if any are ready
-        //begin serial report
+        //print messages (if any are ready)
+        messagemanager.main();
         myserial.printTimestamp(); //print timestamp
         voltmeter.main();          //print voltage
         mystatemachine.main();     //print state changes
-        //end of serial report,      print new line
         Serial.println();
     }
     if (timing.isIt2AM())
@@ -2066,7 +2055,7 @@ void loop()
             //The check for 2AM must therefore be skipped for over an hour so the
             //program does not get caught in a repetitive loop.
             //SECS_PER_HOUR is defined in the time library.
-            const time_t for_over_an_hour (SECS_PER_HOUR + 1); //one hour one second
+            const int for_over_an_hour (SECS_PER_HOUR + 1); //one hour one second
             timing.lockout2AM(for_over_an_hour);
         }
         calendar.init();

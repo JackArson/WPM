@@ -212,3 +212,4 @@ idea:  a function that takes these parameters (min/max voltage allowable time mi
 04-02-19-09:43 Calendar refactor
 04-02-19-10:56 + MyLCD::printStateChangeDelayCounter
 04-02-19-11:05 Timing refactor
+04-02-19-11:53 MessageManager refactor
