@@ -142,6 +142,7 @@ void Clock::syncTimeWithRTC_Clock()
     if (RTC.read(gRTC_reading))
     {
         setTime(RTC.get());
+        
     }
     else
     {
@@ -883,19 +884,15 @@ void MyLCD::printImportantDate(const Calendar::ImportantDate* importantdate)
     String bottom_line (F(""));
     //build a time_t of event for a tommorrow comparison
     tmElements_t event {};
-    event.Year  = year();
+    event.Year  = gRTC_reading.Year;
     event.Month = importantdate->month;
     event.Day   = importantdate->day;
     time_t event_time_t {makeTime(event)};
     time_t right_now {now()};
     time_t tommorrow_begins {nextMidnight(right_now)};
     time_t tommorrow_ends   {nextMidnight(right_now) + SECS_PER_DAY};
-    if (importantdate->day == day())
-    {
-        Serial.print("MyLCD::printImportantDate today ");
-        Serial.print(importantdate->day);
-        Serial.print(" and ");
-        Serial.print(day());
+    if (importantdate->day == gRTC_reading.Day)
+    {        
         bottom_line = F("today");
     }
     else if (event_time_t >= tommorrow_begins &&
@@ -909,7 +906,7 @@ void MyLCD::printImportantDate(const Calendar::ImportantDate* importantdate)
         event.Hour  = 0;
         event.Day   = importantdate->day;
         event.Month = importantdate->month;
-        event.Year  = year() - 1970;
+        event.Year  = gRTC_reading.Year - 1970;
         time_t event_unix {makeTime(event)};
         myserial.printFullDateTime(event_unix);
         const byte day_of_week (weekday(event_unix));
