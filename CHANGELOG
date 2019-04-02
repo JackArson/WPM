@@ -210,3 +210,4 @@ idea:  a function that takes these parameters (min/max voltage allowable time mi
 04-01-19-19:13 fixed incorrect sunrise/sunsets after manual time change2
 04-01-19-19:43 fixed today events not appearing after resets
 04-02-19-09:43 Calendar refactor
+04-02-19-10:56 + MyLCD::printStateChangeDelayCounter

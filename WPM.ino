@@ -549,6 +549,7 @@ bool Calendar::isDaylightSavingsTime(tmElements_t input_date)
 
 void Calendar::loadImportantDates()
 {
+    mQtyImportantDatesToReport = 0;  //reset this variable
     //load all events in the search_window_days
     const time_t search_window_days {14};
     //const time_t seconds_in_a_day   {86400};
@@ -789,20 +790,21 @@ public:
     void   drawDisplay        ();
     void   dissolveEffect     ();
     void   dissolveThis       (String top_line, String bottom_line);
-    void   printDateSuffix    (const byte         day_of_month);
-    void   printImportantDate (const Calendar::ImportantDate* importantdate);
     void   printClock         (const TimeElements time,
                                const Coordinant   coordinant,
                                const bool         right_justify);
     void   printDate          (const Coordinant   coordinant);
+    void   printDateSuffix    (const byte numeral);
+    void   printImportantDate (const Calendar::ImportantDate* importantdate);
     void   printLDRresults    ();
-    void   updateBacklight    ();
+    void   printStateChangeDelayCounter (const int timer_value);
+    //void   updateBacklight    ();
     String centerText         (const String text);
 }mylcd;
 
 void MyLCD::drawDisplay()
 {
-    updateBacklight();
+    //updateBacklight();
     Coordinant coordinant {12, 3};
     const bool right_justify    {true};
     printClock(gRTC_reading, coordinant, right_justify);
@@ -843,16 +845,16 @@ void MyLCD::dissolveThis(String top_line, String bottom_line)
     Serial.println(mMessageBottomLine);
 }
 
-void MyLCD::printDateSuffix(byte day_of_month)
+void MyLCD::printDateSuffix(byte numeral)
 {
-    const char *suffix {calendar.getDaySuffix(day_of_month)};
+    const char *suffix {calendar.getDaySuffix(numeral)};
     liquidcrystali2c.print(suffix);
 }
 
 void MyLCD::printImportantDate(const Calendar::ImportantDate* importantdate)
 {
     //format top line
-    String top_line            (importantdate->text); //Paul
+    String top_line            (importantdate->text); //Paul & Mena
     switch (importantdate->event_type)
     {
         case Calendar::EVENTTYPE_ANNIVERSARY:
@@ -930,7 +932,7 @@ String MyLCD::centerText(const String text)
     if (string_length > mLCD_Width)
     {
         //string is too long
-        Serial.println(F("MyLCD::centerText  String is larger than screen width"));
+        Serial.println(F("MyLCD::centerText  String was larger than screen width"));
         const String end {text.substring(mLCD_Width)};
         const String front {text.substring(0, mLCD_Width - 1)};
         Serial.print(F("MyLCD::centerText  Removed \""));
@@ -987,20 +989,35 @@ void MyLCD::printLDRresults()
     }
 }
 
-void MyLCD::updateBacklight()
+void MyLCD::printStateChangeDelayCounter(const int timer_value)
 {
-    byte hour_to_turn_on_backlight  {4};
-    byte hour_to_turn_off_backlight {21};
-    if (gRTC_reading.Hour >= hour_to_turn_on_backlight &&
-        gRTC_reading.Hour < hour_to_turn_off_backlight)
-    { 
-        liquidcrystali2c.backlight();
-    }
-    else
+    liquidcrystali2c.setCursor(8, 0);
+    if (timer_value == 0)
     {
-        liquidcrystali2c.noBacklight();
+        liquidcrystali2c.print(F("  "));// no counter, so clear the number
+        return;
     }
+    else if (timer_value <= 9)
+    {
+        liquidcrystali2c.print(F(" ")); // clear the first space if a single digit
+    }
+    liquidcrystali2c.print(timer_value); // print the counter
 }
+
+//void MyLCD::updateBacklight()
+//{
+    //byte hour_to_turn_on_backlight  {4};
+    //byte hour_to_turn_off_backlight {21};
+    //if (gRTC_reading.Hour >= hour_to_turn_on_backlight &&
+        //gRTC_reading.Hour < hour_to_turn_off_backlight)
+    //{ 
+        //liquidcrystali2c.backlight();
+    //}
+    //else
+    //{
+        //liquidcrystali2c.noBacklight();
+    //}
+//}
 
 void MyLCD::printClock(const TimeElements time,
                        const Coordinant coordinant,
@@ -1026,17 +1043,18 @@ void MyLCD::printDate(const Coordinant coordinant)
 class Timing
 {
 private: //variables
-    byte         mCounter               {0};
-    time_t       mDissolveTimestamp     {0};
-    time_t       m2AM_Timestamp         {0};
-    tmElements_t mOneHertzLoopTimestamp {0};        //to control 1000ms loop
-    time_t       mLockoutExpires        {0};
+    byte         mStateChangeDelayCounter {};
+    int          m2AM_LockoutTimer        {};
+    time_t       mDissolveTimestamp       {};
+    time_t       m2AM_Timestamp           {};
+    tmElements_t mOneHertzLoopTimestamp   {};        //to control 1000ms loop
+    time_t       mLockoutExpires          {};
 public:  //methods
-    byte getCounter           ();
+    byte getStateChangeDelayCounter           ();
     bool isIt2AM              (); 
     bool isDissolveReady      ();
     bool hasOneSecondPassed   ();
-    void lockout2AM_Check     (time_t lockout_milliseconds);
+    void lockout2AM           (int lockout_seconds);
     void update               ();
     void setCountdownTimer    (byte x); 
 private: //methods
@@ -1045,26 +1063,25 @@ private: //methods
 
 }timing;
 
-byte Timing::getCounter()
+byte Timing::getStateChangeDelayCounter()
 {
-    return mCounter;
+    return mStateChangeDelayCounter;
 }
 
 bool Timing::isIt2AM()
 {
-    if (millis() < mLockoutExpires)
+    if (m2AM_LockoutTimer)
     {
         Serial.print("L");
-    }
-    
-
-
+    }    
     if (gRTC_reading.Hour   == 2 &&
         gRTC_reading.Minute == 0 &&
         gRTC_reading.Second == 0 &&
-        millis() > mLockoutExpires)
+        m2AM_LockoutTimer == false)
     {
-        mLockoutExpires = millis() + 1000;
+        //set mLockoutExpires for one second so this won't check again until
+        //2:00:01AM.  This ensures that true is returned just once per day;
+        mLockoutExpires = 1;
         Serial.println("Timing::isIt2AM() = true!"); 
         return true;
     }
@@ -1103,35 +1120,32 @@ bool Timing::hasOneSecondPassed()
     }
 }
 
-void Timing::lockout2AM_Check(time_t lockout_milliseconds)
+void Timing::lockout2AM(int lockout_seconds)
 {
-    mLockoutExpires = millis() + lockout_milliseconds;
+    m2AM_LockoutTimer = lockout_seconds;
     Serial.print("Timing::lockout2AM_Check  mLockoutExpires in ");
-    Serial.print(lockout_milliseconds);
+    Serial.print(lockout_seconds);
     Serial.print(" milliseconds");
 }
 
 void Timing::update()
 {
-    liquidcrystali2c.setCursor(8, 0);
-    if(mCounter) //if a countdown is running
+    //this runs once per second
+    mylcd.printStateChangeDelayCounter(mStateChangeDelayCounter);
+    //decrement counters
+    if (mStateChangeDelayCounter > 0)
     {
-        if(mCounter <= 9)
-        {
-            liquidcrystali2c.print(F(" ")); // clear the first space if a single digit
-        }
-        liquidcrystali2c.print(mCounter);                 // print the counter
-        mCounter--;                          // counter decrements here
+        --mStateChangeDelayCounter;
     }
-    else
+    if (m2AM_LockoutTimer > 0)
     {
-        liquidcrystali2c.print(F("  "));             // no counter, so clear the board
+        --m2AM_LockoutTimer;
     }
 }
 
 void Timing::setCountdownTimer(byte x)
 {
-    mCounter = x;
+    mStateChangeDelayCounter = x;
 }
 //==end of Timing============================================================================
 
@@ -1590,7 +1604,7 @@ void MyStateMachine::initWarmUpInverterStatefunction()
 
 void MyStateMachine::warmUpInverterStatefunction()
 {
-    if (timing.getCounter())
+    if (timing.getStateChangeDelayCounter())
     {    
         //warming up during countdown
         return;
@@ -1623,7 +1637,7 @@ void MyStateMachine::stageOneInverterStatefunction()
         setState(STATE_INIT_SLEEP);
     }
     else if (voltmeter.getVoltage() >= voltage_to_switch_to_stage_two &&
-             !timing.getCounter())
+             !timing.getStateChangeDelayCounter())
     {
         setState(STATE_INIT_INVERTER_STAGE_TWO);  
     }
@@ -1690,7 +1704,7 @@ void MyStateMachine::initInverterCooldownfunction()
 
 void MyStateMachine::inverterCooldownfunction()
 {
-    if (!timing.getCounter())
+    if (!timing.getStateChangeDelayCounter())
     {
         setState(STATE_INIT_BALANCED);
     }
@@ -2046,9 +2060,12 @@ void loop()
         voltmeter.initDailyStatistics();  //resets daily voltage highs and lows           
         if (calendar.daylightSavingCheck() == Calendar::DST_ACTION_CLOCK_FELL_BACK)
         {
-            const time_t milliseconds {1000};
-            const time_t over_an_hour (milliseconds * SECS_PER_HOUR + SECS_PER_MIN);
-            timing.lockout2AM_Check(over_an_hour);
+            //When time falls back from 2AM to 1AM, 2AM will repeat itself in 1 hour.
+            //The check for 2AM must therefore be skipped for over an hour so the
+            //program does not get caught in a repetitive loop.
+            //SECS_PER_HOUR is defined in the time library.
+            const time_t for_over_an_hour (SECS_PER_HOUR + 1); //one hour one second
+            timing.lockout2AM(for_over_an_hour);
         }
         calendar.init();
     }
