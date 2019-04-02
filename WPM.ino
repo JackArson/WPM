@@ -892,6 +892,10 @@ void MyLCD::printImportantDate(const Calendar::ImportantDate* importantdate)
     time_t tommorrow_ends   {nextMidnight(right_now) + SECS_PER_DAY};
     if (importantdate->day == day())
     {
+        Serial.print("MyLCD::printImportantDate today ");
+        Serial.print(importantdate->day);
+        Serial.print(" and ");
+        Serial.print(day());
         bottom_line = F("today");
     }
     else if (event_time_t >= tommorrow_begins &&
@@ -1297,7 +1301,6 @@ void Voltmeter::readVoltage()
     {
         operating_voltage = mLaptopOperatingVoltage;
     }
-    
     const float pin_voltage       {pin_value_ratio * operating_voltage};
     //the 'real' voltage is the pin voltage multiplied by the voltage ratio.  
     const float raw_voltage       {pin_voltage * voltage_divider_ratio};
@@ -1307,7 +1310,6 @@ void Voltmeter::readVoltage()
         mVoltage = raw_voltage;
         mIsFirstReadingCompleted = true;
     }
-
     //My voltmeter gets jumpy when my solar chargers are processing a lot of energy
     //Use the code below to help stabilize a jumpy reading (if needed.)
     //My voltmeter display runs well with a max deviation setting of 0.01
@@ -1331,7 +1333,6 @@ void Voltmeter::readVoltage()
         mVoltage -= max_deviation;
     }
 }
-
 //==end of Voltmeter=========================================================================
 
 class MyStateMachine
@@ -1855,7 +1856,6 @@ void MessageManager::messageVoltageExtremes()
     const Voltmeter::VoltRecord voltrecord[qty_voltrecord] {voltmeter.getMin(),
                                                             voltmeter.getMax()};
     String message[qty_voltrecord] {""};
-    Serial.println("Voltage extremes:");                                                            
     for (int i = 0; i < qty_voltrecord; i++)
     {
         const String voltage_string  {voltrecord[i].voltage};
