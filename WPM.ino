@@ -607,7 +607,7 @@ class MySerial
 private: //variables
     bool mUseLaptopOperatingVoltage{true};    
 public:
-    void checkForUserInput();
+    bool checkForUserInput();
     void printFullDateTime(const tmElements_t timestamp);
     void printFullDateTime(const time_t timestamp);
     void printState(char const *text);
@@ -618,7 +618,7 @@ private: //methods
     //void print
 }myserial;
 
-void MySerial::checkForUserInput()
+bool MySerial::checkForUserInput()
 {
     //A simple interface that accepts single character commands,
     //or single character commands with a numeric argument from the serial
@@ -702,7 +702,11 @@ void MySerial::checkForUserInput()
             Serial.println("Now: ");
             printFullDateTime(now());
         }
-        
+        return true;    
+    }
+    else
+    {
+        return false;  
     }
 }
 
@@ -1713,11 +1717,18 @@ private: //variables
     const time_t mMessageDuration       {5000}; //milliseconds
     const byte   mQtySystemMessages     {3};        
 public:  //methods
+    void init();
     void main();
     void messageInverterRunTime();
     void messageSunriseSunset();
     void messageVoltageExtremes();
 }messagemanager;
+
+void MessageManager::init()
+{
+    mCurrentMessageIndex = 0;
+    //mNextMessageTimestamp = 0; 
+}
 
 void MessageManager::main()
 {
@@ -2016,7 +2027,12 @@ void loop()
 {
     RTC.read(gRTC_reading);  //gRTC_reading set by reference
     voltmeter.readVoltage();
-    myserial.checkForUserInput();
+    if (myserial.checkForUserInput())
+    {
+        //prevents messagemanager from pointing to missing messages
+        //after a serial time changes
+        messagemanager.init();  
+    }
     tracklight.readDimmerSwitch();
     tracklight.setLightLevel();
     if (timing.isDissolveReady())
