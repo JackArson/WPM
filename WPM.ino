@@ -1043,12 +1043,14 @@ void MyLCD::printDate(const Coordinant coordinant)
 class Timing
 {
 private: //variables
+    //countdown timers
     byte         mStateChangeDelayCounter {};
-    int          m2AM_LockoutTimer        {};
+    int          m2AM_LockoutCounter      {};
+    //timestamps
     time_t       mDissolveTimestamp       {};
-    time_t       m2AM_Timestamp           {};
-    tmElements_t mOneHertzLoopTimestamp   {};        //to control 1000ms loop
-    time_t       mLockoutExpires          {};
+    //time_t       m2AM_Timestamp           {};
+    tmElements_t mOneSecondTimestamp      {};        //to control 1000ms loop
+    
 public:  //methods
     byte getStateChangeDelayCounter           ();
     bool isIt2AM              (); 
@@ -1070,18 +1072,18 @@ byte Timing::getStateChangeDelayCounter()
 
 bool Timing::isIt2AM()
 {
-    if (m2AM_LockoutTimer)
+    if (m2AM_LockoutCounter)
     {
         Serial.print("L");
     }    
     if (gRTC_reading.Hour   == 2 &&
         gRTC_reading.Minute == 0 &&
         gRTC_reading.Second == 0 &&
-        m2AM_LockoutTimer == false)
+        m2AM_LockoutCounter == false)
     {
-        //set mLockoutExpires for one second so this won't check again until
+        //set m2AM_LockoutCounter for one second so this won't check again until
         //2:00:01AM.  This ensures that true is returned just once per day;
-        mLockoutExpires = 1;
+        m2AM_LockoutCounter = 1;
         Serial.println("Timing::isIt2AM() = true!"); 
         return true;
     }
@@ -1108,10 +1110,10 @@ bool Timing::isDissolveReady()
 
 bool Timing::hasOneSecondPassed()
 {
-    if (mOneHertzLoopTimestamp.Second != gRTC_reading.Second) 
+    if (mOneSecondTimestamp.Second != gRTC_reading.Second) 
     {
         //set up 1000ms delay for the next loop
-        mOneHertzLoopTimestamp = gRTC_reading;
+        mOneSecondTimestamp = gRTC_reading;
         return true;
     }
     else
@@ -1122,10 +1124,10 @@ bool Timing::hasOneSecondPassed()
 
 void Timing::lockout2AM(int lockout_seconds)
 {
-    m2AM_LockoutTimer = lockout_seconds;
+    m2AM_LockoutCounter = lockout_seconds;
     Serial.print("Timing::lockout2AM_Check  mLockoutExpires in ");
     Serial.print(lockout_seconds);
-    Serial.print(" milliseconds");
+    Serial.print(" seconds");
 }
 
 void Timing::update()
@@ -1137,9 +1139,9 @@ void Timing::update()
     {
         --mStateChangeDelayCounter;
     }
-    if (m2AM_LockoutTimer > 0)
+    if (m2AM_LockoutCounter > 0)
     {
-        --m2AM_LockoutTimer;
+        --m2AM_LockoutCounter;
     }
 }
 
