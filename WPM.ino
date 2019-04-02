@@ -903,7 +903,7 @@ void MyLCD::printImportantDate(const Calendar::ImportantDate* importantdate)
     else
     {
         tmElements_t event {};
-        event.Hour  = 0;
+        //event.Hour  = 0;
         event.Day   = importantdate->day;
         event.Month = importantdate->month;
         event.Year  = gRTC_reading.Year;
