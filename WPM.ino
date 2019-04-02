@@ -908,10 +908,12 @@ void MyLCD::printImportantDate(const Calendar::ImportantDate* importantdate)
     else
     {
         tmElements_t event {};
+        event.Hour  = 0;
         event.Day   = importantdate->day;
         event.Month = importantdate->month;
-        event.Year  = year();
+        event.Year  = year() - 1970;
         time_t event_unix {makeTime(event)};
+        myserial.printFullDateTime(event_unix);
         const byte day_of_week (weekday(event_unix));
         String day_str {dayShortStr(day_of_week)};
         bottom_line = day_str + F(", "); //Wed,
@@ -2007,6 +2009,7 @@ void setup()
     pinMode (Pin::workbench_lighting, OUTPUT);
     pinMode (Pin::stage_one_inverter_relay, OUTPUT);
     pinMode (Pin::stage_two_inverter_relay, OUTPUT);
+    //Serial.print(year());
 }
                
 void loop()
