@@ -906,7 +906,7 @@ void MyLCD::printImportantDate(const Calendar::ImportantDate* importantdate)
         event.Hour  = 0;
         event.Day   = importantdate->day;
         event.Month = importantdate->month;
-        event.Year  = gRTC_reading.Year - 1970;
+        event.Year  = gRTC_reading.Year;
         time_t event_unix {makeTime(event)};
         myserial.printFullDateTime(event_unix);
         const byte day_of_week (weekday(event_unix));
