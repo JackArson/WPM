@@ -216,3 +216,4 @@ idea:  a function that takes these parameters (min/max voltage allowable time mi
 04-02-19-11:58 MyLCD::printImportantDate today diagnostics
 04-02-19-18:52 moved RTC readings into Clock
 04-02-19-19:04 add Clock::getHour
+04-02-19-19:08 add Clock::getMinute  Clock::getSecond

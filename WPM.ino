@@ -59,6 +59,8 @@ public:  //methods
     void         changeYear            (int year);
     tmElements_t getElements           ();
     int          getHour               ();
+    int          getMinute             ();
+    int          getSecond             ();
     void         syncTimeWithRTC_Clock ();
 }clock;
 
@@ -149,6 +151,15 @@ int Clock::getHour()
     return mRTC_Reading.Hour;
 }
 
+int Clock::getMinute()
+{
+    return mRTC_Reading.Minute;
+}
+
+int Clock::getSecond()
+{
+    return mRTC_Reading.Second;
+}
 
 void Clock::syncTimeWithRTC_Clock()
 {
@@ -745,19 +756,19 @@ void MySerial::printTimestamp()
     {
         Serial.print(F("0"));
     }
-    Serial.print(clock.getElements().Hour);
+    Serial.print(clock.getHour());
     Serial.print(F(":"));
-    if (clock.getElements().Minute <= 9)
+    if (clock.getMinute() <= 9)
     {
         Serial.print(F("0"));
     }
-    Serial.print(clock.getElements().Minute);
+    Serial.print(clock.getMinute());
     Serial.print(F(":"));
-    if (clock.getElements().Second <= 9)
+    if (clock.getSecond() <= 9)
     {
         Serial.print(F("0"));
    }
-   Serial.print(clock.getElements().Second);
+   Serial.print(clock.getSecond());
    Serial.print(F("  "));
 }
 
@@ -1069,9 +1080,9 @@ bool Timing::isIt2AM()
     {
         Serial.print("L");
     }    
-    if (clock.getElements().Hour   == 2 &&
-        clock.getElements().Minute == 0 &&
-        clock.getElements().Second == 0 &&
+    if (clock.getHour()   == 2 &&
+        clock.getMinute() == 0 &&
+        clock.getSecond() == 0 &&
         m2AM_LockoutCounter == false)
     {
         //set m2AM_LockoutCounter for one second so this won't check again until
