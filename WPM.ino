@@ -35,8 +35,8 @@ tmElements_t       gRTC_reading;             //the current time
 namespace Pin
 {                              
     //digital pins
-    const byte light_sensor_one         {2};  //brown   wire lower cable              
-    const byte light_sensor_two         {3};  //orange wire lower cable
+    const byte circuit_sensor_one       {2};  //brown   wire lower cable              
+    const byte circuit_sensor_two       {3};  //orange wire lower cable
     const byte battery_charger          {11}; //green wire upper cable  
     const byte inverter                 {5};  //blue wire upper cable
     const byte workbench_lighting       {10}; //purple wire upper cable
@@ -44,7 +44,7 @@ namespace Pin
     const byte stage_two_inverter_relay {9};  //circuit 'S'
     //analog pins
     const byte voltage_divider          {A0}; //green  wire lower cable
-    const byte dimmer_potentiometer                   {A1}; //yellow wire
+    const byte dimmer_potentiometer     {A1}; //yellow wire
 }
 //==end of namespace Pin======================================================================
 
@@ -156,10 +156,9 @@ void Clock::syncTimeWithRTC_Clock()
         } 
     }
 }
+//==end of Clock=============================================================================
 
-
-
-//all CAPS indicate a COMPILE TIME CONSTANT 
+//QTY_IMPORTANT_DATES is a COMPILE TIME CONSTANT 
 const byte QTY_IMPORTANT_DATES = 23;  //this must be initialized in global space instead
                                       //of inside Calendar.  
 class Calendar
@@ -180,16 +179,6 @@ public:
         EVENTTYPE_HOLIDAY,
         MAX_EVENTTYPE 
     };
-    //enum Weekdays
-    //{
-        //WEEKDAYS_SUNDAY    = 1,
-        //WEEKDAYS_MONDAY    = 2,
-        //WEEKDAYS_TUESDAY   = 3,
-        //WEEKDAYS_WEDNESDAY = 4,
-        //WEEKDAYS_THURSDAY  = 5,
-        //WEEKDAYS_FRIDAY    = 6,
-        //WEEKDAYS_SATURDAY  = 7
-    //};
     struct ImportantDate
     {
         const char *text;
@@ -200,9 +189,9 @@ public:
     };
     
 private: //variables
-    const char* mMonthShortName[13] =    {"", "Jan", "Feb", "Mar", "Apr",
-                                              "May", "Jun", "Jul", "Aug",
-                                              "Sep", "Oct", "Nov", "Dec"};
+    //const char* mMonthShortName[13] =    {"", "Jan", "Feb", "Mar", "Apr",
+                                              //"May", "Jun", "Jul", "Aug",
+                                              //"Sep", "Oct", "Nov", "Dec"};
     //this compiler can't set array length so QTY_IMPORTANT_DATES (right above
     //this class) must be manually counted and set.     
     const ImportantDate mImportantDateList[QTY_IMPORTANT_DATES] = 
@@ -229,39 +218,41 @@ private: //variables
         {"Erik",         12,  4, 1999, EVENTTYPE_BIRTHDAY},     //20
         {"Mathew",       12, 17, 1995, EVENTTYPE_BIRTHDAY},     //21
         {"Christmas",    12, 25, 0,    EVENTTYPE_HOLIDAY},      //22
-        {"Paul's Coronation", 4, 1, 2019, EVENTTYPE_APPOINTMENT} //23
+        {"Paul's Coronation", 4, 3, 2019, EVENTTYPE_APPOINTMENT} //23
     };
     const char* mDaySuffix[4] = {"th", "st", "nd", "rd"};
     //Sometimes there are more than 52 weeks in a year.
     //These tables are close enough to use year after year
-
+    
     //Why is there a 4:58am in this list when know the sun has never risen at 4:58am?
     //Because this list has not had the Daylight Savings Time + 1 (spring forward)
     //applied yet.  Near summer solstice it does rise at 5:58am!
-    const byte sunrise_hour[53]   = { 7,  7,  7,  7,  7,  7,  7,  7,  7,  6,
-                                      6,  6,  6,  6,  5,  5,  5,  5,  5,  5,
-                                      5,  5,  5,  4,  4,  5,  5,  5,  5,  5,
-                                      5,  5,  5,  5,  5,  5,  6,  6,  6,  6,
-                                      6,  6,  6,  6,  6,  7,  7,  7,  7,  7,
-                                      7,  7,  7}; 
-    const byte sunrise_minute[53] = {47, 48, 46, 42, 37, 31, 23, 14,  4, 54,
-                                     43, 32, 21, 10, 59, 48, 38, 29, 20, 13,
-                                      7,  3,  0, 58, 58,  0,  3,  7, 12, 18,
-                                     24, 30, 37, 43, 50, 56,  3,  9, 16, 23,
-                                     29, 36, 44, 51, 59,  7, 15, 23, 30, 36,
-                                     41, 45, 47};
-    const byte sunset_hour[53]    = {17, 17, 17, 17, 17, 17, 17, 18, 18, 18,
-                                     18, 18, 18, 18, 18, 19, 19, 19, 19, 19,
-                                     19, 19, 19, 19, 19, 19, 19, 19, 19, 19,
-                                     19, 19 ,19, 19, 19, 18, 18, 18, 18, 18,
-                                     17, 17, 17, 17, 17, 17, 17, 17, 17, 17,
-                                     17, 17, 17}; 
-    const byte sunset_minute[53]  = {13, 19, 26, 34, 43, 51, 59,  7, 15, 23,
-                                     30, 37, 44, 51, 58,  5, 12, 19, 26, 33,
-                                     39, 45, 50, 54, 57, 58, 58, 56, 53, 48,
-                                     42, 34, 26, 16, 06, 55, 44, 32, 21,  9,
-                                     58, 48, 38, 29, 21, 14,  8,  4,  2,  2,
-                                      4,  7, 13};
+
+    //This table only valid in southeast Ohio, USA
+    const byte mTableSunriseHours[53]   = { 7,  7,  7,  7,  7,  7,  7,  7,  7,  6,
+                                            6,  6,  6,  6,  5,  5,  5,  5,  5,  5,
+                                            5,  5,  5,  4,  4,  5,  5,  5,  5,  5,
+                                            5,  5,  5,  5,  5,  5,  6,  6,  6,  6,
+                                            6,  6,  6,  6,  6,  7,  7,  7,  7,  7,
+                                            7,  7,  7}; 
+    const byte mTableSunriseMinutes[53] = {47, 48, 46, 42, 37, 31, 23, 14,  4, 54,
+                                           43, 32, 21, 10, 59, 48, 38, 29, 20, 13,
+                                           7,  3,  0, 58, 58,  0,  3,  7, 12, 18,
+                                           24, 30, 37, 43, 50, 56,  3,  9, 16, 23,
+                                           29, 36, 44, 51, 59,  7, 15, 23, 30, 36,
+                                           41, 45, 47};
+    const byte mTableSunsetHours[53]  =   {17, 17, 17, 17, 17, 17, 17, 18, 18, 18,
+                                           18, 18, 18, 18, 18, 19, 19, 19, 19, 19,
+                                           19, 19, 19, 19, 19, 19, 19, 19, 19, 19,
+                                           19, 19 ,19, 19, 19, 18, 18, 18, 18, 18,
+                                           17, 17, 17, 17, 17, 17, 17, 17, 17, 17,
+                                           17, 17, 17}; 
+    const byte mTableSunsetMinutes[53]  = {13, 19, 26, 34, 43, 51, 59,  7, 15, 23,
+                                           30, 37, 44, 51, 58,  5, 12, 19, 26, 33,
+                                           39, 45, 50, 54, 57, 58, 58, 56, 53, 48,
+                                           42, 34, 26, 16, 06, 55, 44, 32, 21,  9,
+                                           58, 48, 38, 29, 21, 14,  8,  4,  2,  2,
+                                           4,  7, 13};
 
 private: //variables continued
     byte mQtyImportantDatesToReport              {0};
@@ -358,36 +349,31 @@ String Calendar::getClockString(const tmElements_t time,
     }
     const String minute_string {time.Minute};   
     clock_string += minute_string;
-    //print am, AM, pm or PM.  CAPS to indicate this time is DST modified
-    if (isAM(time)      == true && mDaylightSavingsTime == false)
+    if (isAM(time)      == true)
     {
         clock_string += F("am");
     }
-    else if (isAM(time) == true && mDaylightSavingsTime == true)
-    {
-        //Capitalize AM to indicate this time is DST modified
-        clock_string += F("AM"); 
-    }
-    else if (isAM(time) == false && mDaylightSavingsTime == false)
+    else if (isAM(time) == false)
     {                          
         clock_string += F("pm");
     }
-    else if (isAM(time) == false && mDaylightSavingsTime == true)
-    {                          
-        clock_string += F("PM");
+    //add a plus symbol to the end of the string to indicate DST
+    if (mDaylightSavingsTime)
+    {
+        clock_string += F("+");
     }
     return clock_string;    
 }
 
 bool Calendar::isWakeUpComplete()
 {
-    const int delay = 15;  //minutes 
+    const int wake_up_delay = 15;  //minutes 
     //The wake up delay ensures that the the inverter does not burn off the fresh
     //battery charger energy.
 
-    const int sunrise_minutes = (mTodaySunriseHour * 60) + mTodaySunriseMinute;
-    const int now_minutes     = (hour() * 60)            + minute();  
-    if (now_minutes >= sunrise_minutes + delay)
+    const int sunrise_minutes {(mTodaySunriseHour * 60) + mTodaySunriseMinute};
+    const int now_minutes     {(hour() * 60) + minute()};  
+    if (now_minutes >= sunrise_minutes + wake_up_delay)
     {
         return true; 
     }
@@ -401,8 +387,9 @@ bool Calendar::isWakeUpComplete()
 const char* Calendar::getDaySuffix(byte day_number)
 {
     //Isolate the teens and be sure they get 'th' suffix (11th 12th 13th)
-    //The non-teen 1, 2, 3,s get their special suffix (2nd, 22nd, 31st) 
+    //The non-teen 1, 2, 3,s get their special suffix (2nd, 22nd, 31st....52nd) 
     //Therefore, any number over 20 should be reduced by tens until it is 10 or less
+    //Any number under 20 must be left alone
     if (day_number >= 20)
     {
         while (day_number > 10)
@@ -428,7 +415,8 @@ const Calendar::ImportantDate* Calendar::getImportantDate(const byte index)
 
 const char* Calendar::getMonthShortName(const byte month_number)
 {
-    return mMonthShortName[month_number];
+    //monthShortStr is defined in the time library
+    return monthShortStr(month_number);
 }
 
 String Calendar::getSunriseClockString()
@@ -449,7 +437,7 @@ String Calendar::getSunsetClockString()
     
 byte Calendar::getWeekNumber(tmElements_t date)  //needed to read sunrise sunset table
 {
-    //convert date to the first moment of the year
+    //convert date to the first moment of the year by zeroing all but year (and wday)
     date.Hour   = 0;
     date.Minute = 0;
     date.Second = 0;
@@ -459,10 +447,9 @@ byte Calendar::getWeekNumber(tmElements_t date)  //needed to read sunrise sunset
     const time_t year_start {makeTime(date)};
     //how many seconds have elapsed since the year began?
     const time_t seconds_since_start_of_year {now() - year_start};
-    //divide by seconds in a week to compute week number
-    const time_t seconds_in_a_week {604800};
-    const time_t week_number {seconds_since_start_of_year / seconds_in_a_week};
-    return (week_number);
+    //divide by SECS_PER_WEEK (Time Library) to compute week number 
+    const time_t week_number {seconds_since_start_of_year / SECS_PER_WEEK};
+    return(week_number);
 }
 
 byte Calendar::getQtyImportantDates()
@@ -472,7 +459,8 @@ byte Calendar::getQtyImportantDates()
 
 bool Calendar::isAM(const tmElements_t time)
 {
-    //the moment after the clock hits 12 noon the time is post merīdiem
+    //Time Library has isAM functions, but not with a tmElements_t parameter.
+    //The moment after the clock hits 12 noon the time is 'post merīdiem.'
     if (time.Hour < 12)
     {
         return true;
@@ -485,11 +473,10 @@ bool Calendar::isAM(const tmElements_t time)
 
 bool Calendar::isDaylight()
 {
-    const int sunrise_minutes {(mTodaySunriseHour * 60) + mTodaySunriseMinute};
-    const int sunset_minutes  {(mTodaySunsetHour  * 60) + mTodaySunsetMinute};
+    const int todays_sunrise_minutes {(mTodaySunriseHour * 60) + mTodaySunriseMinute};
+    const int todays_sunset_minutes  {(mTodaySunsetHour  * 60) + mTodaySunsetMinute};
     const int now_minutes     {(hour()            * 60) + minute()};
-    if (now_minutes >= sunrise_minutes &&
-        now_minutes <  sunset_minutes)
+    if (now_minutes >= todays_sunrise_minutes && now_minutes < todays_sunset_minutes)
     {
         return true; 
     }
@@ -507,7 +494,7 @@ bool Calendar::isDaylightSavingsTime(tmElements_t input_date)
     
     //Find the FIRST Sunday of March
     //Create a blank tmElements_t object, it's a seven part time and date.   
-    tmElements_t march_start{};
+    tmElements_t march_start {}; //sets all elements to 0
     //March is the 3rd march of the year
     const uint8_t march {3}; 
     //Set the month
@@ -517,21 +504,22 @@ bool Calendar::isDaylightSavingsTime(tmElements_t input_date)
     //time_t numbers are the number of seconds that have elapsed since January 1st 1970.
     //Use the time library makeTime function to convert the tmElements_t object
     //into a time_t so some time library math can be done.  
-    time_t start_march {makeTime(march_start)};
+    const time_t start_march {makeTime(march_start)};
     //The time library has a 'nextSunday' function
-    //Since the march_start.Day variable was set to the 0th, (when
-    //the object was declared,) Sunday's that fall on the 1st of the march will 
+    //Since the march_start.Day variable was set to the 0th instead of the 1st,
+    //Sunday's that fall on the 1st of the march will 
     //qualify as 'nextSunday' as well as any Sunday that falls on the 2nd through 7th.
     //Use the nextSunday function to find the first Sunday of the month.
-    time_t first_sunday_of_march {nextSunday(start_march)};
+    const time_t first_sunday_of_march {nextSunday(start_march)};
     //Add one weeks worth of seconds to the time_t first_sunday_of_march
     //to get the 2nd Sunday of March.  SECS_PER_WEEK is defined in the time library.
-    //Also, add two hours worth of seconds to change the time from midnight to 2AM.
+    const time_t second_sunday_of_march {first_sunday_of_march + SECS_PER_WEEK};
+    //Add two hours worth of seconds to change the time from midnight to 2AM.
     //It is important to change the time to 2AM AFTER the nextSunday function has
     //been called, and not before. SECS_PER_HOUR is also defined in the time library.
-    const time_t second_sunday_of_march_2AM
-                {first_sunday_of_march + SECS_PER_WEEK + SECS_PER_HOUR * 2};
-    //Now find the first Sunday of November in a similar manner.
+    const time_t second_sunday_of_march_2AM {second_sunday_of_march + SECS_PER_HOUR * 2};
+
+    //Find the first Sunday of November in a similar manner.
     tmElements_t november_start{};
     //November is the 11th march of the year
     const uint8_t november {11};
@@ -545,7 +533,7 @@ bool Calendar::isDaylightSavingsTime(tmElements_t input_date)
     const time_t first_sunday_of_november {nextSunday(start_november)};
     //Add two hours worth of seconds to change the time from midnight to 2AM.
     const time_t first_sunday_of_november_2AM  {first_sunday_of_november + SECS_PER_HOUR * 2};
-    //Convert the input parameter to a time_t number for comparison
+    //Convert the input parameter to a time_t number for a comparison
     const time_t date_input {makeTime(input_date)};
     //Compare results and return the answer
     if (date_input >= second_sunday_of_march_2AM &&
@@ -561,10 +549,10 @@ bool Calendar::isDaylightSavingsTime(tmElements_t input_date)
 
 void Calendar::loadImportantDates()
 {
-    //load all events in the next two weeks
+    //load all events in the search_window_days
     const time_t search_window_days {14};
-    const time_t seconds_in_a_day   {86400};
-    const time_t search_window_secs {search_window_days * seconds_in_a_day}; 
+    //const time_t seconds_in_a_day   {86400};
+    const time_t search_window_secs {search_window_days * SECS_PER_DAY}; 
     for (int i = 0; i < QTY_IMPORTANT_DATES; i++)
     {
         //build anniversary date of event
@@ -595,10 +583,10 @@ void Calendar::loadImportantDates()
 void Calendar::setSunriseSunset()
 {
     const int week_number {getWeekNumber(gRTC_reading)};
-    mTodaySunriseHour   = sunrise_hour[week_number] + mDaylightSavingsTime;
-    mTodaySunriseMinute = sunrise_minute[week_number];
-    mTodaySunsetHour    = sunset_hour[week_number] + mDaylightSavingsTime;
-    mTodaySunsetMinute  = sunset_minute[week_number]; 
+    mTodaySunriseHour   = mTableSunriseHours[week_number] + mDaylightSavingsTime;
+    mTodaySunriseMinute = mTableSunriseMinutes[week_number];
+    mTodaySunsetHour    = mTableSunsetHours[week_number] + mDaylightSavingsTime;
+    mTodaySunsetMinute  = mTableSunsetMinutes[week_number]; 
 }
 //==end of Calendar==========================================================================
 
@@ -980,7 +968,7 @@ String MyLCD::centerText(const String text)
 void MyLCD::printLDRresults()
 {
     liquidcrystali2c.setCursor (11,0);
-    if (digitalRead(Pin::light_sensor_one))
+    if (digitalRead(Pin::circuit_sensor_one))
     { 
         liquidcrystali2c.print(F("A"));
     }
@@ -989,7 +977,7 @@ void MyLCD::printLDRresults()
         liquidcrystali2c.print(F(" "));
     }
 
-    if (digitalRead(Pin::light_sensor_two))
+    if (digitalRead(Pin::circuit_sensor_two))
     {
         liquidcrystali2c.print(F("S"));
     }
@@ -2015,8 +2003,8 @@ void setup()
     pinMode (Pin::inverter, OUTPUT);
     pinMode (Pin::battery_charger, OUTPUT);
     pinMode (Pin::voltage_divider, INPUT);
-    pinMode (Pin::light_sensor_one, INPUT);
-    pinMode (Pin::light_sensor_two, INPUT);
+    pinMode (Pin::circuit_sensor_one, INPUT);
+    pinMode (Pin::circuit_sensor_two, INPUT);
     pinMode (Pin::workbench_lighting, OUTPUT);
     pinMode (Pin::stage_one_inverter_relay, OUTPUT);
     pinMode (Pin::stage_two_inverter_relay, OUTPUT);
