@@ -30,6 +30,10 @@
 //create liquidcrystali2c object
 LiquidCrystal_I2C  liquidcrystali2c(0x27, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);  
 
+void printFullDateTime (const tmElements_t timestamp);
+void printFullDateTime (const time_t timestamp);
+
+
 namespace Pin
 {                              
     //digital pins
@@ -233,9 +237,7 @@ public:
     };
     
 private: //variables
-    //const char* mMonthShortName[13] =    {"", "Jan", "Feb", "Mar", "Apr",
-                                              //"May", "Jun", "Jul", "Aug",
-                                              //"Sep", "Oct", "Nov", "Dec"};
+    
     //this compiler can't set array length so QTY_IMPORTANT_DATES (right above
     //this class) must be manually counted and set.     
     const ImportantDate mImportantDateList[QTY_IMPORTANT_DATES] = 
@@ -302,18 +304,21 @@ private: //variables continued
     byte mQtyImportantDatesToReport              {};
     ImportantDate const * mDatesToReportList[QTY_IMPORTANT_DATES] {};
     //mDatesToReportList array is large enough to hold pointers to every event if needed.
-    byte mTodaySunriseHour   {};
-    byte mTodaySunriseMinute {};
-    byte mTodaySunsetHour    {};
-    byte mTodaySunsetMinute  {};
-    bool mDaylightSavingsTime {true};
+    byte   mTodaySunriseHour     {};
+    byte   mTodaySunriseMinute   {};
+    byte   mTodaySunsetHour      {};
+    byte   mTodaySunsetMinute    {};
+    bool   mDaylightSavingsTime  {};
+    time_t mNextDSTSpringForward {};
+    time_t mNextDSTFallBack      {};
 public:  //methods
     void           init                    ();
     DST_Action     daylightSavingCheck     ();
     String         getClockString          (const tmElements_t time,
                                             const bool right_justify = false);
     const char*    getDaySuffix            (byte day_number);
-    time_t         getDSTSpringForward     ();
+    time_t         getDSTSpringForward     (const int input_year);
+    time_t         getDSTFallBack          (const int input_year);
     const ImportantDate* getImportantDate  (const byte index);     
     const char*    getMonthShortName       (const byte month_number);
     String         getSunriseClockString   ();
@@ -332,7 +337,9 @@ public:  //methods
 void Calendar::init()
 {
     mQtyImportantDatesToReport = 0;
-    mDaylightSavingsTime = isDaylightSavingsTime(timenow.getElements());
+    const time_t this_year_spring_forward_time {getDSTSpringForward(timenow.getYear())};
+    //Serial.print();
+    //mDaylightSavingsTime = isDaylightSavingsTime(timenow.getElements());
     loadImportantDates();
     setSunriseSunset();
 }
@@ -385,6 +392,61 @@ const char* Calendar::getDaySuffix(byte day_number)
     {
         return mDaySuffix[0]; //th
     }
+}
+
+time_t Calendar::getDSTSpringForward(const int input_year)
+{
+    //Rules for my area (Ohio, USA) and most of United States
+    //DST begins on the second Sunday of March    at 2AM and
+    //       ends on the first Sunday of November at 2AM.
+    
+    //Find the FIRST Sunday of March
+    //Create a blank tmElements_t object, it's a seven part time and date.   
+    tmElements_t march_start {}; //sets all elements to 0
+    //March is the 3rd march of the year
+    const uint8_t march {3}; 
+    //Set the month
+    march_start.Month = march;
+    //Set the year to the year from the input_date parameter 
+    march_start.Year  = input_year;
+    //time_t numbers are the number of seconds that have elapsed since January 1st 1970.
+    //Use the time library makeTime function to convert the tmElements_t object
+    //into a time_t so some time library math can be done.  
+    const time_t start_march {makeTime(march_start)};
+    //The time library has a 'nextSunday' function
+    //Since the march_start.Day variable was set to the 0th instead of the 1st,
+    //Sunday's that fall on the 1st of the march will 
+    //qualify as 'nextSunday' as well as any Sunday that falls on the 2nd through 7th.
+    //Use the nextSunday function to find the first Sunday of the month.
+    const time_t first_sunday_of_march {nextSunday(start_march)};
+    //Add one weeks worth of seconds to the time_t first_sunday_of_march
+    //to get the 2nd Sunday of March.  SECS_PER_WEEK is defined in the time library.
+    const time_t second_sunday_of_march {first_sunday_of_march + SECS_PER_WEEK};
+    //Add two hours worth of seconds to change the time from midnight to 2AM.
+    //It is important to change the time to 2AM AFTER the nextSunday function has
+    //been called, and not before. SECS_PER_HOUR is also defined in the time library.
+    const time_t second_sunday_of_march_2AM {second_sunday_of_march + SECS_PER_HOUR * 2};
+    return second_sunday_of_march_2AM;
+}
+
+time_t Calendar::getDSTFallBack(const int input_year)
+{
+    //Find the first Sunday of November in a similar manner
+    //(see Calendar::getDSTSpringForward).
+    tmElements_t november_start{};
+    //November is the 11th march of the year
+    const uint8_t november {11};
+    //Set the month
+    november_start.Month = november;
+    //Set the year to the year from the input_date parameter 
+    november_start.Year  = input_year;
+    //Convert the tmElements_t to a time_t
+    const time_t start_november {makeTime(november_start)};   
+    //Use the nextSunday function to find the first Sunday of the month
+    const time_t first_sunday_of_november {nextSunday(start_november)};
+    //Add two hours worth of seconds to change the time from midnight to 2AM.
+    const time_t first_sunday_of_november_2AM  {first_sunday_of_november + SECS_PER_HOUR * 2};
+    return first_sunday_of_november_2AM;
 }
 
 String Calendar::getClockString(const tmElements_t time,
@@ -2078,6 +2140,54 @@ void loop()
         messagemanager.init();  
         calendar.init();
     }
+}
+
+
+void printFullDateTime (const tmElements_t timestamp)
+{
+    //Tuesday
+    String fullDateTime {dayStr(timestamp.Wday)};
+    //Tuesday,
+    fullDateTime += ", ";
+    //Tuesday, May
+    fullDateTime += monthStr(timestamp.Month);
+    fullDateTime += " ";
+    //Tuesday, May 3
+    fullDateTime += timestamp.Day;
+    //Tuesday, May 3rd
+    fullDateTime += calendar.getDaySuffix(timestamp.Day);
+    fullDateTime += " ";
+    //Tuesday, May 3rd 2019
+    fullDateTime += 1970 + timestamp.Year;
+    fullDateTime += "  ";
+    //Tuesday, May 3rd 2019  1:
+    fullDateTime += timestamp.Hour;
+    fullDateTime += ":";
+    //Tuesday, May 3rd 2019  1:05:
+    const int time_minute {timestamp.Minute};
+    if (time_minute < 10)
+    {
+        //add a leading zero
+        fullDateTime += "0";
+    }
+    fullDateTime += timestamp.Minute;
+    fullDateTime += ":";
+    //Tuesday, May 3rd 2019  1:05:35
+    const int time_second {timestamp.Second};
+    if (time_second < 10)
+    {
+        //add a leading zero
+        fullDateTime += "0";
+    }
+    fullDateTime += timestamp.Minute;
+    Serial.println(fullDateTime);
+}
+
+void printFullDateTime (const time_t timestamp)
+{
+    tmElements_t timestamp_elements {};
+    breakTime(timestamp, timestamp_elements);
+    printFullDateTime(timestamp_elements);
 }
 
 //Serial.print("Year: ");

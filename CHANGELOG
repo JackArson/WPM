@@ -221,3 +221,4 @@ idea:  a function that takes these parameters (min/max voltage allowable time mi
 04-03-19-09:07 renamed Clock:: to TimeNow for clarity
 04-03-19-09:13 updated program to use new TimeNow::Get... methods
 04-03-19-09:19 changed all {0} to {} (redundant)
+04-03-19-09:51 MySerial::printFullDateTime repaired time section
