@@ -51,18 +51,64 @@ class Clock
 private: //variables
     tmElements_t mRTC_Reading;             //the current time
 public:  //methods
+    void         changeYear            (int year);
+    void         changeMonth           (int month);
+    void         changeDay             (int day);
     void         changeHour            (int hour);
     void         changeMinute          (int minute);
     void         changeSecond          (int second);
-    void         changeDay             (int day);
-    void         changeMonth           (int month);
-    void         changeYear            (int year);
+    
+    
+    
     tmElements_t getElements           ();
+    int          getYear               ();
+    int          getMonth              ();
+    int          getDay                ();
     int          getHour               ();
     int          getMinute             ();
     int          getSecond             ();
+    
     void         syncTimeWithRTC_Clock ();
 }clock;
+
+void Clock::changeYear(int year)
+{
+    //make a copy of current reading
+    tmElements_t current_RTC_reading {mRTC_Reading};
+    //change second
+    current_RTC_reading.Year = year;
+    //convert to time_t
+    time_t new_RTC_reading {makeTime(current_RTC_reading)};
+    RTC.set(new_RTC_reading);
+    syncTimeWithRTC_Clock();
+}
+
+void Clock::changeMonth(int month)
+{
+    constrain(month, 1, 12);
+    //make a copy of current reading
+    tmElements_t current_RTC_reading {mRTC_Reading};
+    //change second
+    current_RTC_reading.Month = month;
+    //convert to time_t
+    time_t new_RTC_reading {makeTime(current_RTC_reading)};
+    RTC.set(new_RTC_reading);
+    syncTimeWithRTC_Clock();
+}
+
+
+void Clock::changeDay(int day)
+{
+    constrain(day, 0, 31);
+    //make a copy of current reading
+    tmElements_t current_RTC_reading {mRTC_Reading};
+    //change second
+    current_RTC_reading.Day = day;
+    //convert to time_t
+    time_t new_RTC_reading {makeTime(current_RTC_reading)};
+    RTC.set(new_RTC_reading);
+    syncTimeWithRTC_Clock();
+}
 
 void Clock::changeHour(int hour)
 {
@@ -103,47 +149,24 @@ void Clock::changeSecond(int second)
     syncTimeWithRTC_Clock();
 }
 
-void Clock::changeDay(int day)
-{
-    constrain(day, 0, 31);
-    //make a copy of current reading
-    tmElements_t current_RTC_reading {mRTC_Reading};
-    //change second
-    current_RTC_reading.Day = day;
-    //convert to time_t
-    time_t new_RTC_reading {makeTime(current_RTC_reading)};
-    RTC.set(new_RTC_reading);
-    syncTimeWithRTC_Clock();
-}
-
-void Clock::changeMonth(int month)
-{
-    constrain(month, 1, 12);
-    //make a copy of current reading
-    tmElements_t current_RTC_reading {mRTC_Reading};
-    //change second
-    current_RTC_reading.Month = month;
-    //convert to time_t
-    time_t new_RTC_reading {makeTime(current_RTC_reading)};
-    RTC.set(new_RTC_reading);
-    syncTimeWithRTC_Clock();
-}
-
-void Clock::changeYear(int year)
-{
-    //make a copy of current reading
-    tmElements_t current_RTC_reading {mRTC_Reading};
-    //change second
-    current_RTC_reading.Year = year;
-    //convert to time_t
-    time_t new_RTC_reading {makeTime(current_RTC_reading)};
-    RTC.set(new_RTC_reading);
-    syncTimeWithRTC_Clock();
-}
-
 tmElements_t Clock::getElements()
 {
     return mRTC_Reading;
+}
+
+int Clock::getYear()
+{
+    return mRTC_Reading.Year;
+}
+
+int Clock::getMonth()
+{
+    return mRTC_Reading.Month;
+}
+
+int Clock::getDay()
+{
+    return mRTC_Reading.Day;
 }
 
 int Clock::getHour()
@@ -160,6 +183,7 @@ int Clock::getSecond()
 {
     return mRTC_Reading.Second;
 }
+
 
 void Clock::syncTimeWithRTC_Clock()
 {
