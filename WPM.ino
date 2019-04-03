@@ -64,7 +64,6 @@ public:  //methods
     int          getHour               ();
     int          getMinute             ();
     int          getSecond             ();
-    
     void         syncTimeWithRTC_Clock ();
 }timenow;
 
@@ -608,7 +607,7 @@ void Calendar::loadImportantDates()
         event_anniversary.Minute = 0;
         event_anniversary.Second = 0;
         //align year
-        event_anniversary.Year   = timenow.getElements().Year;
+        event_anniversary.Year   = timenow.getYear();
         //get day and month
         event_anniversary.Day    = mImportantDateList[i].day;
         event_anniversary.Month  = mImportantDateList[i].month;
@@ -924,14 +923,14 @@ void MyLCD::printImportantDate(const Calendar::ImportantDate* importantdate)
     String bottom_line (F(""));
     //build a time_t of event for a tommorrow comparison
     tmElements_t event {};
-    event.Year  = timenow.getElements().Year;
+    event.Year  = timenow.getYear();
     event.Month = importantdate->month;
     event.Day   = importantdate->day;
     time_t event_time_t {makeTime(event)};
     time_t right_now {now()};
     time_t tommorrow_begins {nextMidnight(right_now)};
     time_t tommorrow_ends   {nextMidnight(right_now) + SECS_PER_DAY};
-    if (importantdate->day == timenow.getElements().Day)
+    if (importantdate->day == timenow.getDay())
     {        
         bottom_line = F("today");
     }
@@ -946,7 +945,7 @@ void MyLCD::printImportantDate(const Calendar::ImportantDate* importantdate)
         //event.Hour  = 0;
         event.Day   = importantdate->day;
         event.Month = importantdate->month;
-        event.Year  = timenow.getElements().Year;
+        event.Year  = timenow.getYear();
         time_t event_unix {makeTime(event)};
         myserial.printFullDateTime(event_unix);
         const byte day_of_week (weekday(event_unix));
@@ -1059,9 +1058,9 @@ void MyLCD::printDate(const Coordinant coordinant)
     liquidcrystali2c.setCursor(coordinant.x, coordinant.y); 
     liquidcrystali2c.print(dayShortStr(weekday()));
     liquidcrystali2c.print(F(", "));
-    liquidcrystali2c.print(calendar.getMonthShortName(timenow.getElements().Month));    
+    liquidcrystali2c.print(calendar.getMonthShortName(timenow.getMonth()));    
     liquidcrystali2c.print(F(" "));
-    liquidcrystali2c.print((timenow.getElements().Day));
+    liquidcrystali2c.print((timenow.getDay()));
     liquidcrystali2c.print(F(" "));  //this space to clear last digit when month rolls over (31 to 1) 
 }
 //==end of MyLCD=============================================================================
