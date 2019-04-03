@@ -218,3 +218,4 @@ idea:  a function that takes these parameters (min/max voltage allowable time mi
 04-02-19-19:04 add Clock::getHour
 04-02-19-19:08 add Clock::getMinute  Clock::getSecond
 04-03-19-08:59 add Clock::getYear  Clock::getMonth Clock::getDay
+04-03-19-09:07 renamed Clock:: to TimeNow for clarity
