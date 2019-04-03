@@ -299,13 +299,13 @@ private: //variables
                                            4,  7, 13};
 
 private: //variables continued
-    byte mQtyImportantDatesToReport              {0};
+    byte mQtyImportantDatesToReport              {};
     ImportantDate const * mDatesToReportList[QTY_IMPORTANT_DATES] {};
     //mDatesToReportList array is large enough to hold pointers to every event if needed.
-    byte mTodaySunriseHour   {0};
-    byte mTodaySunriseMinute {0};
-    byte mTodaySunsetHour    {0};
-    byte mTodaySunsetMinute  {0};
+    byte mTodaySunriseHour   {};
+    byte mTodaySunriseMinute {};
+    byte mTodaySunsetHour    {};
+    byte mTodaySunsetMinute  {};
     bool mDaylightSavingsTime {true};
 public:  //methods
     void           init                    ();
@@ -313,6 +313,7 @@ public:  //methods
     String         getClockString          (const tmElements_t time,
                                             const bool right_justify = false);
     const char*    getDaySuffix            (byte day_number);
+    time_t         getDSTSpringForward     ();
     const ImportantDate* getImportantDate  (const byte index);     
     const char*    getMonthShortName       (const byte month_number);
     String         getSunriseClockString   ();
@@ -362,10 +363,34 @@ Calendar::DST_Action Calendar::daylightSavingCheck()
     }
 }
 
+const char* Calendar::getDaySuffix(byte day_number)
+{
+    //Isolate the teens and be sure they get 'th' suffix (11th 12th 13th)
+    //The non-teen 1, 2, 3,s get their special suffix (2nd, 22nd, 31st....52nd) 
+    //Therefore, any number over 20 should be reduced by tens until it is 10 or less
+    //Any number under 20 must be left alone
+    if (day_number >= 20)
+    {
+        while (day_number > 10)
+        {
+            day_number -= 10;
+        }
+    }
+    //day_of_month should now be between (1 and 20)
+    if (day_number < 4)
+    {
+        return mDaySuffix[day_number]; // 0th, 1st, 2nd, 3rd
+    }
+    else
+    {
+        return mDaySuffix[0]; //th
+    }
+}
+
 String Calendar::getClockString(const tmElements_t time,
                                 const bool right_justify)
 {
-    int  format {0};
+    int  format {};
     String clock_string ("");
     if ((time.Hour) >= 12)
     {      
@@ -427,31 +452,6 @@ bool Calendar::isWakeUpComplete()
     }
 }
 
-
-const char* Calendar::getDaySuffix(byte day_number)
-{
-    //Isolate the teens and be sure they get 'th' suffix (11th 12th 13th)
-    //The non-teen 1, 2, 3,s get their special suffix (2nd, 22nd, 31st....52nd) 
-    //Therefore, any number over 20 should be reduced by tens until it is 10 or less
-    //Any number under 20 must be left alone
-    if (day_number >= 20)
-    {
-        while (day_number > 10)
-        {
-            day_number -= 10;
-        }
-    }
-    //day_of_month should now be between (1 and 20)
-    if (day_number < 4)
-    {
-        return mDaySuffix[day_number]; // 0th, 1st, 2nd, 3rd
-    }
-    else
-    {
-        return mDaySuffix[0]; //th
-    }
-}
-
 const Calendar::ImportantDate* Calendar::getImportantDate(const byte index)
 {
     return mDatesToReportList[index];
@@ -463,9 +463,10 @@ const char* Calendar::getMonthShortName(const byte month_number)
     return monthShortStr(month_number);
 }
 
+
 String Calendar::getSunriseClockString()
 {
-    tmElements_t sunrise {0};
+    tmElements_t sunrise {};
     sunrise.Hour   = mTodaySunriseHour;
     sunrise.Minute = mTodaySunriseMinute;
     return getClockString(sunrise);
@@ -473,7 +474,7 @@ String Calendar::getSunriseClockString()
 
 String Calendar::getSunsetClockString()
 {
-    tmElements_t sunset {0};
+    tmElements_t sunset {};
     sunset.Hour   = mTodaySunsetHour;
     sunset.Minute = mTodaySunsetMinute;
     return getClockString(sunset);
@@ -825,7 +826,7 @@ private: //variables
     const byte mLCD_Width {20};
     String mMessageTopLine    {""};
     String mMessageBottomLine {""};
-    byte   mDissolveCountdown {0};
+    byte   mDissolveCountdown {};
 public:
     void   drawDisplay        ();
     void   dissolveEffect     ();
@@ -1381,7 +1382,7 @@ public:
     };
 private: //variables
     State mState           {STATE_INIT_BALANCED};
-    int   mInverterRunTime {0};
+    int   mInverterRunTime {};
 public:  //methods
     void  main                ();
     State getState            ();
@@ -1737,8 +1738,8 @@ void MyStateMachine::inverterCooldownfunction()
 class MessageManager
 {
 private: //variables
-    byte         mCurrentMessageIndex   {0};
-    time_t       mNextMessageTimestamp  {0};
+    byte         mCurrentMessageIndex   {};
+    time_t       mNextMessageTimestamp  {};
     const time_t mMessageDuration       {5000}; //milliseconds
     const byte   mQtySystemMessages     {3};        
 public:  //methods
@@ -1904,7 +1905,7 @@ private: //variables
     time_t      mAdjustmentWindowTimestamp {millis()};
     //Hold the input at mInputAnchorPoint unless there is a mLargeAdjustment
     //Why? My poor quality potentiometer does not always produce a steady reading.
-    int         mInputAnchorPoint               {0};
+    int         mInputAnchorPoint               {};
     
 public:  //methods
     void readDimmerSwitch         ();
