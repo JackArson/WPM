@@ -225,3 +225,4 @@ idea:  a function that takes these parameters (min/max voltage allowable time mi
 04-03-19-11:01 replaced DST logic with simpler model
 04-03-19-11:20 nightly maintenance moved from 2AM to 4AM to avoid DST logic
 04-03-19-18:47 rewrote VoltMeter description for clarity
+04-03-19-18:53 MyStateMachine::setState deployed Strings and F() macros

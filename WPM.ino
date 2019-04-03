@@ -1413,19 +1413,18 @@ void Voltmeter::readVoltage()
         mVoltage = raw_voltage;
         mIsFirstReadingCompleted = true;
     }
-    //My voltmeter gets jumpy when my solar chargers are processing a lot of energy
+    //My voltmeter gets jumpy when my solar chargers are processing a lot of energy.
+    //My experiments to stabilize the raw voltage reading by using capacitors
+    //were ineffective.
+    
     //Use the code below to help stabilize a jumpy reading (if needed.)
-    //My voltmeter display runs well with a max deviation setting of 0.01
+    //My voltmeter runs well with a max deviation setting of 0.01
     const float max_deviation {0.01};
     //a lower number produces a stabler reading at the expense of reaction time.
     //Explained another way, with a smaller max_deviation the reading would take
-    //longer to drop to 0.0 volts if
-    //the battery was disconnected.
-    
-    //My experiments to stabilize
-    //the raw voltage reading by using capacitors were ineffective.  This snippet below
-    //keeps my number averaged well enough though
-    //STABILIZE
+    //longer to drop to 0.0 volts if the battery was disconnected.
+
+    //voltage stabilizer
     if (raw_voltage > mVoltage)
     {
         mVoltage += max_deviation;
@@ -1566,8 +1565,8 @@ void MyStateMachine::resetInverterRunTime()
 void MyStateMachine::setState(State state)
 {
     mState = state;
-    const char *start_string {" State changed to "};
-    const char *finish_string {""};
+    String start_string  {F(" State changed to ")};
+    String finish_string {""};
     liquidcrystali2c.setCursor (0,0);
     switch (mState)
     {
@@ -1581,36 +1580,36 @@ void MyStateMachine::setState(State state)
     case STATE_INIT_INVERTER_COOL_DOWN:
         break;
     case STATE_SLEEP:
-        finish_string = "sleeping";
-        liquidcrystali2c.print("Sleeping");
+        finish_string = F("sleeping");
+        liquidcrystali2c.print(F("Sleeping"));
         break;
     case STATE_WAKE:
-        finish_string = "waking";
-        liquidcrystali2c.print("Waking  ");
+        finish_string = F("waking");
+        liquidcrystali2c.print(F("Waking  "));
         break;
     case STATE_BALANCED:
-        finish_string = "balanced";
-        liquidcrystali2c.print("Balanced");
+        finish_string = F("balanced");
+        liquidcrystali2c.print(F("Balanced"));
         break;
     case STATE_INVERTER_WARM_UP:
-        finish_string = "warm up";
-        liquidcrystali2c.print("Warm up ");
+        finish_string = F("warm up");
+        liquidcrystali2c.print(F("Warm up "));
         break;
     case STATE_INVERTER_STAGE_ONE:
-        finish_string = "stage one inverter";
-        liquidcrystali2c.print("Invert1 ");
+        finish_string = F("stage one inverter");
+        liquidcrystali2c.print(F("Invert1 "));
         break;
     case STATE_INVERTER_STAGE_TWO:
-        finish_string = "stage two inverter";
-        liquidcrystali2c.print("Invert2 ");
+        finish_string = F("stage two inverter");
+        liquidcrystali2c.print(F("Invert2 "));
         break;
     case STATE_DAY_CHARGE:
-        finish_string = "charging";
-        liquidcrystali2c.print("Charging");
+        finish_string = F("charging");
+        liquidcrystali2c.print(F("Charging"));
         break;
     case STATE_INVERTER_COOL_DOWN:
-        finish_string = "inverter cool down";
-        liquidcrystali2c.print("Cooldown");
+        finish_string = F("inverter cool down");
+        liquidcrystali2c.print(F("Cooldown"));
         break;
     case MAX_STATE:
     default:
