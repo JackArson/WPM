@@ -369,44 +369,16 @@ void Calendar::init()
         mNextDSTspringForward = {getDSTspringForward(next_year)};
         mNextDSTfallBack      =  this_year_fall_back_time;
     }
-    else if (now() >= this_year_fall_back_time))
+    else if (now() >= this_year_fall_back_time)
     {
         mDaylightSavingsTime = false;
         Serial.println("Calendar::init  mDaylightSavingsTime = false");
         mNextDSTspringForward = {getDSTspringForward(next_year)};
         mNextDSTfallBack      = {getDSTfallBack(next_year)};
     }
-
-
     loadImportantDates();
     setSunriseSunset();
 }
-
-//Calendar::DST_Action Calendar::daylightSavingCheck()
-//{
-    //bool last_DST_reading {mDaylightSavingsTime};
-    //bool this_DST_reading {isDaylightSavingsTime(timenow.getElements())};
-    //if      (last_DST_reading == true && this_DST_reading == true)
-    //{
-        //return Calendar::DST_Action::DST_ACTION_NONE;
-    //}
-    //else if (last_DST_reading == false && this_DST_reading == false)
-    //{
-        //return Calendar::DST_Action::DST_ACTION_NONE;
-    //}
-    //else if (last_DST_reading == true && this_DST_reading == false)
-    //{
-        //Serial.println(F("Calendar::daylightSavingCheck  Fall back occured"));
-        //timenow.changeHour(1); //set clock to 1AM 
-        //return Calendar::DST_Action::DST_ACTION_CLOCK_FELL_BACK;
-    //}
-    //else
-    //{
-        //Serial.println(F("Calendar::daylightSavingCheck  Spring forward occured"));
-        //timenow.changeHour(3); //set clock to 3AM
-        //return Calendar::DST_Action::DST_ACTION_CLOCK_SPRUNG_FORWARD;
-    //}
-//}
 
 const char* Calendar::getDaySuffix(byte day_number)
 {
@@ -1199,7 +1171,7 @@ class Timing
 private: //variables
     //countdown timers
     byte         mStateChangeDelayCounter {};
-    int          m2AM_LockoutCounter      {};
+    //int          m2AM_LockoutCounter      {};
     //timestamps
     time_t       mDissolveTimestamp       {};
     time_t       mOneSecondTimestamp      {}; //to control 1s loop
@@ -1207,10 +1179,10 @@ private: //variables
 public:  //methods
     byte getStateChangeDelayCounter           ();
     bool hasOneSecondPassed   ();
-    bool isIt2AM              (); 
+    bool isIt4AM              (); 
     bool isDissolveReady      ();
-    void lockout2AM           (int lockout_seconds);    
-    void setCountdownTimer    (byte x);
+    //void lockout2AM           (int lockout_seconds);    
+    void setCountdownTimer    (const int x);
     void updateCounters       ();
 private: //methods
     
@@ -1223,21 +1195,11 @@ byte Timing::getStateChangeDelayCounter()
     return mStateChangeDelayCounter;
 }
 
-bool Timing::isIt2AM()
+bool Timing::isIt4AM()
 {
-    if (m2AM_LockoutCounter)
+    if (timenow.getHour()   == 4 && timenow.getMinute() == 0 && timenow.getSecond() == 0)
     {
-        Serial.print("L");
-    }    
-    if (timenow.getHour()   == 2 &&
-        timenow.getMinute() == 0 &&
-        timenow.getSecond() == 0 &&
-        m2AM_LockoutCounter == false)
-    {
-        //set m2AM_LockoutCounter for one second so this won't check again until
-        //2:00:01AM.  This ensures that true is returned just once per day;
-        m2AM_LockoutCounter = 1;
-        Serial.println("Timing::isIt2AM() = true!"); 
+        Serial.println("Timing::isIt4AM() = true!");
         return true;
     }
     else
@@ -1275,15 +1237,15 @@ bool Timing::hasOneSecondPassed()
     }
 }
 
-void Timing::lockout2AM(int lockout_seconds)
-{
-    m2AM_LockoutCounter = lockout_seconds;
-    Serial.print("Timing::lockout2AM_Check  mLockoutExpires in ");
-    Serial.print(lockout_seconds);
-    Serial.print(" seconds");
-}
+//void Timing::lockout2AM(int lockout_seconds)
+//{
+    //m2AM_LockoutCounter = lockout_seconds;
+    //Serial.print("Timing::lockout2AM_Check  mLockoutExpires in ");
+    //Serial.print(lockout_seconds);
+    //Serial.print(" seconds");
+//}
 
-void Timing::setCountdownTimer(byte x)
+void Timing::setCountdownTimer(const int x)
 {
     mStateChangeDelayCounter = x;
 }
@@ -1297,10 +1259,10 @@ void Timing::updateCounters()
     {
         --mStateChangeDelayCounter;
     }
-    if (m2AM_LockoutCounter > 0)
-    {
-        --m2AM_LockoutCounter;
-    }
+    //if (m2AM_LockoutCounter > 0)
+    //{
+        //--m2AM_LockoutCounter;
+    //}
 }
 //==end of Timing============================================================================
 
@@ -2198,11 +2160,12 @@ void loop()
     }
     else if (calendar.getNextDSTfallBack() == now())
     {
-        calendar.init(); //sets new DST dates
+        calendar.init(); //sets new DST dates. Must be done before setting
+                         //the clock back to avoid a repeat
         timenow.changeHour(1);
         Serial.println("The clock was set back one hour. 2AM became 1AM"); 
     }
-    if (timing.isIt2AM())
+    if (timing.isIt4AM())
     {
         mystatemachine.resetInverterRunTime();
         voltmeter.initDailyStatistics();  //resets daily voltage highs and lows           
