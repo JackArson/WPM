@@ -1178,10 +1178,9 @@ private: //variables
     
 public:  //methods
     byte getStateChangeDelayCounter           ();
-    bool hasOneSecondPassed   ();
+    bool isOneSecondLoopReady   ();
     bool isIt4AM              (); 
     bool isDissolveReady      ();
-    //void lockout2AM           (int lockout_seconds);    
     void setCountdownTimer    (const int x);
     void updateCounters       ();
 private: //methods
@@ -1223,7 +1222,7 @@ bool Timing::isDissolveReady()
     }    
 }
 
-bool Timing::hasOneSecondPassed()
+bool Timing::isOneSecondLoopReady()
 {
     if (mOneSecondTimestamp != now()) 
     {
@@ -1359,56 +1358,47 @@ void Voltmeter::initDailyStatistics()
 }
 void Voltmeter::readVoltage()
 {
-    //The 5 volt Arduino controller cannot read voltage above 5 volts.
-    //If you put more than 5 volts on an analog input pin, you will probably
-    //ruin your controller. 
-    //Instead, measure a smaller voltage from a voltage divider and then multiply that
-    //result by a voltage ratio.
+    //A 5 volt micro controller can be damaged when more than 5 volts is applied to
+    //a pin.  A voltage divider can be used to reduce a high voltage to a low
+    //voltage so it can be safely measured.    
 
-    //my voltage divider is constructed as:  
+    //I need to measure a bank of 12 volt sealed lead acid batteries.  I built a
+    //voltage divider as follows:
     //150k resistor from positive battery terminal to voltage divider intersection.
     // 47k resistor from negative battery terminal to voltage divider intersection.
-    // a wire from the voltage divider intersection to a controller analog pin
+    //a wire from the voltage divider intersection to a controller analog pin
 
-    //To establish the voltage ratio:
-    //take two measurements with a portable voltmeter                                        
-    //DO NOT TAKE THESE READINGS WITH THE USB CABLE ATTACHED, THEY WON'T BE ACCURATE.
-    //my battery reading  12.28volts
-    //my divider reading    2.9volts
-    //Use a calculator to get this number. 12.28 / 2.84 = 4.32
-    //Since it is a constant, there is no need to make the controller calculate it every time.
-    float         voltage_divider_ratio { 4.32};  
-    //if the program displays the wrong voltage, you can fine tune it here.
-    const float   error_correction      {-0.07};  //This is the actual adjustment to my
+    //The total resistance: 197k (150k + 47k = 197k)
+    //The percentage of power at my voltage divider intersection: 24% (47k / 197k = 0.24)
+    //That means 20 volts should read as 4.8 volts (20v * 0.24 = 4.8v)
+    float         voltage_divider_ratio {4.19};  // (197k / 47k = 4.19)
+    //if the program displays the wrong voltage, you can fine tune it below.
+    const float   error_correction      {0.06};  //This is the actual adjustment to my
     //own voltmeter.  you would put a 0.00 here unless you have reason to believe
     //your Arduino voltmeter is reading too high, or too low.  I found my error correction by
     //adjusting this number and examining the result
     voltage_divider_ratio += error_correction;
-      
     //An important note about errors and operating voltage.  I am using the full operating voltage
-    //of my Arduino as a voltage reference for simplicity.  There are other ways to set up a more 
-    //accurate voltage reference, but this method works well for me.
+    //of my Arduino as a voltage reference.  There are other ways to set up a more 
+    //accurate voltage reference, but this method is simple and effective.
     //I power my Arduino with 9 volts, and have a nice even 5 volts measured between my 5 volt
-    //pin and my ground pin.  When I plug my Arduino into my laptop for uploading, the voltage changes
-    //slightly.  What that means: My program displays the wrong voltage with the USB cable attached.
-    //The difference is about 0.2 volts.  I must remind myself to unplug the USB cable after uploading
-    //my sketch and before I wonder why the voltage is wrong.
-    //Be sure you have a steady power supply to your Arduino (or clone, or other thing 
-    //that reads code)
-    
+    //pin and my ground pin.  When I plug my Arduino into my laptop to upload this sketch,
+    //the operating voltage rises slightly and program calculates the wrong voltage.
+    //The difference is only about 0.2 volts, but it is enough of an error to cause some
+    //unwanted behavior.  I wrote a bit of code to compensate for that error.  I can
+    //toggle the correction by entering a 'c' into my serial monitor input box.
+    const int   pin_reading     {analogRead(Pin::voltage_divider)};
+    const float pin_value       {static_cast<float>(pin_reading)};
     //the range of pin values starts at 0 for 0.0 volts and top out
     //at 1023 when the pin is at full operating voltage
-    const int   pin_reading     {analogRead(Pin::voltage_divider)};
-    
-    const float pin_value       {static_cast<float>(pin_reading)};
-    const float max_pin_value   {1024.0};
-    const float pin_value_ratio {pin_value / max_pin_value};
+    const float total_values {1024.0};
+    const float pin_value_ratio {pin_value / total_values};
     //the pin value ratio is a number between 0.0 and 1.0  It is a decimal percentage
     //of the controller's operating_voltage. 
     float operating_voltage {5.0}; //this is a number you need to measure, my 
     //portable voltmeter mesures 5.0 volts between the 5V pin and ground (with
     //the USB cable unplugged.  See note on my USB cable trouble above.)
-    //there is enough information for the micro-controller to read the voltage at the pin
+    //There is enough information for the micro-controller to calculate the voltage.
     if (myserial.usingLaptopOperatingVoltage())
     {
         operating_voltage = mLaptopOperatingVoltage;
@@ -1416,7 +1406,8 @@ void Voltmeter::readVoltage()
     const float pin_voltage       {pin_value_ratio * operating_voltage};
     //the 'real' voltage is the pin voltage multiplied by the voltage ratio.  
     const float raw_voltage       {pin_voltage * voltage_divider_ratio};
-    //set the mVoltage value to raw_voltage if this is the first run.
+    //set the mVoltage value to raw_voltage only on the first run.
+    //after that, mVoltage will be set by stabilizing code  
     if (mIsFirstReadingCompleted == false)
     {
         mVoltage = raw_voltage;
@@ -1426,14 +1417,13 @@ void Voltmeter::readVoltage()
     //Use the code below to help stabilize a jumpy reading (if needed.)
     //My voltmeter display runs well with a max deviation setting of 0.01
     const float max_deviation {0.01};
-    //a lower number produces a more consistent reading, at the
-    //expense of reaction time.
-    //Explained another way, with a small max_deviation
-    //the reading would take longer to drop to 0.0 volts if
+    //a lower number produces a stabler reading at the expense of reaction time.
+    //Explained another way, with a smaller max_deviation the reading would take
+    //longer to drop to 0.0 volts if
     //the battery was disconnected.
     
-    //I am not an electronics expert, but my experiments to stabilize
-    //my voltmeter reading by using capacitors were ineffective.  This snippet below
+    //My experiments to stabilize
+    //the raw voltage reading by using capacitors were ineffective.  This snippet below
     //keeps my number averaged well enough though
     //STABILIZE
     if (raw_voltage > mVoltage)
@@ -2140,13 +2130,11 @@ void loop()
         mylcd.dissolveEffect();
     }
     //This code runs every second (1000ms)
-    if (timing.hasOneSecondPassed())   
+    if (timing.isOneSecondLoopReady())   
     {
-        //timenow.syncTimeWithRTC_Clock();
         timing.updateCounters();    
-        mylcd.drawDisplay();
-        //print messages (if any are ready)
-        messagemanager.main();
+        mylcd.drawDisplay();        
+        messagemanager.main();  //print messages (if any are ready)
         myserial.printTimestamp(); //print timestamp
         voltmeter.main();          //print voltage
         mystatemachine.main();     //print state changes
@@ -2165,14 +2153,16 @@ void loop()
         timenow.changeHour(1);
         Serial.println("The clock was set back one hour. 2AM became 1AM"); 
     }
-    if (timing.isIt4AM())
+    else if (timing.isIt4AM())
     {
+        //do nightly maintenance
         mystatemachine.resetInverterRunTime();
         voltmeter.initDailyStatistics();  //resets daily voltage highs and lows           
         messagemanager.init();  
         calendar.init();
     }
 }
+
 
 
 void printFullDateTime (const tmElements_t timestamp)
