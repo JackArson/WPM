@@ -1658,8 +1658,9 @@ void MyStateMachine::wakeStatefunction()
         setState(STATE_INIT_SLEEP); //initiate sleep state
     }
     //check to see how long it is past dawn.
-    //if it is delta_t, or 15 minutes, past dawn switch to state 4 (init balanced)
-    //The wake up delay ensures that the the inverter does not burn off the fresh battery charger energy
+    //if it is a certain time past dawn, switch to state 4 (init balanced)
+    //The wake up delay ensures that the the inverter does not burn off the overcharge
+    //from the battery charger that was just turned off at dawn
     else if (calendar.isWakeUpComplete() == true)
     {
         setState(STATE_INIT_BALANCED);  //initiate balanced
@@ -1670,9 +1671,9 @@ void MyStateMachine::initBalancedStatefunction()
 {
     digitalWrite (Pin::battery_charger, LOW);          //battery charger off
     digitalWrite (Pin::inverter, LOW);                 //inverter off
-    digitalWrite (Pin::stage_one_inverter_relay, LOW); // relay one off
-    digitalWrite (Pin::stage_two_inverter_relay, LOW); // relay two off
-    setState(STATE_BALANCED);                          // balanced initialization complete
+    digitalWrite (Pin::stage_one_inverter_relay, LOW); //relay one off
+    digitalWrite (Pin::stage_two_inverter_relay, LOW); //relay two off
+    setState(STATE_BALANCED);                          //balanced initialization complete
 }
 
 void MyStateMachine::balancedStatefunction()
@@ -1697,10 +1698,10 @@ void MyStateMachine::balancedStatefunction()
 void MyStateMachine::initWarmUpInverterStatefunction()
 {
     const int seconds_to_warm_up {4};
-    digitalWrite (Pin::battery_charger, LOW);  //battery charger off
-    digitalWrite (Pin::inverter, HIGH);         //inverter on
-    digitalWrite(Pin::stage_one_inverter_relay, LOW);    // relay one off
-    digitalWrite(Pin::stage_two_inverter_relay, LOW);    // relay two off
+    digitalWrite (Pin::battery_charger, LOW);         //battery charger off
+    digitalWrite (Pin::inverter, HIGH);               //inverter on
+    digitalWrite(Pin::stage_one_inverter_relay, LOW); //relay one off
+    digitalWrite(Pin::stage_two_inverter_relay, LOW); //relay two off
     timing.setCountdownTimer(seconds_to_warm_up);
     setState(STATE_INVERTER_WARM_UP);
 }
@@ -1723,8 +1724,8 @@ void MyStateMachine::initStageOneInverterStatefunction()
     const int stage_two_switching_delay {15};
     digitalWrite (Pin::battery_charger, LOW);           //battery charger off
     digitalWrite (Pin::inverter, HIGH);                 //inverter on
-    digitalWrite (Pin::stage_one_inverter_relay, HIGH); // relay one on
-    digitalWrite (Pin::stage_two_inverter_relay, LOW);  // relay two off
+    digitalWrite (Pin::stage_one_inverter_relay, HIGH); //relay one on
+    digitalWrite (Pin::stage_two_inverter_relay, LOW);  //relay two off
     timing.setCountdownTimer(stage_two_switching_delay);
     setState(STATE_INVERTER_STAGE_ONE);
 }
@@ -1734,7 +1735,7 @@ void MyStateMachine::stageOneInverterStatefunction()
     const float voltage_to_turn_inverter_off   {12.55};
     const float voltage_to_switch_to_stage_two {13.80};
     mInverterRunTime++;
-    //switch to initiate sleep mode if dark (unlikely)
+    //switch to initiate sleep mode if dark (although unlikely to be on near dusk)
     if (calendar.isDaylight() == false)
     {        
         setState(STATE_INIT_SLEEP);
