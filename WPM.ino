@@ -212,13 +212,13 @@ const byte QTY_IMPORTANT_DATES = 23;  //this must be initialized in global space
 class Calendar
 {
 public:
-    enum DST_Action
-    {
-        DST_ACTION_NONE,
-        DST_ACTION_CLOCK_FELL_BACK,
-        DST_ACTION_CLOCK_SPRUNG_FORWARD,
-        MAX_DST_ACTION
-    };
+    //enum DST_Action
+    //{
+        //DST_ACTION_NONE,
+        //DST_ACTION_CLOCK_FELL_BACK,
+        //DST_ACTION_CLOCK_SPRUNG_FORWARD,
+        //MAX_DST_ACTION
+    //};
     enum EventType
     {
         EVENTTYPE_ANNIVERSARY,
@@ -309,25 +309,28 @@ private: //variables continued
     byte   mTodaySunsetHour      {};
     byte   mTodaySunsetMinute    {};
     bool   mDaylightSavingsTime  {};
-    time_t mNextDSTSpringForward {};
-    time_t mNextDSTFallBack      {};
+    time_t mNextDSTspringForward {};
+    time_t mNextDSTfallBack      {};
 public:  //methods
     void           init                    ();
-    DST_Action     daylightSavingCheck     ();
+    //DST_Action     daylightSavingCheck     ();
     String         getClockString          (const tmElements_t time,
                                             const bool right_justify = false);
     const char*    getDaySuffix            (byte day_number);
-    time_t         getDSTSpringForward     (const int input_year);
-    time_t         getDSTFallBack          (const int input_year);
+    time_t         getDSTspringForward     (const int input_year);
+    time_t         getDSTfallBack          (const int input_year);
+    time_t         getNextDSTspringForward ();
+    time_t         getNextDSTfallBack      ();
     const ImportantDate* getImportantDate  (const byte index);     
     const char*    getMonthShortName       (const byte month_number);
+    
     String         getSunriseClockString   ();
     String         getSunsetClockString    ();
     byte           getWeekNumber           (tmElements_t date);
     byte           getQtyImportantDates    ();
     bool           isAM                    (const tmElements_t time);
     bool           isDaylight              ();
-    bool           isDaylightSavingsTime   (tmElements_t input_date);
+    //bool           isDaylightSavingsTime   (tmElements_t input_date);
     bool           isWakeUpComplete        ();
     void           loadImportantDates      ();
     void           setSunriseSunset        ();
@@ -337,38 +340,73 @@ public:  //methods
 void Calendar::init()
 {
     mQtyImportantDatesToReport = 0;
-    const time_t this_year_spring_forward_time {getDSTSpringForward(timenow.getYear())};
-    //Serial.print();
-    //mDaylightSavingsTime = isDaylightSavingsTime(timenow.getElements());
+    //confirm now
+    Serial.print("Calendar::init  now:            ");
+    printFullDateTime(now());
+    //get this years spring forward time_t
+    const time_t this_year_spring_forward_time {getDSTspringForward(timenow.getYear())};
+    Serial.print("Calendar::init  Spring Forward: ");
+    printFullDateTime(this_year_spring_forward_time);
+    //get this years fall back time_t
+    const time_t this_year_fall_back_time {getDSTfallBack(timenow.getYear())};
+    Serial.print("Calendar::init  Fall Back     : ");
+    printFullDateTime(this_year_fall_back_time);
+    //calculate next year
+    const int next_year {timenow.getYear() + 1};
+    //determime if DST is active now and set next SpringForward / FallBack
+    if (now() < this_year_spring_forward_time)
+    {
+        mDaylightSavingsTime  = false;
+        Serial.println("Calendar::init  mDaylightSavingsTime = false");
+        mNextDSTspringForward = this_year_spring_forward_time;
+        mNextDSTfallBack      = this_year_fall_back_time;
+    }
+    else if (now() >= this_year_spring_forward_time &&
+             now() <  this_year_fall_back_time)
+    {
+        mDaylightSavingsTime = true;
+        Serial.println("Calendar::init  mDaylightSavingsTime = true");
+        mNextDSTspringForward = {getDSTspringForward(next_year)};
+        mNextDSTfallBack      =  this_year_fall_back_time;
+    }
+    else if (now() >= this_year_fall_back_time))
+    {
+        mDaylightSavingsTime = false;
+        Serial.println("Calendar::init  mDaylightSavingsTime = false");
+        mNextDSTspringForward = {getDSTspringForward(next_year)};
+        mNextDSTfallBack      = {getDSTfallBack(next_year)};
+    }
+
+
     loadImportantDates();
     setSunriseSunset();
 }
 
-Calendar::DST_Action Calendar::daylightSavingCheck()
-{
-    bool last_DST_reading {mDaylightSavingsTime};
-    bool this_DST_reading {isDaylightSavingsTime(timenow.getElements())};
-    if      (last_DST_reading == true && this_DST_reading == true)
-    {
-        return Calendar::DST_Action::DST_ACTION_NONE;
-    }
-    else if (last_DST_reading == false && this_DST_reading == false)
-    {
-        return Calendar::DST_Action::DST_ACTION_NONE;
-    }
-    else if (last_DST_reading == true && this_DST_reading == false)
-    {
-        Serial.println(F("Calendar::daylightSavingCheck  Fall back occured"));
-        timenow.changeHour(1); //set clock to 1AM 
-        return Calendar::DST_Action::DST_ACTION_CLOCK_FELL_BACK;
-    }
-    else
-    {
-        Serial.println(F("Calendar::daylightSavingCheck  Spring forward occured"));
-        timenow.changeHour(3); //set clock to 3AM
-        return Calendar::DST_Action::DST_ACTION_CLOCK_SPRUNG_FORWARD;
-    }
-}
+//Calendar::DST_Action Calendar::daylightSavingCheck()
+//{
+    //bool last_DST_reading {mDaylightSavingsTime};
+    //bool this_DST_reading {isDaylightSavingsTime(timenow.getElements())};
+    //if      (last_DST_reading == true && this_DST_reading == true)
+    //{
+        //return Calendar::DST_Action::DST_ACTION_NONE;
+    //}
+    //else if (last_DST_reading == false && this_DST_reading == false)
+    //{
+        //return Calendar::DST_Action::DST_ACTION_NONE;
+    //}
+    //else if (last_DST_reading == true && this_DST_reading == false)
+    //{
+        //Serial.println(F("Calendar::daylightSavingCheck  Fall back occured"));
+        //timenow.changeHour(1); //set clock to 1AM 
+        //return Calendar::DST_Action::DST_ACTION_CLOCK_FELL_BACK;
+    //}
+    //else
+    //{
+        //Serial.println(F("Calendar::daylightSavingCheck  Spring forward occured"));
+        //timenow.changeHour(3); //set clock to 3AM
+        //return Calendar::DST_Action::DST_ACTION_CLOCK_SPRUNG_FORWARD;
+    //}
+//}
 
 const char* Calendar::getDaySuffix(byte day_number)
 {
@@ -394,7 +432,7 @@ const char* Calendar::getDaySuffix(byte day_number)
     }
 }
 
-time_t Calendar::getDSTSpringForward(const int input_year)
+time_t Calendar::getDSTspringForward(const int input_year)
 {
     //Rules for my area (Ohio, USA) and most of United States
     //DST begins on the second Sunday of March    at 2AM and
@@ -429,7 +467,7 @@ time_t Calendar::getDSTSpringForward(const int input_year)
     return second_sunday_of_march_2AM;
 }
 
-time_t Calendar::getDSTFallBack(const int input_year)
+time_t Calendar::getDSTfallBack(const int input_year)
 {
     //Find the first Sunday of November in a similar manner
     //(see Calendar::getDSTSpringForward).
@@ -448,6 +486,17 @@ time_t Calendar::getDSTFallBack(const int input_year)
     const time_t first_sunday_of_november_2AM  {first_sunday_of_november + SECS_PER_HOUR * 2};
     return first_sunday_of_november_2AM;
 }
+
+time_t Calendar::getNextDSTspringForward()
+{
+    return mNextDSTspringForward;
+}
+
+time_t Calendar::getNextDSTfallBack()
+{
+    return mNextDSTfallBack;
+}
+    
 
 String Calendar::getClockString(const tmElements_t time,
                                 const bool right_justify)
@@ -593,66 +642,66 @@ bool Calendar::isDaylight()
     }
 }
 
-bool Calendar::isDaylightSavingsTime(tmElements_t input_date)
-{  
-    //Rules for my area (Ohio, USA) and most of United States
-    //DST begins on the second Sunday of March    at 2AM and
-    //       ends on the first Sunday of November at 2AM.
+//bool Calendar::isDaylightSavingsTime(tmElements_t input_date)
+//{  
+    ////Rules for my area (Ohio, USA) and most of United States
+    ////DST begins on the second Sunday of March    at 2AM and
+    ////       ends on the first Sunday of November at 2AM.
     
-    //Find the FIRST Sunday of March
-    //Create a blank tmElements_t object, it's a seven part time and date.   
-    tmElements_t march_start {}; //sets all elements to 0
-    //March is the 3rd march of the year
-    const uint8_t march {3}; 
-    //Set the month
-    march_start.Month = march;
-    //Set the year to the year from the input_date parameter 
-    march_start.Year  = input_date.Year;
-    //time_t numbers are the number of seconds that have elapsed since January 1st 1970.
-    //Use the time library makeTime function to convert the tmElements_t object
-    //into a time_t so some time library math can be done.  
-    const time_t start_march {makeTime(march_start)};
-    //The time library has a 'nextSunday' function
-    //Since the march_start.Day variable was set to the 0th instead of the 1st,
-    //Sunday's that fall on the 1st of the march will 
-    //qualify as 'nextSunday' as well as any Sunday that falls on the 2nd through 7th.
-    //Use the nextSunday function to find the first Sunday of the month.
-    const time_t first_sunday_of_march {nextSunday(start_march)};
-    //Add one weeks worth of seconds to the time_t first_sunday_of_march
-    //to get the 2nd Sunday of March.  SECS_PER_WEEK is defined in the time library.
-    const time_t second_sunday_of_march {first_sunday_of_march + SECS_PER_WEEK};
-    //Add two hours worth of seconds to change the time from midnight to 2AM.
-    //It is important to change the time to 2AM AFTER the nextSunday function has
-    //been called, and not before. SECS_PER_HOUR is also defined in the time library.
-    const time_t second_sunday_of_march_2AM {second_sunday_of_march + SECS_PER_HOUR * 2};
+    ////Find the FIRST Sunday of March
+    ////Create a blank tmElements_t object, it's a seven part time and date.   
+    //tmElements_t march_start {}; //sets all elements to 0
+    ////March is the 3rd march of the year
+    //const uint8_t march {3}; 
+    ////Set the month
+    //march_start.Month = march;
+    ////Set the year to the year from the input_date parameter 
+    //march_start.Year  = input_date.Year;
+    ////time_t numbers are the number of seconds that have elapsed since January 1st 1970.
+    ////Use the time library makeTime function to convert the tmElements_t object
+    ////into a time_t so some time library math can be done.  
+    //const time_t start_march {makeTime(march_start)};
+    ////The time library has a 'nextSunday' function
+    ////Since the march_start.Day variable was set to the 0th instead of the 1st,
+    ////Sunday's that fall on the 1st of the march will 
+    ////qualify as 'nextSunday' as well as any Sunday that falls on the 2nd through 7th.
+    ////Use the nextSunday function to find the first Sunday of the month.
+    //const time_t first_sunday_of_march {nextSunday(start_march)};
+    ////Add one weeks worth of seconds to the time_t first_sunday_of_march
+    ////to get the 2nd Sunday of March.  SECS_PER_WEEK is defined in the time library.
+    //const time_t second_sunday_of_march {first_sunday_of_march + SECS_PER_WEEK};
+    ////Add two hours worth of seconds to change the time from midnight to 2AM.
+    ////It is important to change the time to 2AM AFTER the nextSunday function has
+    ////been called, and not before. SECS_PER_HOUR is also defined in the time library.
+    //const time_t second_sunday_of_march_2AM {second_sunday_of_march + SECS_PER_HOUR * 2};
 
-    //Find the first Sunday of November in a similar manner.
-    tmElements_t november_start{};
-    //November is the 11th march of the year
-    const uint8_t november {11};
-    //Set the month
-    november_start.Month = november;
-    //Set the year to the year from the input_date parameter 
-    november_start.Year  = input_date.Year;
-    //Convert the tmElements_t to a time_t
-    const time_t start_november {makeTime(november_start)};   
-    //Use the nextSunday function to find the first Sunday of the month
-    const time_t first_sunday_of_november {nextSunday(start_november)};
-    //Add two hours worth of seconds to change the time from midnight to 2AM.
-    const time_t first_sunday_of_november_2AM  {first_sunday_of_november + SECS_PER_HOUR * 2};
-    //Convert the input parameter to a time_t number for a comparison
-    const time_t date_input {makeTime(input_date)};
-    //Compare results and return the answer
-    if (date_input >= second_sunday_of_march_2AM &&
-        date_input <  first_sunday_of_november_2AM)
-    {
-        return true;
-    }
-    else
-    {
-        return false;
-    }
-}
+    ////Find the first Sunday of November in a similar manner.
+    //tmElements_t november_start{};
+    ////November is the 11th march of the year
+    //const uint8_t november {11};
+    ////Set the month
+    //november_start.Month = november;
+    ////Set the year to the year from the input_date parameter 
+    //november_start.Year  = input_date.Year;
+    ////Convert the tmElements_t to a time_t
+    //const time_t start_november {makeTime(november_start)};   
+    ////Use the nextSunday function to find the first Sunday of the month
+    //const time_t first_sunday_of_november {nextSunday(start_november)};
+    ////Add two hours worth of seconds to change the time from midnight to 2AM.
+    //const time_t first_sunday_of_november_2AM  {first_sunday_of_november + SECS_PER_HOUR * 2};
+    ////Convert the input parameter to a time_t number for a comparison
+    //const time_t date_input {makeTime(input_date)};
+    ////Compare results and return the answer
+    //if (date_input >= second_sunday_of_march_2AM &&
+        //date_input <  first_sunday_of_november_2AM)
+    //{
+        //return true;
+    //}
+    //else
+    //{
+        //return false;
+    //}
+//}
 
 void Calendar::loadImportantDates()
 {
@@ -818,11 +867,28 @@ void MySerial::printFullDateTime (const tmElements_t timestamp)
     fullDateTime += " ";
     //Tuesday, May 3rd 2019
     fullDateTime += 1970 + timestamp.Year;
-    fullDateTime += " ";
-    //Tuesday, May 3rd 2019 01:23:07
-    Serial.print(fullDateTime);
-    printTimestamp();
-    Serial.println();
+    fullDateTime += "  ";
+    //Tuesday, May 3rd 2019  1:
+    fullDateTime += timestamp.Hour;
+    fullDateTime += ":";
+    //Tuesday, May 3rd 2019  1:05:
+    const int time_minute {timestamp.Minute};
+    if (time_minute < 10)
+    {
+        //add a leading zero
+        fullDateTime += "0";
+    }
+    fullDateTime += timestamp.Minute;
+    fullDateTime += ":";
+    //Tuesday, May 3rd 2019  1:05:35
+    const int time_second {timestamp.Second};
+    if (time_second < 10)
+    {
+        //add a leading zero
+        fullDateTime += "0";
+    }
+    fullDateTime += timestamp.Minute;
+    Serial.println(fullDateTime);
 }
 
 void MySerial::printFullDateTime (const time_t timestamp)
@@ -2124,19 +2190,22 @@ void loop()
         mystatemachine.main();     //print state changes
         Serial.println();
     }
+    if (calendar.getNextDSTspringForward() == now())
+    {
+        calendar.init(); //sets new DST dates
+        timenow.changeHour(3);
+        Serial.println("The clock was set forward one hour. 2AM became 3AM"); 
+    }
+    else if (calendar.getNextDSTfallBack() == now())
+    {
+        calendar.init(); //sets new DST dates
+        timenow.changeHour(1);
+        Serial.println("The clock was set back one hour. 2AM became 1AM"); 
+    }
     if (timing.isIt2AM())
     {
         mystatemachine.resetInverterRunTime();
         voltmeter.initDailyStatistics();  //resets daily voltage highs and lows           
-        if (calendar.daylightSavingCheck() == Calendar::DST_ACTION_CLOCK_FELL_BACK)
-        {
-            //When time falls back from 2AM to 1AM, 2AM will repeat itself in 1 hour.
-            //The check for 2AM must therefore be skipped for over an hour so the
-            //program does not get caught in a repetitive loop.
-            //SECS_PER_HOUR is defined in the time library.
-            const int for_over_an_hour (SECS_PER_HOUR + 1); //one hour one second
-            timing.lockout2AM(for_over_an_hour);
-        }
         messagemanager.init();  
         calendar.init();
     }
