@@ -754,7 +754,7 @@ bool Calendar::isDaylight()
 {
     const int todays_sunrise_minutes {(mTodaySunriseHour * 60) + mTodaySunriseMinute};
     const int todays_sunset_minutes  {(mTodaySunsetHour  * 60) + mTodaySunsetMinute};
-    const int now_minutes     {(hour()            * 60) + minute()};
+    const int now_minutes {(timenow.getHour() * 60) + timenow.getMinute()};
     if (now_minutes >= todays_sunrise_minutes && now_minutes < todays_sunset_minutes)
     {
         return true; 

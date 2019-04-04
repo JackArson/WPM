@@ -233,3 +233,4 @@ idea:  a function that takes these parameters (min/max voltage allowable time mi
 04-04-19-10:13 added myString and began moving in String related functions and methods
 04-04-19-11:33 added MyString::get24Clock
 04-04-19-12:08 added MyString::get12Clock
+04-04-19-12:38 Calendar::isDaylight updated
