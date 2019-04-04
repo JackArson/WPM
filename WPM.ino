@@ -671,7 +671,7 @@ bool Calendar::isWakeUpComplete()
     //battery charger energy.
 
     const int sunrise_minutes {(mTodaySunriseHour * 60) + mTodaySunriseMinute};
-    const int now_minutes     {(hour() * 60) + minute()};  
+    const int now_minutes     {(timenow.getHour() * 60) + timenow.getMinute()};  
     if (now_minutes >= sunrise_minutes + wake_up_delay)
     {
         return true; 
@@ -1155,9 +1155,9 @@ void MyLCD::printImportantDate(const Calendar::ImportantDate* importantdate)
         case Calendar::EVENTTYPE_BIRTHDAY:
             {
                 top_line += F("'s "); //Paul & Mena's
-                byte anniversary (year() - importantdate->year);
+                byte anniversary (timenow.getYear() - importantdate->year);
                 //fix end of year wrap around
-                if (month() == 12 && importantdate->month != 12)
+                if (timenow.getMonth() == 12 && importantdate->month != 12)
                 {
                     ++anniversary; 
                 }
@@ -1311,7 +1311,7 @@ void MyLCD::printClock(const TimeElements time,
 void MyLCD::printDate(const Coordinant coordinant)
 {
     liquidcrystali2c.setCursor(coordinant.x, coordinant.y); 
-    liquidcrystali2c.print(dayShortStr(weekday()));
+    liquidcrystali2c.print(dayShortStr(weekday(timenow.getNow())));
     liquidcrystali2c.print(F(", "));
     liquidcrystali2c.print(calendar.getMonthShortName(timenow.getMonth()));    
     liquidcrystali2c.print(F(" "));
