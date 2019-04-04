@@ -56,13 +56,66 @@ private: //variables
 
 
 public:  //methods
-    String get24Clock          (const time_t timestamp); // 13:45:56
-    String getDaySuffix        (int day_number);         // nd
+    String get12Clock          (const tmElements_t time,
+                                const bool right_justify, 
+                                const bool dst); //  1:24am+
+    String get24Clock          (const time_t timestamp);   // 13:45:56
+    String getDaySuffix        (int day_number);           // nd
     String getFullDateTime     (const tmElements_t timestamp);
     String getFullDateTime     (const time_t timestamp);
     
     
 }mystring;
+
+String MyString::get12Clock(const tmElements_t time, const bool right_justify,
+                            const bool dst)
+{
+    int    format       {12};  //remove 12 hours if not AM
+    String clock_string {""};
+    bool   isAM           {};
+    if (time.Hour < 12)
+    {
+        isAM = true;
+        format = 0;  //do not subtract 12 hours
+    }
+    if (time.Hour == 0) //the midnight hour
+    {
+        clock_string += F("12");
+    }
+    else
+    {
+        //if a single digit AND right_justify, add a leading space
+        if (time.Hour - format < 10 && right_justify == true)
+        {             
+            clock_string = " " + clock_string;
+        }
+        const String hour_string (time.Hour - format); 
+        clock_string += hour_string;
+    }   
+    clock_string += F(":");
+    //if a single digit, add a leading zero
+    if (time.Minute < 10)
+    {  
+        clock_string += F("0");
+    }
+    const String minute_string {time.Minute};   
+    clock_string += minute_string;
+    if (isAM)
+    {
+        clock_string += F("am");
+    }
+    else 
+    {                          
+        clock_string += F("pm");
+    }
+    //add a plus symbol to the end of the string to indicate Daylight Savings Time
+    if (dst)
+    {
+        clock_string += F("+");
+    }
+    return clock_string;    
+}
+
 
 String MyString::get24Clock(const time_t timestamp)  // 13:45:56
 {
@@ -159,9 +212,6 @@ String MyString::getFullDateTime (const time_t timestamp)
     breakTime(timestamp, timestamp_elements);
     return getFullDateTime(timestamp_elements);
 }
-
-
-
 //==end of MyString==========================================================================
 
 class TimeNow
@@ -374,13 +424,6 @@ const byte QTY_IMPORTANT_DATES = 23;  //this must be initialized in global space
 class Calendar
 {
 public:
-    //enum DST_Action
-    //{
-        //DST_ACTION_NONE,
-        //DST_ACTION_CLOCK_FELL_BACK,
-        //DST_ACTION_CLOCK_SPRUNG_FORWARD,
-        //MAX_DST_ACTION
-    //};
     enum EventType
     {
         EVENTTYPE_ANNIVERSARY,
@@ -475,10 +518,9 @@ private: //variables continued
     time_t mNextDSTfallBack      {};
 public:  //methods
     void           init                    ();
-    //DST_Action     daylightSavingCheck     ();
-    String         getClockString          (const tmElements_t time,
-                                            const bool right_justify = false);
-    //const char*    getDaySuffix            (byte day_number);
+    //String         getClockString          (const tmElements_t time, 
+    //                                        const bool right_justify = false);
+    bool           getDST_Status           ();
     time_t         getDSTspringForward     (const int input_year);
     time_t         getDSTfallBack          (const int input_year);
     time_t         getNextDSTspringForward ();
@@ -490,7 +532,7 @@ public:  //methods
     String         getSunsetClockString    ();
     byte           getWeekNumber           (tmElements_t date);
     byte           getQtyImportantDates    ();
-    bool           isAM                    (const tmElements_t time);
+    //bool           isAM                    (const tmElements_t time);
     bool           isDaylight              ();
     //bool           isDaylightSavingsTime   (tmElements_t input_date);
     bool           isWakeUpComplete        ();
@@ -552,29 +594,10 @@ void Calendar::init()
     setSunriseSunset();
 }
 
-//const char* Calendar::getDaySuffix(byte day_number)
-//{
-    ////Isolate the teens and be sure they get 'th' suffix (11th 12th 13th)
-    ////The non-teen 1, 2, 3,s get their special suffix (2nd, 22nd, 31st....52nd) 
-    ////Therefore, any number over 20 should be reduced by tens until it is 10 or less
-    ////Any number under 20 must be left alone
-    //if (day_number >= 20)
-    //{
-        //while (day_number > 10)
-        //{
-            //day_number -= 10;
-        //}
-    //}
-    ////day_of_month should now be between (1 and 20)
-    //if (day_number < 4)
-    //{
-        //return mDaySuffix[day_number]; // 0th, 1st, 2nd, 3rd
-    //}
-    //else
-    //{
-        //return mDaySuffix[0]; //th
-    //}
-//}
+bool Calendar::getDST_Status()
+{
+    return mDaylightSavingsTime;
+}
 
 time_t Calendar::getDSTspringForward(const int input_year)
 {
@@ -641,54 +664,6 @@ time_t Calendar::getNextDSTfallBack()
     return mNextDSTfallBack;
 }
     
-
-String Calendar::getClockString(const tmElements_t time,
-                                const bool right_justify)
-{
-    int  format {};
-    String clock_string ("");
-    if ((time.Hour) >= 12)
-    {      
-        format = 12;
-    }
-    if ((time.Hour) == 12 || (time.Hour) == 0)
-    {
-        clock_string += F("12");
-    }
-    else
-    {
-        //if a single digit AND right_justify add a leading space
-        if (time.Hour - format < 10 && right_justify == true)
-        {             
-            clock_string = " " + clock_string;
-        }
-        const String hour_string (time.Hour - format); 
-        clock_string += hour_string;
-    }   
-    clock_string += F(":");
-    //if a single digit, add a leading zero
-    if (time.Minute < 10)
-    {  
-        clock_string += F("0");
-    }
-    const String minute_string {time.Minute};   
-    clock_string += minute_string;
-    if (isAM(time)      == true)
-    {
-        clock_string += F("am");
-    }
-    else if (isAM(time) == false)
-    {                          
-        clock_string += F("pm");
-    }
-    //add a plus symbol to the end of the string to indicate DST
-    if (mDaylightSavingsTime)
-    {
-        clock_string += F("+");
-    }
-    return clock_string;    
-}
-
 bool Calendar::isWakeUpComplete()
 {
     const int wake_up_delay = 15;  //minutes 
@@ -724,7 +699,9 @@ String Calendar::getSunriseClockString()
     tmElements_t sunrise {};
     sunrise.Hour   = mTodaySunriseHour;
     sunrise.Minute = mTodaySunriseMinute;
-    return getClockString(sunrise);
+    const bool right_justify = false;
+    String string {mystring.get12Clock(sunrise, right_justify, mDaylightSavingsTime)};
+    return string;
 }
 
 String Calendar::getSunsetClockString()
@@ -732,7 +709,9 @@ String Calendar::getSunsetClockString()
     tmElements_t sunset {};
     sunset.Hour   = mTodaySunsetHour;
     sunset.Minute = mTodaySunsetMinute;
-    return getClockString(sunset);
+    const bool right_justify = false;
+    String string {mystring.get12Clock(sunset, right_justify, mDaylightSavingsTime)};
+    return string;
 }
     
 byte Calendar::getWeekNumber(tmElements_t date)  //needed to read sunrise sunset table
@@ -757,19 +736,19 @@ byte Calendar::getQtyImportantDates()
     return mQtyImportantDatesToReport;
 }
 
-bool Calendar::isAM(const tmElements_t time)
-{
-    //Time Library has isAM functions, but not with a tmElements_t parameter.
-    //The moment after the clock hits 12 noon the time is 'post merīdiem.'
-    if (time.Hour < 12)
-    {
-        return true;
-    }
-    else
-    {
-        return false;
-    }      
-}
+//bool Calendar::isAM(const tmElements_t time)
+//{
+    ////Time Library has isAM functions, but not with a tmElements_t parameter.
+    ////The moment after the clock hits 12 noon the time is 'post merīdiem.'
+    //if (time.Hour < 12)
+    //{
+        //return true;
+    //}
+    //else
+    //{
+        //return false;
+    //}      
+//}
 
 bool Calendar::isDaylight()
 {
@@ -1105,7 +1084,8 @@ public:
     void   dissolveThis       (String top_line, String bottom_line);
     void   printClock         (const TimeElements time,
                                const Coordinant   coordinant,
-                               const bool         right_justify);
+                               const bool         right_justify,
+                               const bool         dst);
     void   printDate          (const Coordinant   coordinant);
     //void   printDateSuffix    (const byte numeral);
     void   printImportantDate (const Calendar::ImportantDate* importantdate);
@@ -1120,7 +1100,8 @@ void MyLCD::drawDisplay()
     //updateBacklight();
     Coordinant coordinant {12, 3};
     const bool right_justify    {true};
-    printClock(timenow.getElements(), coordinant, right_justify);
+    const bool dst              {calendar.getDST_Status()};
+    printClock(timenow.getElements(), coordinant, right_justify, dst);
     coordinant = {0, 3};
     printDate(coordinant);
     printLDRresults();
@@ -1319,9 +1300,10 @@ void MyLCD::printStateChangeDelayCounter(const int timer_value)
 
 void MyLCD::printClock(const TimeElements time,
                        const Coordinant coordinant,
-                       const bool right_justify)
+                       const bool right_justify,
+                       const bool dst)
 {
-    const String clock_string {(calendar.getClockString(time, right_justify))};
+    const String clock_string {(mystring.get12Clock(time, right_justify, dst))};
     liquidcrystali2c.setCursor(coordinant.x, coordinant.y);
     liquidcrystali2c.print(clock_string);
 }
@@ -2133,7 +2115,10 @@ void MessageManager::messageVoltageExtremes()
     for (int i = 0; i < qty_voltrecord; i++)
     {
         const String voltage_string  {voltrecord[i].voltage};
-        const String clock_string    {calendar.getClockString(voltrecord[i].timestamp)};
+        const bool right_justify     {false};
+        const bool dst               {calendar.getDST_Status()};
+        const String clock_string    {mystring.get12Clock(voltrecord[i].timestamp,
+                                      right_justify, dst)};
         message[i] = voltage_string + "v @ " + clock_string;
     }
     mylcd.dissolveThis(message[0], message[1]);
