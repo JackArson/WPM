@@ -496,6 +496,7 @@ private: //variables continued
     time_t mNextDSTfallBack         {};
 public:  //methods
     void           init                    ();
+    void           initDST                 ();
     bool           getDST_Status           ();
     time_t         getDST_SpringForward     (const int input_year);
     time_t         getDSTfallBack          (const int input_year);
@@ -518,34 +519,28 @@ public:  //methods
 void Calendar::init()
 {
     mQtyImportantDatesToReport = 0;
-    //confirm now
-    Serial.print("Calendar::init  now:            ");
+    //print current time and date    
     const String calendar_now_string {mystring.getFullDateTime(timenow.getNow())};
+    Serial.print(F("Clock set to: "));
     Serial.println(calendar_now_string);
+    initDST();
+    loadImportantDates();
+    setSunriseSunset();
+}
 
+void Calendar::initDST()
+{
     //get this years spring forward time_t
     const time_t this_year_spring_forward_time {getDST_SpringForward(timenow.getYear())};
-    Serial.print("Calendar::init  Spring Forward: ");
-    const String spring_forward_string
-                 {mystring.getFullDateTime(this_year_spring_forward_time)};
-    Serial.println(spring_forward_string);    
-
     //get this years fall back time_t
     const time_t this_year_fall_back_time {getDSTfallBack(timenow.getYear())};
-    Serial.print("Calendar::init  Fall Back     : ");
-    const String fall_back_string
-                 {mystring.getFullDateTime(this_year_fall_back_time)};
-    Serial.println(fall_back_string);    
-
-
-
     //calculate next year
     const int next_year {timenow.getYear() + 1};
     //determime if DST is active now and set next SpringForward / FallBack
     if (timenow.getNow() < this_year_spring_forward_time)
     {
         mDaylightSavingsTime  = false;
-        Serial.println("Calendar::init  mDaylightSavingsTime = false");
+        Serial.println("daylight savings time = false");
         mNextDSTspringForward = this_year_spring_forward_time;
         mNextDSTfallBack      = this_year_fall_back_time;
     }
@@ -553,19 +548,25 @@ void Calendar::init()
              timenow.getNow() <  this_year_fall_back_time)
     {
         mDaylightSavingsTime = true;
-        Serial.println("Calendar::init  mDaylightSavingsTime = true");
+        Serial.println("daylight savings time = true");
         mNextDSTspringForward = {getDST_SpringForward(next_year)};
         mNextDSTfallBack      =  this_year_fall_back_time;
     }
     else if (timenow.getNow() >= this_year_fall_back_time)
     {
         mDaylightSavingsTime = false;
-        Serial.println("Calendar::init  mDaylightSavingsTime = false");
+        Serial.println("daylight savings time = false");
         mNextDSTspringForward = {getDST_SpringForward(next_year)};
         mNextDSTfallBack      = {getDSTfallBack(next_year)};
     }
-    loadImportantDates();
-    setSunriseSunset();
+    Serial.print("Next DST spring forward: ");
+    const String spring_forward_string
+                 {mystring.getFullDateTime(mNextDSTspringForward)};
+    Serial.println(spring_forward_string);    
+    Serial.print("Next DST fall back     : ");
+    const String fall_back_string
+                 {mystring.getFullDateTime(mNextDSTfallBack)};
+    Serial.println(fall_back_string);    
 }
 
 bool Calendar::getDST_Status()
