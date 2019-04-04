@@ -53,18 +53,17 @@ class MyString
 {
 private: //variables
     String mDaySuffix[4] = {"th", "st", "nd", "rd"};
-
-
 public:  //methods
+    //5:24pm+
     String get12Clock          (const tmElements_t time,
                                 const bool right_justify, 
-                                const bool dst); //  1:24am+
-    String get24Clock          (const time_t timestamp);   // 13:45:56
-    String getDaySuffix        (int day_number);           // nd
-    String getFullDateTime     (const tmElements_t timestamp);
+                                const bool dst);
+    //17:24:56
+    String get24Clock          (const time_t timestamp);
+    String getDaySuffix        (int day_number);   
+    //Monday, April 15th 2019  17:24:56
+    String getFullDateTime     (const tmElements_t timestamp); 
     String getFullDateTime     (const time_t timestamp);
-    
-    
 }mystring;
 
 String MyString::get12Clock(const tmElements_t time, const bool right_justify,
@@ -242,7 +241,6 @@ public:  //methods
     int          getMinute             ();
     int          getSecond             ();
     time_t       readRTC               ();
-    //void         syncTimeWithRTC_Clock ();
     
 }timenow;
 
@@ -396,28 +394,6 @@ time_t TimeNow::readRTC()
     }
     
 }
-
-//void TimeNow::syncTimeWithRTC_Clock()
-//{
-    
-
-    //if (RTC.read(mRTC_Reading))
-    //{
-        //setTime(RTC.get());        
-    //}
-    //else
-    //{
-        ////if the time cannot be found.
-        //if (RTC.chipPresent())
-        //{
-            //Serial.println(F("Time not set.  Possible RTC clock battery issue. Battery is LIR2032."));
-        //}
-        //else
-        //{
-            //Serial.println(F("I can't find the clock through the I2C connection, check wiring."));
-        //} 
-    //}
-//}
 //==end of TimeNow=============================================================================
 
 //QTY_IMPORTANT_DATES is a COMPILE TIME CONSTANT 
@@ -508,22 +484,20 @@ private: //variables
                                            4,  7, 13};
 
 private: //variables continued
-    byte mQtyImportantDatesToReport              {};
+    byte mQtyImportantDatesToReport {};
     ImportantDate const * mDatesToReportList[QTY_IMPORTANT_DATES] {};
     //mDatesToReportList array is large enough to hold pointers to every event if needed.
-    byte   mTodaySunriseHour     {};
-    byte   mTodaySunriseMinute   {};
-    byte   mTodaySunsetHour      {};
-    byte   mTodaySunsetMinute    {};
-    bool   mDaylightSavingsTime  {};
-    time_t mNextDSTspringForward {};
-    time_t mNextDSTfallBack      {};
+    byte   mTodaySunriseHour        {};
+    byte   mTodaySunriseMinute      {};
+    byte   mTodaySunsetHour         {};
+    byte   mTodaySunsetMinute       {};
+    bool   mDaylightSavingsTime     {};
+    time_t mNextDSTspringForward    {};
+    time_t mNextDSTfallBack         {};
 public:  //methods
     void           init                    ();
-    //String         getClockString          (const tmElements_t time, 
-    //                                        const bool right_justify = false);
     bool           getDST_Status           ();
-    time_t         getDSTspringForward     (const int input_year);
+    time_t         getDST_SpringForward     (const int input_year);
     time_t         getDSTfallBack          (const int input_year);
     time_t         getNextDSTspringForward ();
     time_t         getNextDSTfallBack      ();
@@ -534,9 +508,7 @@ public:  //methods
     String         getSunsetClockString    ();
     byte           getWeekNumber           (tmElements_t date);
     byte           getQtyImportantDates    ();
-    //bool           isAM                    (const tmElements_t time);
     bool           isDaylight              ();
-    //bool           isDaylightSavingsTime   (tmElements_t input_date);
     bool           isWakeUpComplete        ();
     void           loadImportantDates      ();
     void           setSunriseSunset        ();
@@ -552,7 +524,7 @@ void Calendar::init()
     Serial.println(calendar_now_string);
 
     //get this years spring forward time_t
-    const time_t this_year_spring_forward_time {getDSTspringForward(timenow.getYear())};
+    const time_t this_year_spring_forward_time {getDST_SpringForward(timenow.getYear())};
     Serial.print("Calendar::init  Spring Forward: ");
     const String spring_forward_string
                  {mystring.getFullDateTime(this_year_spring_forward_time)};
@@ -582,14 +554,14 @@ void Calendar::init()
     {
         mDaylightSavingsTime = true;
         Serial.println("Calendar::init  mDaylightSavingsTime = true");
-        mNextDSTspringForward = {getDSTspringForward(next_year)};
+        mNextDSTspringForward = {getDST_SpringForward(next_year)};
         mNextDSTfallBack      =  this_year_fall_back_time;
     }
     else if (timenow.getNow() >= this_year_fall_back_time)
     {
         mDaylightSavingsTime = false;
         Serial.println("Calendar::init  mDaylightSavingsTime = false");
-        mNextDSTspringForward = {getDSTspringForward(next_year)};
+        mNextDSTspringForward = {getDST_SpringForward(next_year)};
         mNextDSTfallBack      = {getDSTfallBack(next_year)};
     }
     loadImportantDates();
@@ -601,7 +573,7 @@ bool Calendar::getDST_Status()
     return mDaylightSavingsTime;
 }
 
-time_t Calendar::getDSTspringForward(const int input_year)
+time_t Calendar::getDST_SpringForward(const int input_year)
 {
     //Rules for my area (Ohio, USA) and most of United States
     //DST begins on the second Sunday of March    at 2AM and
@@ -1066,7 +1038,7 @@ struct Coordinant
     byte y;
 };
 
-class MyLCD
+ class MyLCD
 {
 
 //  01234567890123456789 20 x 4        LCD Display
@@ -1158,6 +1130,11 @@ void MyLCD::printImportantDate(const Calendar::ImportantDate* importantdate)
             {
                 top_line += F("'s "); //Paul & Mena's
                 byte anniversary (timenow.getYear() - importantdate->year);
+                Serial.print("MyLCD::printImportantDate  timenow.getYear() ");
+                Serial.println(timenow.getYear());
+                Serial.print("MyLCD::printImportantDate  importantdate->year ");
+                Serial.println(importantdate->year);
+                
                 //fix end of year wrap around
                 if (timenow.getMonth() == 12 && importantdate->month != 12)
                 {
@@ -1327,10 +1304,8 @@ class Timing
 private: //variables
     //countdown timers
     byte         mStateChangeDelayCounter {};
-    //int          m2AM_LockoutCounter      {};
     //timestamps
     time_t       mDissolveTimestamp       {};
-    time_t       mOneSecondTimestamp      {}; //to control 1s loop
     
 public:  //methods
     byte getStateChangeDelayCounter           ();
@@ -1378,28 +1353,6 @@ bool Timing::isDissolveReady()
     }    
 }
 
-//bool Timing::isOneSecondLoopReady()
-//{
-    //if (mOneSecondTimestamp != now()) 
-    //{
-        ////set up 1000ms delay for the next loop
-        //mOneSecondTimestamp = now();
-        //return true;
-    //}
-    //else
-    //{
-        //return false;
-    //}
-//}
-
-//void Timing::lockout2AM(int lockout_seconds)
-//{
-    //m2AM_LockoutCounter = lockout_seconds;
-    //Serial.print("Timing::lockout2AM_Check  mLockoutExpires in ");
-    //Serial.print(lockout_seconds);
-    //Serial.print(" seconds");
-//}
-
 void Timing::setCountdownTimer(const int x)
 {
     mStateChangeDelayCounter = x;
@@ -1414,11 +1367,7 @@ void Timing::updateCounters()
     {
         --mStateChangeDelayCounter;
     }
-    //if (m2AM_LockoutCounter > 0)
-    //{
-        //--m2AM_LockoutCounter;
-    //}
-}
+ }
 //==end of Timing============================================================================
 
 class Voltmeter
@@ -1472,13 +1421,13 @@ void Voltmeter::main()
     { 
         mMax.voltage   = mVoltage;
         mMax.timestamp = timenow.getElements();
-        Serial.print(" New daily high just set.");
+        Serial.print(F(" New daily high just set."));
     }
     if (mVoltage < mMin.voltage)
     {
         mMin.voltage   = mVoltage; 
         mMin.timestamp = timenow.getElements();
-        Serial.print(" New daily low just set.");
+        Serial.print(F(" New daily low just set."));
     }   
 }
 
@@ -1508,7 +1457,7 @@ void Voltmeter::initDailyStatistics()
     }
     else
     {
-        Serial.print("Voltmeter::initDailyStatistics  no voltage detected");
+        Serial.print(F("Voltmeter::initDailyStatistics  no voltage detected"));
     }
     
 }
@@ -1531,7 +1480,7 @@ void Voltmeter::readVoltage()
     //if the program displays the wrong voltage, you can fine tune it below.
     const float   error_correction      {0.06};  //This is the actual adjustment to my
     //own voltmeter.  you would put a 0.00 here unless you have reason to believe
-    //your Arduino voltmeter is reading too high, or too low.  I found my error correction by
+    //your voltmeter is reading too high, or too low.  I found my error correction by
     //adjusting this number and examining the result
     voltage_divider_ratio += error_correction;
     //An important note about errors and operating voltage.  I am using the full operating voltage
@@ -1641,8 +1590,6 @@ private: //methods
     void daytimeChargingfunction();
     void initInverterCooldownfunction();
     void inverterCooldownfunction();
-    
-    
 }mystatemachine;
 
 void  MyStateMachine::main()
@@ -2290,14 +2237,14 @@ void loop()
     {
         calendar.init(); //sets new DST dates
         timenow.changeHour(3);
-        Serial.println("The clock was set forward one hour. 2AM became 3AM"); 
+        Serial.println(F("The clock was set forward one hour. 2AM became 3AM")); 
     }
     else if (calendar.getNextDSTfallBack() == timenow.getNow())
     {
         calendar.init(); //sets new DST dates. Must be done before setting
                          //the clock back to avoid a repeat
         timenow.changeHour(1);
-        Serial.println("The clock was set back one hour. 2AM became 1AM"); 
+        Serial.println(F("The clock was set back one hour. 2AM became 1AM")); 
     }
     if (timing.isDissolveReady())
     {
