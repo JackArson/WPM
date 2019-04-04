@@ -30,8 +30,7 @@
 //create liquidcrystali2c object
 LiquidCrystal_I2C  liquidcrystali2c(0x27, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);  
 
-void printFullDateTime (const tmElements_t timestamp);
-void printFullDateTime (const time_t timestamp);
+
 
 
 namespace Pin
@@ -48,7 +47,96 @@ namespace Pin
     const byte voltage_divider          {A0}; //green  wire lower cable
     const byte dimmer_potentiometer     {A1}; //yellow wire
 }
-//==end of namespace Pin======================================================================
+//==end of namespace Pin=====================================================================
+
+class MyString
+{
+private: //variables
+    String mDaySuffix[4] = {"th", "st", "nd", "rd"};
+
+
+public:  //methods
+    String getDaySuffix    (int day_number);
+    String getFullDateTime (const tmElements_t timestamp);
+    String getFullDateTime (const time_t timestamp);
+    
+}mystring;
+
+String MyString::getDaySuffix(int day_number)
+{
+    //Isolate the teens and be sure they get 'th' suffix (11th 12th 13th)
+    //The non-teen 1, 2, 3,s get their special suffix (2nd, 22nd, 31st....52nd) 
+    //Therefore, any number over 20 should be reduced by tens until it is 10 or less
+    //Any number under 20 must be left alone
+    if (day_number >= 20)
+    {
+        while (day_number > 10)
+        {
+            day_number -= 10;
+        }
+    }
+    //day_of_month should now be between (1 and 20)
+    if (day_number < 4)
+    {
+        return mDaySuffix[day_number]; // 0th, 1st, 2nd, 3rd
+    }
+    else
+    {
+        return mDaySuffix[0]; //th
+    }
+}
+
+
+String MyString::getFullDateTime(const tmElements_t timestamp)
+{
+    //Tuesday
+    String fullDateTime {dayStr(timestamp.Wday)};
+    //Tuesday,
+    fullDateTime += ", ";
+    //Tuesday, May
+    fullDateTime += monthStr(timestamp.Month);
+    fullDateTime += " ";
+    //Tuesday, May 3
+    fullDateTime += timestamp.Day;
+    //Tuesday, May 3rd
+    fullDateTime += getDaySuffix(timestamp.Day);
+    fullDateTime += " ";
+    //Tuesday, May 3rd 2019
+    fullDateTime += 1970 + timestamp.Year;
+    fullDateTime += "  ";
+    //Tuesday, May 3rd 2019  1:
+    fullDateTime += timestamp.Hour;
+    fullDateTime += ":";
+    //Tuesday, May 3rd 2019  1:05:
+    const int time_minute {timestamp.Minute};
+    if (time_minute < 10)
+    {
+        //add a leading zero
+        fullDateTime += "0";
+    }
+    fullDateTime += timestamp.Minute;
+    fullDateTime += ":";
+    //Tuesday, May 3rd 2019  1:05:35
+    const int time_second {timestamp.Second};
+    if (time_second < 10)
+    {
+        //add a leading zero
+        fullDateTime += "0";
+    }
+    fullDateTime += timestamp.Minute;
+    return fullDateTime;
+}
+
+String MyString::getFullDateTime (const time_t timestamp)
+{
+    tmElements_t timestamp_elements {};
+    breakTime(timestamp, timestamp_elements);
+    return getFullDateTime(timestamp_elements);
+}
+
+
+
+//==end of MyString==========================================================================
 
 class TimeNow
 {
@@ -314,7 +402,7 @@ private: //variables
         {"Christmas",    12, 25, 0,    EVENTTYPE_HOLIDAY},      //22
         {"Paul's Coronation", 4, 3, 2019, EVENTTYPE_APPOINTMENT} //23
     };
-    const char* mDaySuffix[4] = {"th", "st", "nd", "rd"};
+    
     //Sometimes there are more than 52 weeks in a year.
     //These tables are close enough to use year after year
     
@@ -364,7 +452,7 @@ public:  //methods
     //DST_Action     daylightSavingCheck     ();
     String         getClockString          (const tmElements_t time,
                                             const bool right_justify = false);
-    const char*    getDaySuffix            (byte day_number);
+    //const char*    getDaySuffix            (byte day_number);
     time_t         getDSTspringForward     (const int input_year);
     time_t         getDSTfallBack          (const int input_year);
     time_t         getNextDSTspringForward ();
@@ -390,15 +478,25 @@ void Calendar::init()
     mQtyImportantDatesToReport = 0;
     //confirm now
     Serial.print("Calendar::init  now:            ");
-    printFullDateTime(timenow.getNow());
+    const String calendar_now_string {mystring.getFullDateTime(timenow.getNow())};
+    Serial.println(calendar_now_string);
+
     //get this years spring forward time_t
     const time_t this_year_spring_forward_time {getDSTspringForward(timenow.getYear())};
     Serial.print("Calendar::init  Spring Forward: ");
-    printFullDateTime(this_year_spring_forward_time);
+    const String spring_forward_string
+                 {mystring.getFullDateTime(this_year_spring_forward_time)};
+    Serial.println(spring_forward_string);    
+
     //get this years fall back time_t
     const time_t this_year_fall_back_time {getDSTfallBack(timenow.getYear())};
     Serial.print("Calendar::init  Fall Back     : ");
-    printFullDateTime(this_year_fall_back_time);
+    const String fall_back_string
+                 {mystring.getFullDateTime(this_year_fall_back_time)};
+    Serial.println(fall_back_string);    
+
+
+
     //calculate next year
     const int next_year {timenow.getYear() + 1};
     //determime if DST is active now and set next SpringForward / FallBack
@@ -428,29 +526,29 @@ void Calendar::init()
     setSunriseSunset();
 }
 
-const char* Calendar::getDaySuffix(byte day_number)
-{
-    //Isolate the teens and be sure they get 'th' suffix (11th 12th 13th)
-    //The non-teen 1, 2, 3,s get their special suffix (2nd, 22nd, 31st....52nd) 
-    //Therefore, any number over 20 should be reduced by tens until it is 10 or less
-    //Any number under 20 must be left alone
-    if (day_number >= 20)
-    {
-        while (day_number > 10)
-        {
-            day_number -= 10;
-        }
-    }
-    //day_of_month should now be between (1 and 20)
-    if (day_number < 4)
-    {
-        return mDaySuffix[day_number]; // 0th, 1st, 2nd, 3rd
-    }
-    else
-    {
-        return mDaySuffix[0]; //th
-    }
-}
+//const char* Calendar::getDaySuffix(byte day_number)
+//{
+    ////Isolate the teens and be sure they get 'th' suffix (11th 12th 13th)
+    ////The non-teen 1, 2, 3,s get their special suffix (2nd, 22nd, 31st....52nd) 
+    ////Therefore, any number over 20 should be reduced by tens until it is 10 or less
+    ////Any number under 20 must be left alone
+    //if (day_number >= 20)
+    //{
+        //while (day_number > 10)
+        //{
+            //day_number -= 10;
+        //}
+    //}
+    ////day_of_month should now be between (1 and 20)
+    //if (day_number < 4)
+    //{
+        //return mDaySuffix[day_number]; // 0th, 1st, 2nd, 3rd
+    //}
+    //else
+    //{
+        //return mDaySuffix[0]; //th
+    //}
+//}
 
 time_t Calendar::getDSTspringForward(const int input_year)
 {
@@ -883,7 +981,7 @@ void MySerial::printFullDateTime (const tmElements_t timestamp)
     //Tuesday, May 3
     fullDateTime += timestamp.Day;
     //Tuesday, May 3rd
-    fullDateTime += calendar.getDaySuffix(timestamp.Day);
+    fullDateTime += mystring.getDaySuffix(timestamp.Day);
     fullDateTime += " ";
     //Tuesday, May 3rd 2019
     fullDateTime += 1970 + timestamp.Year;
@@ -983,7 +1081,7 @@ public:
                                const Coordinant   coordinant,
                                const bool         right_justify);
     void   printDate          (const Coordinant   coordinant);
-    void   printDateSuffix    (const byte numeral);
+    //void   printDateSuffix    (const byte numeral);
     void   printImportantDate (const Calendar::ImportantDate* importantdate);
     void   printLDRresults    ();
     void   printStateChangeDelayCounter (const int timer_value);
@@ -1034,11 +1132,11 @@ void MyLCD::dissolveThis(String top_line, String bottom_line)
     Serial.println(mMessageBottomLine);
 }
 
-void MyLCD::printDateSuffix(byte numeral)
-{
-    const char *suffix {calendar.getDaySuffix(numeral)};
-    liquidcrystali2c.print(suffix);
-}
+//void MyLCD::printDateSuffix(byte numeral)
+//{
+    //const char *suffix {calendar.getDaySuffix(numeral)};
+    //liquidcrystali2c.print(suffix);
+//}
 
 void MyLCD::printImportantDate(const Calendar::ImportantDate* importantdate)
 {
@@ -1058,7 +1156,7 @@ void MyLCD::printImportantDate(const Calendar::ImportantDate* importantdate)
                 }
                 const String anniversary_str {anniversary};
                 top_line += anniversary_str; //Paul & Mena's 27
-                const String anniversary_date_suffix {calendar.getDaySuffix(anniversary)};
+                const String anniversary_date_suffix {mystring.getDaySuffix(anniversary)};
                 top_line += anniversary_date_suffix; //Paul & Mena's 27th 
             }
             break;
@@ -1105,7 +1203,7 @@ void MyLCD::printImportantDate(const Calendar::ImportantDate* importantdate)
         bottom_line += ' ';
         String date_str {event.Day};  
         bottom_line += date_str; //Wed, Sep 3
-        String date_suffix {calendar.getDaySuffix(event.Day)};
+        String date_suffix {mystring.getDaySuffix(event.Day)};
         bottom_line += date_suffix; //Wed, Sep 3rd
     }
     dissolveThis(top_line, bottom_line);
@@ -2212,55 +2310,6 @@ void loop()
         messagemanager.init();  
         calendar.init();
     }
-}
-
-
-
-void printFullDateTime (const tmElements_t timestamp)
-{
-    //Tuesday
-    String fullDateTime {dayStr(timestamp.Wday)};
-    //Tuesday,
-    fullDateTime += ", ";
-    //Tuesday, May
-    fullDateTime += monthStr(timestamp.Month);
-    fullDateTime += " ";
-    //Tuesday, May 3
-    fullDateTime += timestamp.Day;
-    //Tuesday, May 3rd
-    fullDateTime += calendar.getDaySuffix(timestamp.Day);
-    fullDateTime += " ";
-    //Tuesday, May 3rd 2019
-    fullDateTime += 1970 + timestamp.Year;
-    fullDateTime += "  ";
-    //Tuesday, May 3rd 2019  1:
-    fullDateTime += timestamp.Hour;
-    fullDateTime += ":";
-    //Tuesday, May 3rd 2019  1:05:
-    const int time_minute {timestamp.Minute};
-    if (time_minute < 10)
-    {
-        //add a leading zero
-        fullDateTime += "0";
-    }
-    fullDateTime += timestamp.Minute;
-    fullDateTime += ":";
-    //Tuesday, May 3rd 2019  1:05:35
-    const int time_second {timestamp.Second};
-    if (time_second < 10)
-    {
-        //add a leading zero
-        fullDateTime += "0";
-    }
-    fullDateTime += timestamp.Minute;
-    Serial.println(fullDateTime);
-}
-
-void printFullDateTime (const time_t timestamp)
-{
-    tmElements_t timestamp_elements {};
-    breakTime(timestamp, timestamp_elements);
-    printFullDateTime(timestamp_elements);
 }
 
 //Serial.print("Year: ");
