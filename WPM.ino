@@ -56,11 +56,37 @@ private: //variables
 
 
 public:  //methods
-    String getDaySuffix    (int day_number);
-    String getFullDateTime (const tmElements_t timestamp);
-    String getFullDateTime (const time_t timestamp);
+    String get24Clock          (const time_t timestamp); // 13:45:56
+    String getDaySuffix        (int day_number);         // nd
+    String getFullDateTime     (const tmElements_t timestamp);
+    String getFullDateTime     (const time_t timestamp);
+    
     
 }mystring;
+
+String MyString::get24Clock(const time_t timestamp)  // 13:45:56
+{
+    tmElements_t timestamp_elements;
+    breakTime(timestamp, timestamp_elements);
+    if (timestamp_elements.Hour <= 9)
+    {
+        Serial.print(F("0"));
+    }
+    Serial.print(timestamp_elements.Hour);
+    Serial.print(F(":"));
+    if (timestamp_elements.Minute <= 9)
+    {
+        Serial.print(F("0"));
+    }
+    Serial.print(timestamp_elements.Minute);
+    Serial.print(F(":"));
+    if (timestamp_elements.Second <= 9)
+    {
+        Serial.print(F("0"));
+    }
+    Serial.print(timestamp_elements.Second);
+    Serial.print(F("  "));
+}
 
 String MyString::getDaySuffix(int day_number)
 {
@@ -874,7 +900,7 @@ public:
     void printFullDateTime(const tmElements_t timestamp);
     void printFullDateTime(const time_t timestamp);
     void printState(char const *text);
-    void printTimestamp();
+    //void printTimestamp();
     bool usingLaptopOperatingVoltage();
 private: //methods
     int  getIntegerInput();
@@ -1017,27 +1043,27 @@ void MySerial::printFullDateTime (const time_t timestamp)
 }
 
 
-void MySerial::printTimestamp()
-{    
-    if (timenow.getHour() <= 9)
-    {
-        Serial.print(F("0"));
-    }
-    Serial.print(timenow.getHour());
-    Serial.print(F(":"));
-    if (timenow.getMinute() <= 9)
-    {
-        Serial.print(F("0"));
-    }
-    Serial.print(timenow.getMinute());
-    Serial.print(F(":"));
-    if (timenow.getSecond() <= 9)
-    {
-        Serial.print(F("0"));
-   }
-   Serial.print(timenow.getSecond());
-   Serial.print(F("  "));
-}
+//void MySerial::printTimestamp()
+//{    
+    //if (timenow.getHour() <= 9)
+    //{
+        //Serial.print(F("0"));
+    //}
+    //Serial.print(timenow.getHour());
+    //Serial.print(F(":"));
+    //if (timenow.getMinute() <= 9)
+    //{
+        //Serial.print(F("0"));
+    //}
+    //Serial.print(timenow.getMinute());
+    //Serial.print(F(":"));
+    //if (timenow.getSecond() <= 9)
+    //{
+        //Serial.print(F("0"));
+   //}
+   //Serial.print(timenow.getSecond());
+   //Serial.print(F("  "));
+//}
 
 bool MySerial::usingLaptopOperatingVoltage()
 {
@@ -2272,23 +2298,7 @@ void loop()
     myserial.checkForUserInput();
     tracklight.readDimmerSwitch();
     tracklight.setLightLevel();
-    if (timing.isDissolveReady())
-    {
-        mylcd.dissolveEffect();
-    }
-    //This code runs every second (1000ms)
-    if (time_now != timenow.getLastTimeStamp())   
-    {
-        //update last time stamp for next loop
-        timenow.setLastTimeStamp(time_now);
-        timing.updateCounters();    
-        mylcd.drawDisplay();        
-        messagemanager.main();  //print messages (if any are ready)
-        myserial.printTimestamp(); //print timestamp
-        voltmeter.main();          //print voltage
-        mystatemachine.main();     //print state changes
-        Serial.println();
-    }
+    
     if (calendar.getNextDSTspringForward() == timenow.getNow())
     {
         calendar.init(); //sets new DST dates
@@ -2302,13 +2312,34 @@ void loop()
         timenow.changeHour(1);
         Serial.println("The clock was set back one hour. 2AM became 1AM"); 
     }
-    else if (timing.isIt4AM())
+    if (timing.isDissolveReady())
     {
-        //do nightly maintenance
-        mystatemachine.resetInverterRunTime();
-        voltmeter.initDailyStatistics();  //resets daily voltage highs and lows           
-        messagemanager.init();  
-        calendar.init();
+        mylcd.dissolveEffect();
+    }
+    //This code runs every second (1000ms)
+    if (time_now != timenow.getLastTimeStamp())   
+    {
+        //update last time stamp for next loop
+        timenow.setLastTimeStamp(time_now);
+        timing.updateCounters();    
+        mylcd.drawDisplay();        
+        messagemanager.main();  //print messages (if any are ready)
+
+        //format a timestamp string to start a one line status report
+        const String timestamp_string {mystring.get24Clock(time_now)};
+        Serial.print(timestamp_string);
+        voltmeter.main();          //print voltage
+        mystatemachine.main();     //print state changes
+        Serial.println();
+        //conclude the one line status report
+        if (timing.isIt4AM())
+        {
+            //do nightly maintenance
+            mystatemachine.resetInverterRunTime();
+            voltmeter.initDailyStatistics();  //resets daily voltage highs and lows           
+            messagemanager.init();  
+            calendar.init();
+        }
     }
 }
 
