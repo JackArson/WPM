@@ -1129,12 +1129,7 @@ void MyLCD::printImportantDate(const Calendar::ImportantDate* importantdate)
         case Calendar::EVENTTYPE_BIRTHDAY:
             {
                 top_line += F("'s "); //Paul & Mena's
-                byte anniversary (timenow.getYear() - importantdate->year);
-                Serial.print("MyLCD::printImportantDate  timenow.getYear() ");
-                Serial.println(timenow.getYear());
-                Serial.print("MyLCD::printImportantDate  importantdate->year ");
-                Serial.println(importantdate->year);
-                
+                byte anniversary (timenow.getYear() + 1970 - importantdate->year);
                 //fix end of year wrap around
                 if (timenow.getMonth() == 12 && importantdate->month != 12)
                 {
