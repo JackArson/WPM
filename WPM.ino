@@ -119,26 +119,28 @@ String MyString::get12Clock(const tmElements_t time, const bool right_justify,
 
 String MyString::get24Clock(const time_t timestamp)  // 13:45:56
 {
-    tmElements_t timestamp_elements;
+    tmElements_t timestamp_elements {};
     breakTime(timestamp, timestamp_elements);
+    String time_string {""};
     if (timestamp_elements.Hour <= 9)
     {
-        Serial.print(F("0"));
+        time_string += F("0");
     }
-    Serial.print(timestamp_elements.Hour);
-    Serial.print(F(":"));
+    time_string += timestamp_elements.Hour;
+    time_string += F(":");
     if (timestamp_elements.Minute <= 9)
     {
-        Serial.print(F("0"));
+        time_string += F("0");
     }
-    Serial.print(timestamp_elements.Minute);
-    Serial.print(F(":"));
+    time_string += timestamp_elements.Minute;
+    time_string += F(":");
     if (timestamp_elements.Second <= 9)
     {
-        Serial.print(F("0"));
+        time_string += F("0");
     }
-    Serial.print(timestamp_elements.Second);
-    Serial.print(F("  "));
+    time_string += timestamp_elements.Second;
+    time_string += F("  ");
+    return time_string;
 }
 
 String MyString::getDaySuffix(int day_number)
