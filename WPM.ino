@@ -68,6 +68,7 @@ public:  //methods
     tmElements_t getElements           ();
     time_t       getLastTimeStamp      ();
     void         setLastTimeStamp      (const time_t last_timestamp);
+    time_t       getNow                ();
     int          getYear               ();
     int          getMonth              ();
     int          getDay                ();
@@ -75,7 +76,7 @@ public:  //methods
     int          getMinute             ();
     int          getSecond             ();
     time_t       readRTC               ();
-    void         syncTimeWithRTC_Clock ();
+    //void         syncTimeWithRTC_Clock ();
     
 }timenow;
 
@@ -88,7 +89,7 @@ void TimeNow::changeYear(int year)
     //convert to time_t
     time_t new_RTC_reading {makeTime(current_RTC_reading)};
     RTC.set(new_RTC_reading);
-    syncTimeWithRTC_Clock();
+    readRTC();
 }
 
 void TimeNow::changeMonth(int month)
@@ -101,7 +102,7 @@ void TimeNow::changeMonth(int month)
     //convert to time_t
     time_t new_RTC_reading {makeTime(current_RTC_reading)};
     RTC.set(new_RTC_reading);
-    syncTimeWithRTC_Clock();
+    readRTC();
 }
 
 
@@ -115,7 +116,7 @@ void TimeNow::changeDay(int day)
     //convert to time_t
     time_t new_RTC_reading {makeTime(current_RTC_reading)};
     RTC.set(new_RTC_reading);
-    syncTimeWithRTC_Clock();
+    readRTC();
 }
 
 void TimeNow::changeHour(int hour)
@@ -128,7 +129,7 @@ void TimeNow::changeHour(int hour)
     //convert to time_t
     time_t new_RTC_reading {makeTime(current_RTC_reading)};
     RTC.set(new_RTC_reading);
-    syncTimeWithRTC_Clock();
+    readRTC();
 }
 
 void TimeNow::changeMinute(int minute)
@@ -141,7 +142,7 @@ void TimeNow::changeMinute(int minute)
     //convert to time_t
     time_t new_RTC_reading {makeTime(current_RTC_reading)};
     RTC.set(new_RTC_reading);
-    syncTimeWithRTC_Clock();
+    readRTC();
 }
 
 void TimeNow::changeSecond(int second)
@@ -154,7 +155,7 @@ void TimeNow::changeSecond(int second)
     //convert to time_t
     time_t new_RTC_reading {makeTime(current_RTC_reading)};
     RTC.set(new_RTC_reading);
-    syncTimeWithRTC_Clock();
+    readRTC();
 }
 
 tmElements_t TimeNow::getElements()
@@ -171,6 +172,11 @@ void TimeNow::setLastTimeStamp(const time_t last_timestamp)
 {
     mLastTimeStamp = last_timestamp;
 }    
+
+time_t TimeNow::getNow()
+{
+    return mRTC_time_t;
+}
 
 int TimeNow::getYear()
 {
@@ -225,27 +231,27 @@ time_t TimeNow::readRTC()
     
 }
 
-void TimeNow::syncTimeWithRTC_Clock()
-{
+//void TimeNow::syncTimeWithRTC_Clock()
+//{
     
 
-    if (RTC.read(mRTC_Reading))
-    {
-        setTime(RTC.get());        
-    }
-    else
-    {
-        //if the time cannot be found.
-        if (RTC.chipPresent())
-        {
-            Serial.println(F("Time not set.  Possible RTC clock battery issue. Battery is LIR2032."));
-        }
-        else
-        {
-            Serial.println(F("I can't find the clock through the I2C connection, check wiring."));
-        } 
-    }
-}
+    //if (RTC.read(mRTC_Reading))
+    //{
+        //setTime(RTC.get());        
+    //}
+    //else
+    //{
+        ////if the time cannot be found.
+        //if (RTC.chipPresent())
+        //{
+            //Serial.println(F("Time not set.  Possible RTC clock battery issue. Battery is LIR2032."));
+        //}
+        //else
+        //{
+            //Serial.println(F("I can't find the clock through the I2C connection, check wiring."));
+        //} 
+    //}
+//}
 //==end of TimeNow=============================================================================
 
 //QTY_IMPORTANT_DATES is a COMPILE TIME CONSTANT 
@@ -384,7 +390,7 @@ void Calendar::init()
     mQtyImportantDatesToReport = 0;
     //confirm now
     Serial.print("Calendar::init  now:            ");
-    printFullDateTime(now());
+    printFullDateTime(timenow.getNow());
     //get this years spring forward time_t
     const time_t this_year_spring_forward_time {getDSTspringForward(timenow.getYear())};
     Serial.print("Calendar::init  Spring Forward: ");
@@ -396,22 +402,22 @@ void Calendar::init()
     //calculate next year
     const int next_year {timenow.getYear() + 1};
     //determime if DST is active now and set next SpringForward / FallBack
-    if (now() < this_year_spring_forward_time)
+    if (timenow.getNow() < this_year_spring_forward_time)
     {
         mDaylightSavingsTime  = false;
         Serial.println("Calendar::init  mDaylightSavingsTime = false");
         mNextDSTspringForward = this_year_spring_forward_time;
         mNextDSTfallBack      = this_year_fall_back_time;
     }
-    else if (now() >= this_year_spring_forward_time &&
-             now() <  this_year_fall_back_time)
+    else if (timenow.getNow() >= this_year_spring_forward_time &&
+             timenow.getNow() <  this_year_fall_back_time)
     {
         mDaylightSavingsTime = true;
         Serial.println("Calendar::init  mDaylightSavingsTime = true");
         mNextDSTspringForward = {getDSTspringForward(next_year)};
         mNextDSTfallBack      =  this_year_fall_back_time;
     }
-    else if (now() >= this_year_fall_back_time)
+    else if (timenow.getNow() >= this_year_fall_back_time)
     {
         mDaylightSavingsTime = false;
         Serial.println("Calendar::init  mDaylightSavingsTime = false");
@@ -616,7 +622,7 @@ byte Calendar::getWeekNumber(tmElements_t date)  //needed to read sunrise sunset
     //convert first moment of the year to unix time
     const time_t year_start {makeTime(date)};
     //how many seconds have elapsed since the year began?
-    const time_t seconds_since_start_of_year {now() - year_start};
+    const time_t seconds_since_start_of_year {timenow.getNow() - year_start};
     //divide by SECS_PER_WEEK (Time Library) to compute week number 
     const time_t week_number {seconds_since_start_of_year / SECS_PER_WEEK};
     return(week_number);
@@ -740,8 +746,8 @@ void Calendar::loadImportantDates()
         //convert tmElements_t to time_t
         time_t event = makeTime(event_anniversary);
         //see if date is in search window
-        time_t today_start {previousMidnight(now())};
-        if (event >= today_start && event <= now() + search_window_secs)
+        time_t today_start {previousMidnight(timenow.getNow())};
+        if (event >= today_start && event <= timenow.getNow() + search_window_secs)
         {
             //Fill mDatesToReportList with pointers to the important date table 
             const ImportantDate *pointer {&mImportantDateList[i]};
@@ -859,7 +865,7 @@ bool MySerial::checkForUserInput()
             time_command_feedback += value;
             Serial.println(time_command_feedback);
             Serial.print("Now: ");
-            printFullDateTime(now());
+            printFullDateTime(timenow.getNow());
             calendar.init();
         }
     }
@@ -1070,7 +1076,7 @@ void MyLCD::printImportantDate(const Calendar::ImportantDate* importantdate)
     event.Month = importantdate->month;
     event.Day   = importantdate->day;
     time_t event_time_t {makeTime(event)};
-    time_t right_now {now()};
+    time_t right_now {timenow.getNow()};
     time_t tommorrow_begins {nextMidnight(right_now)};
     time_t tommorrow_ends   {nextMidnight(right_now) + SECS_PER_DAY};
     if (importantdate->day == timenow.getDay())
@@ -2145,7 +2151,8 @@ void setup()
     const int lcd_columns {20};
     const int lcd_rows    { 4};
     liquidcrystali2c.begin(lcd_columns, lcd_rows);
-    timenow.syncTimeWithRTC_Clock();
+    timenow.readRTC();
+    //timenow.syncTimeWithRTC_Clock();
     voltmeter.readVoltage();
     voltmeter.initDailyStatistics();
     calendar.init();
@@ -2184,13 +2191,13 @@ void loop()
         mystatemachine.main();     //print state changes
         Serial.println();
     }
-    if (calendar.getNextDSTspringForward() == now())
+    if (calendar.getNextDSTspringForward() == timenow.getNow())
     {
         calendar.init(); //sets new DST dates
         timenow.changeHour(3);
         Serial.println("The clock was set forward one hour. 2AM became 3AM"); 
     }
-    else if (calendar.getNextDSTfallBack() == now())
+    else if (calendar.getNextDSTfallBack() == timenow.getNow())
     {
         calendar.init(); //sets new DST dates. Must be done before setting
                          //the clock back to avoid a repeat
