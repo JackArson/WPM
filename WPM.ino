@@ -53,7 +53,11 @@ namespace Pin
 class TimeNow
 {
 private: //variables
-    tmElements_t mRTC_Reading;             //the current time
+    tmElements_t mRTC_Reading          {};    //the current time
+    time_t       mRTC_time_t           {};    //the current time
+    //mLastTimeStamp is used by the main loop to activate a sub loop
+    //which runs once every second.
+    time_t       mLastTimeStamp        {};
 public:  //methods
     void         changeYear            (int year);
     void         changeMonth           (int month);
@@ -62,13 +66,17 @@ public:  //methods
     void         changeMinute          (int minute);
     void         changeSecond          (int second);
     tmElements_t getElements           ();
+    time_t       getLastTimeStamp      ();
+    void         setLastTimeStamp      (const time_t last_timestamp);
     int          getYear               ();
     int          getMonth              ();
     int          getDay                ();
     int          getHour               ();
     int          getMinute             ();
     int          getSecond             ();
+    time_t       readRTC               ();
     void         syncTimeWithRTC_Clock ();
+    
 }timenow;
 
 void TimeNow::changeYear(int year)
@@ -154,6 +162,16 @@ tmElements_t TimeNow::getElements()
     return mRTC_Reading;
 }
 
+time_t TimeNow::getLastTimeStamp()
+{
+    return mLastTimeStamp;
+}
+
+void TimeNow::setLastTimeStamp(const time_t last_timestamp)
+{
+    mLastTimeStamp = last_timestamp;
+}    
+
 int TimeNow::getYear()
 {
     return mRTC_Reading.Year;
@@ -184,9 +202,33 @@ int TimeNow::getSecond()
     return mRTC_Reading.Second;
 }
 
+time_t TimeNow::readRTC()
+{
+    if (RTC.read(mRTC_Reading))
+    {
+        mRTC_time_t = RTC.get();
+        return mRTC_time_t;
+    }
+    else
+    {
+        //if the time cannot be found.
+        if (RTC.chipPresent())
+        {
+            Serial.println(F("Time not set.  Possible RTC clock battery issue. Battery is LIR2032."));
+        }
+        else
+        {
+            Serial.println(F("I can't find the clock through the I2C connection, check wiring."));
+        }
+        return false;
+    }
+    
+}
 
 void TimeNow::syncTimeWithRTC_Clock()
 {
+    
+
     if (RTC.read(mRTC_Reading))
     {
         setTime(RTC.get());        
@@ -1222,19 +1264,19 @@ bool Timing::isDissolveReady()
     }    
 }
 
-bool Timing::isOneSecondLoopReady()
-{
-    if (mOneSecondTimestamp != now()) 
-    {
-        //set up 1000ms delay for the next loop
-        mOneSecondTimestamp = now();
-        return true;
-    }
-    else
-    {
-        return false;
-    }
-}
+//bool Timing::isOneSecondLoopReady()
+//{
+    //if (mOneSecondTimestamp != now()) 
+    //{
+        ////set up 1000ms delay for the next loop
+        //mOneSecondTimestamp = now();
+        //return true;
+    //}
+    //else
+    //{
+        //return false;
+    //}
+//}
 
 //void Timing::lockout2AM(int lockout_seconds)
 //{
@@ -2120,7 +2162,7 @@ void setup()
                
 void loop()
 {
-    timenow.syncTimeWithRTC_Clock();  
+    time_t time_now {timenow.readRTC()};  
     voltmeter.readVoltage();
     myserial.checkForUserInput();
     tracklight.readDimmerSwitch();
@@ -2130,8 +2172,10 @@ void loop()
         mylcd.dissolveEffect();
     }
     //This code runs every second (1000ms)
-    if (timing.isOneSecondLoopReady())   
+    if (time_now != timenow.getLastTimeStamp())   
     {
+        //update last time stamp for next loop
+        timenow.setLastTimeStamp(time_now);
         timing.updateCounters();    
         mylcd.drawDisplay();        
         messagemanager.main();  //print messages (if any are ready)
