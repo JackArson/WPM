@@ -1,24 +1,50 @@
-//Copyright (C) 2019 Paul R Bailey  aka  'Jack Arson'
-//Written on a Raspberry Pi (Linux) using Arduino-1.8.9
-//also runs fine on Windows with Arduino-1.8.8
+/*
+MIT License
 
-/* Workshop Power Manager controls my 12 volt solar power system in my workshop.
- * It monitors system voltage and can activate a battery charger or an inverter.
- * It also controls 2, 120 volt circuits and can switch them away from the grid
- * to the inverter as needed.
- *     The hardware is an Arduino Mega, (although an Uno would have been enough.)
- * Attached to that is a battery backed up RTC clock, and a 4 x 20 LCD screen.  These
- * items communicate to the Mega through the i2c protocol.  I also built a 9 volt power
- * supply (drops to 5 volts after the Mega's regulator.)  I also built a voltage
- * divider.  The divider allows my 5 volt Mega to measure up to 20 volts.
- *     In addition to it's primary functions, it runs a small message system, a
- * a track lighting system, and it reads two LDR's (light-dependent resistors.)
- * The message system display's system statistics and reminds me of important dates.
-   I converted the track lighting to 12 volts DC and bought 12 volt DC LED light bulbs
-   for it.  The controller keeps the LED lights below 12 volts using pulse width modulation.
- * It also reads a potentiometer I am using as a dimmer switch.  Finally, the LDR display
- * serves to alert me to any switching problems with my opto-coupler equipped circuit
- * swapping relays.
+Copyright (c) 2019 Paul R Bailey aka 'Jack Arson'
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+Written on a Raspberry Pi (Linux) using Arduino-1.8.9
+also runs fine on Windows with Arduino-1.8.8
+
+Workshop Power Manager controls my 12 volt solar power system in my workshop.
+It is a unique machine I've built for my own use. I hope that by making my code public,
+it will find a like minded tinkerer.
+
+I am also curious if anyone will ever find this project.
+If you do find it, (and it helps you in some way,) I would love to hear about it.
+axe8765@gmail.com
+
+It monitors system voltage and can activate a battery charger or an inverter.
+It controls two 120 volt circuits and can switch them away from the grid to the
+inverter as needed.
+Reads two LDR's (light-dependent resistors,) for a visual confirmation of
+circuit swapped status
+The micro-controller is an Arduino Mega. This sketch will also fit an Uno.
+It has a battery backed up RTC clock, and a 4 x 20 LCD screen.
+the clock and LCD communicate to the Mega through the i2c protocol.
+Homemade 9 volt power supply (drops to 5 volts after the Mega's regulator.)
+Homemade voltage divider. (Allows my 5 volt Mega to measure up to 20 VDC.)
+Has a rotating message display system I use to remind myself of upcoming events.
+Controls and protects a track lighting system I converted to 12VDC.
+It also reads a potentiometer I am using as a dimmer switch.
 */
 
 #include <Time.h>
@@ -29,9 +55,6 @@
 
 //create liquidcrystali2c object
 LiquidCrystal_I2C  liquidcrystali2c(0x27, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);  
-
-
-
 
 namespace Pin
 {                              
@@ -78,7 +101,7 @@ String MyString::get12Clock(const tmElements_t time, const bool right_justify,
         isAM = true;
         format = 0;  //do not subtract 12 hours
     }
-    if (time.Hour == 0 || time.Hour == 12) //the midnight hour
+    if (time.Hour == 0 || time.Hour == 12)
     {
         clock_string += F("12");
     }
@@ -191,29 +214,8 @@ String MyString::getFullDateTime(const tmElements_t timestamp)
     //Tuesday, May 3rd 2019
     fullDateTime += 1970 + timestamp.Year;
     fullDateTime += "  ";
-
     String clock_string {get24Clock(timestamp)};
     fullDateTime += clock_string;
-    ////Tuesday, May 3rd 2019  1:
-    //fullDateTime += timestamp.Hour;
-    //fullDateTime += ":";
-    ////Tuesday, May 3rd 2019  1:05:
-    //const int time_minute {timestamp.Minute};
-    //if (time_minute < 10)
-    //{
-        ////add a leading zero
-        //fullDateTime += "0";
-    //}
-    //fullDateTime += timestamp.Minute;
-    //fullDateTime += ":";
-    ////Tuesday, May 3rd 2019  1:05:35
-    //const int time_second {timestamp.Second};
-    //if (time_second < 10)
-    //{
-        ////add a leading zero
-        //fullDateTime += "0";
-    //}
-    //fullDateTime += timestamp.Second;
     return fullDateTime;
 }
 
@@ -456,8 +458,7 @@ private: //variables
         {"Mom",          10, 23, 1943, EVENTTYPE_BIRTHDAY},     //19
         {"Erik",         12,  4, 1999, EVENTTYPE_BIRTHDAY},     //20
         {"Mathew",       12, 17, 1995, EVENTTYPE_BIRTHDAY},     //21
-        {"Christmas",    12, 25, 0,    EVENTTYPE_HOLIDAY},      //22
-        {"Paul's Coronation", 4, 3, 2019, EVENTTYPE_APPOINTMENT} //23
+        {"Christmas",    12, 25, 0,    EVENTTYPE_HOLIDAY}       //22
     };
     
     //Sometimes there are more than 52 weeks in a year.
@@ -476,14 +477,14 @@ private: //variables
                                             7,  7,  7}; 
     const byte mTableSunriseMinutes[53] = {47, 48, 46, 42, 37, 31, 23, 14,  4, 54,
                                            43, 32, 21, 10, 59, 48, 38, 29, 20, 13,
-                                           7,  3,  0, 58, 58,  0,  3,  7, 12, 18,
+                                            7,  3,  0, 58, 58,  0,  3,  7, 12, 18,
                                            24, 30, 37, 43, 50, 56,  3,  9, 16, 23,
                                            29, 36, 44, 51, 59,  7, 15, 23, 30, 36,
                                            41, 45, 47};
-    const byte mTableSunsetHours[53]  =   {17, 17, 17, 17, 17, 17, 17, 18, 18, 18,
+    const byte mTableSunsetHours[53]    = {17, 17, 17, 17, 17, 17, 17, 18, 18, 18,
                                            18, 18, 18, 18, 18, 19, 19, 19, 19, 19,
                                            19, 19, 19, 19, 19, 19, 19, 19, 19, 19,
-                                           19, 19 ,19, 19, 19, 18, 18, 18, 18, 18,
+                                           19, 19, 19, 19, 19, 18, 18, 18, 18, 18,
                                            17, 17, 17, 17, 17, 17, 17, 17, 17, 17,
                                            17, 17, 17}; 
     const byte mTableSunsetMinutes[53]  = {13, 19, 26, 34, 43, 51, 59,  7, 15, 23,
@@ -491,8 +492,7 @@ private: //variables
                                            39, 45, 50, 54, 57, 58, 58, 56, 53, 48,
                                            42, 34, 26, 16, 06, 55, 44, 32, 21,  9,
                                            58, 48, 38, 29, 21, 14,  8,  4,  2,  2,
-                                           4,  7, 13};
-
+                                            4,  7, 13};
 private: //variables continued
     byte mQtyImportantDatesToReport {};
     ImportantDate const * mDatesToReportList[QTY_IMPORTANT_DATES] {};
@@ -653,8 +653,7 @@ bool Calendar::isWakeUpComplete()
 {
     const int wake_up_delay = 15;  //minutes 
     //The wake up delay ensures that the the inverter does not burn off the fresh
-    //battery charger energy.
-
+    //energy from the nightly battery recharging.
     const int sunrise_minutes {(mTodaySunriseHour * 60) + mTodaySunriseMinute};
     const int now_minutes     {(timenow.getHour() * 60) + timenow.getMinute()};  
     if (now_minutes >= sunrise_minutes + wake_up_delay)
@@ -677,7 +676,6 @@ const char* Calendar::getMonthShortName(const byte month_number)
     //monthShortStr is defined in the time library
     return monthShortStr(month_number);
 }
-
 
 String Calendar::getSunriseClockString()
 {
@@ -721,20 +719,6 @@ byte Calendar::getQtyImportantDates()
     return mQtyImportantDatesToReport;
 }
 
-//bool Calendar::isAM(const tmElements_t time)
-//{
-    ////Time Library has isAM functions, but not with a tmElements_t parameter.
-    ////The moment after the clock hits 12 noon the time is 'post merīdiem.'
-    //if (time.Hour < 12)
-    //{
-        //return true;
-    //}
-    //else
-    //{
-        //return false;
-    //}      
-//}
-
 bool Calendar::isDaylight()
 {
     const int todays_sunrise_minutes {(mTodaySunriseHour * 60) + mTodaySunriseMinute};
@@ -749,67 +733,6 @@ bool Calendar::isDaylight()
         return false;
     }
 }
-
-//bool Calendar::isDaylightSavingsTime(tmElements_t input_date)
-//{  
-    ////Rules for my area (Ohio, USA) and most of United States
-    ////DST begins on the second Sunday of March    at 2AM and
-    ////       ends on the first Sunday of November at 2AM.
-    
-    ////Find the FIRST Sunday of March
-    ////Create a blank tmElements_t object, it's a seven part time and date.   
-    //tmElements_t march_start {}; //sets all elements to 0
-    ////March is the 3rd march of the year
-    //const uint8_t march {3}; 
-    ////Set the month
-    //march_start.Month = march;
-    ////Set the year to the year from the input_date parameter 
-    //march_start.Year  = input_date.Year;
-    ////time_t numbers are the number of seconds that have elapsed since January 1st 1970.
-    ////Use the time library makeTime function to convert the tmElements_t object
-    ////into a time_t so some time library math can be done.  
-    //const time_t start_march {makeTime(march_start)};
-    ////The time library has a 'nextSunday' function
-    ////Since the march_start.Day variable was set to the 0th instead of the 1st,
-    ////Sunday's that fall on the 1st of the march will 
-    ////qualify as 'nextSunday' as well as any Sunday that falls on the 2nd through 7th.
-    ////Use the nextSunday function to find the first Sunday of the month.
-    //const time_t first_sunday_of_march {nextSunday(start_march)};
-    ////Add one weeks worth of seconds to the time_t first_sunday_of_march
-    ////to get the 2nd Sunday of March.  SECS_PER_WEEK is defined in the time library.
-    //const time_t second_sunday_of_march {first_sunday_of_march + SECS_PER_WEEK};
-    ////Add two hours worth of seconds to change the time from midnight to 2AM.
-    ////It is important to change the time to 2AM AFTER the nextSunday function has
-    ////been called, and not before. SECS_PER_HOUR is also defined in the time library.
-    //const time_t second_sunday_of_march_2AM {second_sunday_of_march + SECS_PER_HOUR * 2};
-
-    ////Find the first Sunday of November in a similar manner.
-    //tmElements_t november_start{};
-    ////November is the 11th march of the year
-    //const uint8_t november {11};
-    ////Set the month
-    //november_start.Month = november;
-    ////Set the year to the year from the input_date parameter 
-    //november_start.Year  = input_date.Year;
-    ////Convert the tmElements_t to a time_t
-    //const time_t start_november {makeTime(november_start)};   
-    ////Use the nextSunday function to find the first Sunday of the month
-    //const time_t first_sunday_of_november {nextSunday(start_november)};
-    ////Add two hours worth of seconds to change the time from midnight to 2AM.
-    //const time_t first_sunday_of_november_2AM  {first_sunday_of_november + SECS_PER_HOUR * 2};
-    ////Convert the input parameter to a time_t number for a comparison
-    //const time_t date_input {makeTime(input_date)};
-    ////Compare results and return the answer
-    //if (date_input >= second_sunday_of_march_2AM &&
-        //date_input <  first_sunday_of_november_2AM)
-    //{
-        //return true;
-    //}
-    //else
-    //{
-        //return false;
-    //}
-//}
 
 void Calendar::loadImportantDates()
 {
@@ -858,17 +781,13 @@ void Calendar::setSunriseSunset()
 class MySerial
 {
 private: //variables
-    bool mUseLaptopOperatingVoltage{true};    
+    bool mUseLaptopOperatingVoltage{false};    
 public:
     bool checkForUserInput();
-    void printFullDateTime(const tmElements_t timestamp);
-    void printFullDateTime(const time_t timestamp);
     void printState(char const *text);
-    //void printTimestamp();
     bool usingLaptopOperatingVoltage();
 private: //methods
     int  getIntegerInput();
-    //void print
 }myserial;
 
 bool MySerial::checkForUserInput()
@@ -953,81 +872,12 @@ bool MySerial::checkForUserInput()
             time_command_feedback += value;
             Serial.println(time_command_feedback);
             Serial.print("Now: ");
-            printFullDateTime(timenow.getNow());
+            const String datetime {mystring.getFullDateTime(timenow.getNow())};
+            Serial.println(datetime);
             calendar.init();
         }
     }
 }
-
-void MySerial::printFullDateTime (const tmElements_t timestamp)
-{
-    //Tuesday
-    String fullDateTime {dayStr(timestamp.Wday)};
-    //Tuesday,
-    fullDateTime += ", ";
-    //Tuesday, May
-    fullDateTime += monthStr(timestamp.Month);
-    fullDateTime += " ";
-    //Tuesday, May 3
-    fullDateTime += timestamp.Day;
-    //Tuesday, May 3rd
-    fullDateTime += mystring.getDaySuffix(timestamp.Day);
-    fullDateTime += " ";
-    //Tuesday, May 3rd 2019
-    fullDateTime += 1970 + timestamp.Year;
-    fullDateTime += "  ";
-    //Tuesday, May 3rd 2019  1:
-    fullDateTime += timestamp.Hour;
-    fullDateTime += ":";
-    //Tuesday, May 3rd 2019  1:05:
-    const int time_minute {timestamp.Minute};
-    if (time_minute < 10)
-    {
-        //add a leading zero
-        fullDateTime += "0";
-    }
-    fullDateTime += timestamp.Minute;
-    fullDateTime += ":";
-    //Tuesday, May 3rd 2019  1:05:35
-    const int time_second {timestamp.Second};
-    if (time_second < 10)
-    {
-        //add a leading zero
-        fullDateTime += "0";
-    }
-    fullDateTime += timestamp.Minute;
-    Serial.println(fullDateTime);
-}
-
-void MySerial::printFullDateTime (const time_t timestamp)
-{
-    tmElements_t timestamp_elements {};
-    breakTime(timestamp, timestamp_elements);
-    printFullDateTime(timestamp_elements);
-}
-
-
-//void MySerial::printTimestamp()
-//{    
-    //if (timenow.getHour() <= 9)
-    //{
-        //Serial.print(F("0"));
-    //}
-    //Serial.print(timenow.getHour());
-    //Serial.print(F(":"));
-    //if (timenow.getMinute() <= 9)
-    //{
-        //Serial.print(F("0"));
-    //}
-    //Serial.print(timenow.getMinute());
-    //Serial.print(F(":"));
-    //if (timenow.getSecond() <= 9)
-    //{
-        //Serial.print(F("0"));
-   //}
-   //Serial.print(timenow.getSecond());
-   //Serial.print(F("  "));
-//}
 
 bool MySerial::usingLaptopOperatingVoltage()
 {
@@ -1035,6 +885,7 @@ bool MySerial::usingLaptopOperatingVoltage()
 }
 
 //private MySerial methods
+
 int MySerial::getIntegerInput()
 {
     String numeral   {Serial.readString()};    
@@ -1181,12 +1032,10 @@ void MyLCD::printImportantDate(const Calendar::ImportantDate* importantdate)
     else
     {
         tmElements_t event {};
-        //event.Hour  = 0;
         event.Day   = importantdate->day;
         event.Month = importantdate->month;
         event.Year  = timenow.getYear();
         time_t event_unix {makeTime(event)};
-        myserial.printFullDateTime(event_unix);
         const byte day_of_week (weekday(event_unix));
         String day_str {dayShortStr(day_of_week)};
         bottom_line = day_str + F(", "); //Wed,
@@ -1843,8 +1692,6 @@ void MyStateMachine::stageOneInverterStatefunction()
     const float voltage_to_turn_inverter_off   {12.55};
     const float voltage_to_switch_to_stage_two {13.80};
     mInverterRunTime++;
-    Serial.print (mInverterRunTime++);
-    Serial.print (" ");
     //switch to initiate sleep mode if dark (although unlikely to be on near dusk)
     if (calendar.isDaylight() == false)
     {        

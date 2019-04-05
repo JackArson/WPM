@@ -245,3 +245,4 @@ idea:  a function that takes these parameters (min/max voltage allowable time mi
 04-05-19-09:38 Timing::isIt4AM() prepared for testing
 04-05-19-13:49 mInverterRunTime++ diagnostics
 04-05-19-13:52 mInverterRunTime++ diagnostics
+04-05-19-18:48 removed repetive myserial.printFullDateTime
