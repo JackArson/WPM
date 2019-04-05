@@ -241,3 +241,4 @@ idea:  a function that takes these parameters (min/max voltage allowable time mi
 04-04-19-19:03 add Calendar::initDST()
 04-04-19-19:04 add Calendar::initDST()
 04-05-19-09:22 overloaded MyString::get24Clock tmElements/time_t
+04-05-19-09:30 MyString::getFullDateTime removed repetitive clock string generator

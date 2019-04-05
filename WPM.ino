@@ -125,6 +125,29 @@ String MyString::get24Clock(const time_t timestamp)  // 13:45:56
     return get24Clock(timestamp_elements);
 }
 
+String MyString::get24Clock(const tmElements_t timestamp_elements)  // 13:45:56
+{
+    String time_string {""};
+    if (timestamp_elements.Hour <= 9)
+    {
+        time_string += F("0");
+    }
+    time_string += timestamp_elements.Hour;
+    time_string += F(":");
+    if (timestamp_elements.Minute <= 9)
+    {
+        time_string += F("0");
+    }
+    time_string += timestamp_elements.Minute;
+    time_string += F(":");
+    if (timestamp_elements.Second <= 9)
+    {
+        time_string += F("0");
+    }
+    time_string += timestamp_elements.Second;
+    time_string += F("  ");
+    return time_string;
+}
 
 String MyString::getDaySuffix(int day_number)
 {
@@ -169,28 +192,28 @@ String MyString::getFullDateTime(const tmElements_t timestamp)
     fullDateTime += 1970 + timestamp.Year;
     fullDateTime += "  ";
 
-
-    
-    //Tuesday, May 3rd 2019  1:
-    fullDateTime += timestamp.Hour;
-    fullDateTime += ":";
-    //Tuesday, May 3rd 2019  1:05:
-    const int time_minute {timestamp.Minute};
-    if (time_minute < 10)
-    {
-        //add a leading zero
-        fullDateTime += "0";
-    }
-    fullDateTime += timestamp.Minute;
-    fullDateTime += ":";
-    //Tuesday, May 3rd 2019  1:05:35
-    const int time_second {timestamp.Second};
-    if (time_second < 10)
-    {
-        //add a leading zero
-        fullDateTime += "0";
-    }
-    fullDateTime += timestamp.Second;
+    String clock_string {get24Clock(timestamp)};
+    fullDateTime += clock_string;
+    ////Tuesday, May 3rd 2019  1:
+    //fullDateTime += timestamp.Hour;
+    //fullDateTime += ":";
+    ////Tuesday, May 3rd 2019  1:05:
+    //const int time_minute {timestamp.Minute};
+    //if (time_minute < 10)
+    //{
+        ////add a leading zero
+        //fullDateTime += "0";
+    //}
+    //fullDateTime += timestamp.Minute;
+    //fullDateTime += ":";
+    ////Tuesday, May 3rd 2019  1:05:35
+    //const int time_second {timestamp.Second};
+    //if (time_second < 10)
+    //{
+        ////add a leading zero
+        //fullDateTime += "0";
+    //}
+    //fullDateTime += timestamp.Second;
     return fullDateTime;
 }
 
