@@ -246,3 +246,4 @@ idea:  a function that takes these parameters (min/max voltage allowable time mi
 04-05-19-13:49 mInverterRunTime++ diagnostics
 04-05-19-13:52 mInverterRunTime++ diagnostics
 04-05-19-18:48 removed repetive myserial.printFullDateTime
+04-05-19-19:13 proofreading, old comments deleted

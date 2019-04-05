@@ -101,6 +101,7 @@ String MyString::get12Clock(const tmElements_t time, const bool right_justify,
         isAM = true;
         format = 0;  //do not subtract 12 hours
     }
+    
     if (time.Hour == 0 || time.Hour == 12)
     {
         clock_string += F("12");
@@ -114,13 +115,15 @@ String MyString::get12Clock(const tmElements_t time, const bool right_justify,
         }
         const String hour_string (time.Hour - format); 
         clock_string += hour_string;
-    }   
+    }
+       
     clock_string += F(":");
     //if a single digit, add a leading zero
     if (time.Minute < 10)
     {  
         clock_string += F("0");
     }
+    
     const String minute_string {time.Minute};   
     clock_string += minute_string;
     if (isAM)
@@ -131,11 +134,13 @@ String MyString::get12Clock(const tmElements_t time, const bool right_justify,
     {                          
         clock_string += F("pm");
     }
+    
     //add a plus symbol to the end of the string to indicate Daylight Savings Time
     if (dst)
     {
         clock_string += F("+");
     }
+    
     return clock_string;    
 }
 
@@ -155,18 +160,21 @@ String MyString::get24Clock(const tmElements_t timestamp_elements)  // 13:45:56
     {
         time_string += F("0");
     }
+    
     time_string += timestamp_elements.Hour;
     time_string += F(":");
     if (timestamp_elements.Minute <= 9)
     {
         time_string += F("0");
     }
+    
     time_string += timestamp_elements.Minute;
     time_string += F(":");
     if (timestamp_elements.Second <= 9)
     {
         time_string += F("0");
     }
+    
     time_string += timestamp_elements.Second;
     time_string += F("  ");
     return time_string;
@@ -185,6 +193,7 @@ String MyString::getDaySuffix(int day_number)
             day_number -= 10;
         }
     }
+    
     //day_of_month should now be between (1 and 20)
     if (day_number < 4)
     {
@@ -402,9 +411,9 @@ time_t TimeNow::readRTC()
         {
             Serial.println(F("I can't find the clock through the I2C connection, check wiring."));
         }
+        
         return false;
     }
-    
 }
 //==end of TimeNow=============================================================================
 
@@ -569,6 +578,7 @@ void Calendar::initDST()
         mNextDSTspringForward = {getDST_SpringForward(next_year)};
         mNextDSTfallBack      = {getDSTfallBack(next_year)};
     }
+    
     Serial.print("Next DST spring forward: ");
     const String spring_forward_string
                  {mystring.getFullDateTime(mNextDSTspringForward)};
@@ -827,6 +837,7 @@ bool MySerial::checkForUserInput()
                     mUseLaptopOperatingVoltage = true;
                     Serial.println(F("Switched to laptop operating voltage."));
                 }
+                
                 break;
             case 'm':
             case 'M':
@@ -861,11 +872,10 @@ bool MySerial::checkForUserInput()
                 time_command_feedback = "Year";
                 calendar.init();
                 break;
-            
             default:
                 break;
-            
-        }
+        } //end of switch (input)
+        
         if (time_command_feedback != "")
         {
             time_command_feedback += " changed to ";
@@ -900,9 +910,10 @@ struct Coordinant
     byte y;
 };
 
- class MyLCD
-{
+//==end of Coordinant=======================================================================
 
+class MyLCD
+{
 //  01234567890123456789 20 x 4        LCD Display
 //0|Charging15 SA 13.02v               The number next to 'Charging' is a state change timer
 //1|  message display                  'S' indicates 'S'ummer sensor is detecting light
@@ -923,17 +934,14 @@ public:
                                const bool         right_justify,
                                const bool         dst);
     void   printDate          (const Coordinant   coordinant);
-    //void   printDateSuffix    (const byte numeral);
     void   printImportantDate (const Calendar::ImportantDate* importantdate);
     void   printLDRresults    ();
     void   printStateChangeDelayCounter (const int timer_value);
-    //void   updateBacklight    ();
     String centerText         (const String text);
 }mylcd;
 
 void MyLCD::drawDisplay()
 {
-    //updateBacklight();
     Coordinant coordinant {12, 3};
     const bool right_justify    {true};
     const bool dst              {calendar.getDST_Status()};
@@ -974,12 +982,6 @@ void MyLCD::dissolveThis(String top_line, String bottom_line)
     Serial.print(mMessageTopLine);
     Serial.println(mMessageBottomLine);
 }
-
-//void MyLCD::printDateSuffix(byte numeral)
-//{
-    //const char *suffix {calendar.getDaySuffix(numeral)};
-    //liquidcrystali2c.print(suffix);
-//}
 
 void MyLCD::printImportantDate(const Calendar::ImportantDate* importantdate)
 {
@@ -1047,6 +1049,7 @@ void MyLCD::printImportantDate(const Calendar::ImportantDate* importantdate)
         String date_suffix {mystring.getDaySuffix(event.Day)};
         bottom_line += date_suffix; //Wed, Sep 3rd
     }
+
     dissolveThis(top_line, bottom_line);
 }
 
@@ -1093,8 +1096,8 @@ String MyLCD::centerText(const String text)
         }
         return front + text + rear;
     }
-    
 }
+
 void MyLCD::printLDRresults()
 {
     liquidcrystali2c.setCursor (11,0);
@@ -1129,6 +1132,7 @@ void MyLCD::printStateChangeDelayCounter(const int timer_value)
     {
         liquidcrystali2c.print(F(" ")); // clear the first space if a single digit
     }
+
     liquidcrystali2c.print(timer_value); // print the counter
 }
 
@@ -1163,19 +1167,14 @@ private: //variables
     time_t       mDissolveTimestamp       {};
     
 public:  //methods
-    byte getStateChangeDelayCounter           ();
-    bool isOneSecondLoopReady   ();
-    bool isIt4AM              (); 
-    bool isDissolveReady      ();
-    void setCountdownTimer    (const int x);
-    void updateCounters       ();
-private: //methods
-    
-
-
+    int  getStateChangeDelayCounter ();
+    bool isIt4AM                    (); 
+    bool isDissolveReady            ();
+    void setCountdownTimer          (const int seconds);
+    void updateCounters             ();
 }timing;
 
-byte Timing::getStateChangeDelayCounter()
+int Timing::getStateChangeDelayCounter()
 {
     return mStateChangeDelayCounter;
 }
@@ -1189,8 +1188,7 @@ bool Timing::isIt4AM()
     else
     {
         return false;
-    }
-    
+    }    
 }
 
 bool Timing::isDissolveReady()
@@ -1207,9 +1205,9 @@ bool Timing::isDissolveReady()
     }    
 }
 
-void Timing::setCountdownTimer(const int x)
+void Timing::setCountdownTimer(const int seconds)
 {
-    mStateChangeDelayCounter = x;
+    mStateChangeDelayCounter = seconds;
 }
 
 void Timing::updateCounters()
@@ -1245,9 +1243,7 @@ public:  //methods
     VoltRecord getMax              ();
     float      getVoltage          ();
     void       initDailyStatistics ();
-    void       readVoltage         ();
-private: //methods
-    
+    void       readVoltage         ();    
 }voltmeter;
 
 void Voltmeter::main()
@@ -1313,20 +1309,19 @@ void Voltmeter::initDailyStatistics()
     {
         Serial.print(F("Voltmeter::initDailyStatistics  no voltage detected"));
     }
-    
 }
+
 void Voltmeter::readVoltage()
 {
     //A 5 volt micro controller can be damaged when more than 5 volts is applied to
     //a pin.  A voltage divider can be used to reduce a high voltage to a low
-    //voltage so it can be safely measured.    
-
+    //voltage so it can be safely measured.
+    
     //I need to measure a bank of 12 volt sealed lead acid batteries.  I built a
     //voltage divider as follows:
     //150k resistor from positive battery terminal to voltage divider intersection.
     // 47k resistor from negative battery terminal to voltage divider intersection.
     //a wire from the voltage divider intersection to a controller analog pin
-
     //The total resistance: 197k (150k + 47k = 197k)
     //The percentage of power at my voltage divider intersection: 24% (47k / 197k = 0.24)
     //That means 20 volts should read as 4.8 volts (20v * 0.24 = 4.8v)
@@ -1375,7 +1370,6 @@ void Voltmeter::readVoltage()
     //My voltmeter gets jumpy when my solar chargers are processing a lot of energy.
     //My experiments to stabilize the raw voltage reading by using capacitors
     //were ineffective.
-    
     //Use the code below to help stabilize a jumpy reading (if needed.)
     //My voltmeter runs well with a max deviation setting of 0.01
     const float max_deviation {0.01};
@@ -1400,27 +1394,27 @@ class MyStateMachine
 public:
     enum State
     {
-        STATE_INIT_SLEEP, //0
-        STATE_SLEEP, //1
-        STATE_INIT_WAKE, //2
-        STATE_WAKE, //3
-        STATE_INIT_BALANCED, //4
-        STATE_BALANCED, //5
-        STATE_INIT_INVERTER_WARM_UP, //6
-        STATE_INVERTER_WARM_UP, //7
-        STATE_INIT_INVERTER_STAGE_ONE, //8
-        STATE_INVERTER_STAGE_ONE, //9
-        STATE_INIT_INVERTER_STAGE_TWO, //10
-        STATE_INVERTER_STAGE_TWO, //11
-        STATE_INIT_DAY_CHARGE, //12
-        STATE_DAY_CHARGE, //13
-        STATE_INIT_INVERTER_COOL_DOWN, //14
-        STATE_INVERTER_COOL_DOWN, //15
+        STATE_INIT_SLEEP,
+        STATE_SLEEP,
+        STATE_INIT_WAKE,
+        STATE_WAKE,
+        STATE_INIT_BALANCED,
+        STATE_BALANCED,
+        STATE_INIT_INVERTER_WARM_UP,
+        STATE_INVERTER_WARM_UP,
+        STATE_INIT_INVERTER_STAGE_ONE,
+        STATE_INVERTER_STAGE_ONE,
+        STATE_INIT_INVERTER_STAGE_TWO,
+        STATE_INVERTER_STAGE_TWO,
+        STATE_INIT_DAY_CHARGE,
+        STATE_DAY_CHARGE,
+        STATE_INIT_INVERTER_COOL_DOWN,
+        STATE_INVERTER_COOL_DOWN,
         MAX_STATE
     };
 private: //variables
-    State mState           {STATE_INIT_BALANCED};
-    int   mInverterRunTime {};
+    State mState              {STATE_INIT_BALANCED};
+    int   mInverterRunTime    {};
 public:  //methods
     void  main                ();
     State getState            ();
@@ -1428,22 +1422,22 @@ public:  //methods
     void  resetInverterRunTime();
     void  setState            (const State);
 private: //methods
-    void initSleepStatefunction();
-    void sleepStatefunction();
-    void initWakeStatefunction();
-    void wakeStatefunction();
-    void initBalancedStatefunction();
-    void balancedStatefunction();
-    void initWarmUpInverterStatefunction();
-    void warmUpInverterStatefunction();
+    void initSleepStatefunction           ();
+    void sleepStatefunction               ();
+    void initWakeStatefunction            ();
+    void wakeStatefunction                ();
+    void initBalancedStatefunction        ();
+    void balancedStatefunction            ();
+    void initWarmUpInverterStatefunction  ();
+    void warmUpInverterStatefunction      ();
     void initStageOneInverterStatefunction();
-    void stageOneInverterStatefunction();
+    void stageOneInverterStatefunction    ();
     void initStageTwoInverterStatefunction();
-    void stageTwoInverterStatefunction();
-    void initDaytimeChargingfunction();
-    void daytimeChargingfunction();
-    void initInverterCooldownfunction();
-    void inverterCooldownfunction();
+    void stageTwoInverterStatefunction    ();
+    void initDaytimeChargingfunction      ();
+    void daytimeChargingfunction          ();
+    void initInverterCooldownfunction     ();
+    void inverterCooldownfunction         ();
 }mystatemachine;
 
 void  MyStateMachine::main()
@@ -1542,7 +1536,7 @@ void MyStateMachine::setState(State state)
         break;
     case STATE_WAKE:
         finish_string = F("waking");
-        liquidcrystali2c.print(F("Waking  "));
+        liquidcrystali2c.print(F("Waking  ")); //extra spaces to erase last mode
         break;
     case STATE_BALANCED:
         finish_string = F("balanced");
@@ -1588,7 +1582,6 @@ void MyStateMachine::initSleepStatefunction()
     setState(STATE_SLEEP);
 }
 
-
 void MyStateMachine::sleepStatefunction()
 {
     //switch to initiate wake state if light
@@ -1615,7 +1608,7 @@ void MyStateMachine::wakeStatefunction()
         setState(STATE_INIT_SLEEP); //initiate sleep state
     }
     //check to see how long it is past dawn.
-    //if it is a certain time past dawn, switch to state 4 (init balanced)
+    //if it is a certain time past dawn (15 minutes), switch to state 'init balanced'
     //The wake up delay ensures that the the inverter does not burn off the overcharge
     //from the battery charger that was just turned off at dawn
     else if (calendar.isWakeUpComplete() == true)
@@ -1706,7 +1699,6 @@ void MyStateMachine::stageOneInverterStatefunction()
     {
         setState(STATE_INIT_INVERTER_COOL_DOWN);
     }
-
 }
 
 void MyStateMachine::initStageTwoInverterStatefunction()
@@ -1717,7 +1709,6 @@ void MyStateMachine::initStageTwoInverterStatefunction()
     digitalWrite(Pin::stage_two_inverter_relay, HIGH); // relay two on
     setState(STATE_INIT_INVERTER_STAGE_TWO);
 }
-
 
 void MyStateMachine::stageTwoInverterStatefunction()
 {
@@ -1790,7 +1781,6 @@ public:  //methods
 void MessageManager::init()
 {
     mCurrentMessageIndex = 0;
-    //mNextMessageTimestamp = 0; 
 }
 
 void MessageManager::main()
@@ -1903,7 +1893,7 @@ void MessageManager::messageSunriseSunset()
     const String sunrise {F("Sunrise ")};
     const String sunrise_clock_string {calendar.getSunriseClockString()};
     const String top_line {sunrise + sunrise_clock_string};
-    const String sunset {F("Sunset ")};
+    const String sunset  {F("Sunset ")};
     const String sunset_clock_string {calendar.getSunsetClockString()};
     const String bottom_line {sunset + sunset_clock_string};
     mylcd.dissolveThis(top_line, bottom_line);
@@ -1940,12 +1930,10 @@ private: //enums
     
 private: //variables
     TrackLightState mTrackLightState {TRACKLIGHTSTATE_READING_NEW_INPUT};
-    //to prevent flicker drift, freeze light level if this many milliseconds 
-    //have passed since the last mLargeAdjustment
-    time_t      mAdjustmentWindowTimestamp {millis()};
+    time_t          mAdjustmentWindowTimestamp {millis()};
     //Hold the input at mInputAnchorPoint unless there is a mLargeAdjustment
     //Why? My poor quality potentiometer does not always produce a steady reading.
-    int         mInputAnchorPoint               {};
+    int mInputAnchorPoint {};
     
 public:  //methods
     void readDimmerSwitch         ();
@@ -1953,8 +1941,6 @@ public:  //methods
 private: //methods
     bool largeAdjustmentDetected  (const int dimmer_reading);
     int  regulateVoltage          (const int input_level);
-    
-
 }tracklight;
 
 void TrackLight::readDimmerSwitch()
@@ -2006,7 +1992,7 @@ void TrackLight::setLightLevel()
     analogWrite(Pin::workbench_lighting, value_to_write);
 }
 
-//private methods
+//private TrackLight methods
 
 bool TrackLight::largeAdjustmentDetected(const int dimmer_reading)
 {
@@ -2064,7 +2050,6 @@ void setup()
     const int lcd_rows    { 4};
     liquidcrystali2c.begin(lcd_columns, lcd_rows);
     timenow.readRTC();
-    //timenow.syncTimeWithRTC_Clock();
     voltmeter.readVoltage();
     voltmeter.initDailyStatistics();
     calendar.init();
@@ -2086,7 +2071,6 @@ void loop()
     myserial.checkForUserInput();
     tracklight.readDimmerSwitch();
     tracklight.setLightLevel();
-    
     if (calendar.getNextDSTspringForward() == timenow.getNow())
     {
         calendar.init(); //sets new DST dates
@@ -2100,10 +2084,12 @@ void loop()
         timenow.changeHour(1);
         Serial.println(F("The clock was set back one hour. 2AM became 1AM")); 
     }
+
     if (timing.isDissolveReady())
     {
         mylcd.dissolveEffect();
     }
+
     //This code runs every second (1000ms)
     if (time_now != timenow.getLastTimeStamp())   
     {
@@ -2121,7 +2107,6 @@ void loop()
         timing.updateCounters();    
         mylcd.drawDisplay();        
         messagemanager.main();  //print messages (if any are ready)
-
         //format a timestamp string to start a one line status report
         const String timestamp_string {mystring.get24Clock(time_now)};
         Serial.print(timestamp_string);
@@ -2129,9 +2114,5 @@ void loop()
         mystatemachine.main();     //print state changes
         Serial.println();
         //conclude the one line status report
-        
     }
 }
-
-//Serial.print("Year: ");
-//Serial.println(test_elements.Year);
