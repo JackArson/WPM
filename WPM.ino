@@ -78,7 +78,7 @@ String MyString::get12Clock(const tmElements_t time, const bool right_justify,
         isAM = true;
         format = 0;  //do not subtract 12 hours
     }
-    if (time.Hour == 0) //the midnight hour
+    if (time.Hour == 0 || time.Hour == 12) //the midnight hour
     {
         clock_string += F("12");
     }
