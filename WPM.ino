@@ -1843,6 +1843,8 @@ void MyStateMachine::stageOneInverterStatefunction()
     const float voltage_to_turn_inverter_off   {12.55};
     const float voltage_to_switch_to_stage_two {13.80};
     mInverterRunTime++;
+    Serial.print (mInverterRunTime++);
+    Serial.print (" ");
     //switch to initiate sleep mode if dark (although unlikely to be on near dusk)
     if (calendar.isDaylight() == false)
     {        
