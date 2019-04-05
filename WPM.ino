@@ -60,6 +60,7 @@ public:  //methods
                                 const bool dst);
     //17:24:56
     String get24Clock          (const time_t timestamp);
+    String get24Clock          (const tmElements_t timestamp_elements);
     String getDaySuffix        (int day_number);   
     //Monday, April 15th 2019  17:24:56
     String getFullDateTime     (const tmElements_t timestamp); 
@@ -118,29 +119,12 @@ String MyString::get12Clock(const tmElements_t time, const bool right_justify,
 
 String MyString::get24Clock(const time_t timestamp)  // 13:45:56
 {
+    //time_t overload
     tmElements_t timestamp_elements {};
     breakTime(timestamp, timestamp_elements);
-    String time_string {""};
-    if (timestamp_elements.Hour <= 9)
-    {
-        time_string += F("0");
-    }
-    time_string += timestamp_elements.Hour;
-    time_string += F(":");
-    if (timestamp_elements.Minute <= 9)
-    {
-        time_string += F("0");
-    }
-    time_string += timestamp_elements.Minute;
-    time_string += F(":");
-    if (timestamp_elements.Second <= 9)
-    {
-        time_string += F("0");
-    }
-    time_string += timestamp_elements.Second;
-    time_string += F("  ");
-    return time_string;
+    return get24Clock(timestamp_elements);
 }
+
 
 String MyString::getDaySuffix(int day_number)
 {
@@ -184,6 +168,9 @@ String MyString::getFullDateTime(const tmElements_t timestamp)
     //Tuesday, May 3rd 2019
     fullDateTime += 1970 + timestamp.Year;
     fullDateTime += "  ";
+
+
+    
     //Tuesday, May 3rd 2019  1:
     fullDateTime += timestamp.Hour;
     fullDateTime += ":";
@@ -203,7 +190,7 @@ String MyString::getFullDateTime(const tmElements_t timestamp)
         //add a leading zero
         fullDateTime += "0";
     }
-    fullDateTime += timestamp.Minute;
+    fullDateTime += timestamp.Second;
     return fullDateTime;
 }
 
