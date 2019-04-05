@@ -1333,7 +1333,7 @@ byte Timing::getStateChangeDelayCounter()
 
 bool Timing::isIt4AM()
 {
-    if (timenow.getHour()   == 4 && timenow.getMinute() == 0 && timenow.getSecond() == 0)
+    if (timenow.getHour()  == 10 && timenow.getMinute() == 0 && timenow.getSecond() == 0)
     {
         Serial.println("Timing::isIt4AM() = true!");
         return true;
@@ -2261,6 +2261,14 @@ void loop()
     {
         //update last time stamp for next loop
         timenow.setLastTimeStamp(time_now);
+        if (timing.isIt4AM())
+        {
+            //do nightly maintenance
+            mystatemachine.resetInverterRunTime();
+            voltmeter.initDailyStatistics();  //resets daily voltage highs and lows           
+            messagemanager.init();  
+            calendar.init();
+        }
         timing.updateCounters();    
         mylcd.drawDisplay();        
         messagemanager.main();  //print messages (if any are ready)
@@ -2272,14 +2280,7 @@ void loop()
         mystatemachine.main();     //print state changes
         Serial.println();
         //conclude the one line status report
-        if (timing.isIt4AM())
-        {
-            //do nightly maintenance
-            mystatemachine.resetInverterRunTime();
-            voltmeter.initDailyStatistics();  //resets daily voltage highs and lows           
-            messagemanager.init();  
-            calendar.init();
-        }
+        
     }
 }
 
