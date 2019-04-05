@@ -531,7 +531,7 @@ void Calendar::init()
     mQtyImportantDatesToReport = 0;
     //print current time and date    
     const String calendar_now_string {mystring.getFullDateTime(timenow.getNow())};
-    Serial.print(F("Clock set to: "));
+    Serial.print(F("Clock currently set to:  "));
     Serial.println(calendar_now_string);
     initDST();
     loadImportantDates();
@@ -550,7 +550,7 @@ void Calendar::initDST()
     if (timenow.getNow() < this_year_spring_forward_time)
     {
         mDaylightSavingsTime  = false;
-        Serial.println("daylight savings time = false");
+        Serial.println(F("It is not daylight savings time now."));
         mNextDSTspringForward = this_year_spring_forward_time;
         mNextDSTfallBack      = this_year_fall_back_time;
     }
@@ -558,14 +558,14 @@ void Calendar::initDST()
              timenow.getNow() <  this_year_fall_back_time)
     {
         mDaylightSavingsTime = true;
-        Serial.println("daylight savings time = true");
+        Serial.println(F("It is daylight savings time now."));
         mNextDSTspringForward = {getDST_SpringForward(next_year)};
         mNextDSTfallBack      =  this_year_fall_back_time;
     }
     else if (timenow.getNow() >= this_year_fall_back_time)
     {
         mDaylightSavingsTime = false;
-        Serial.println("daylight savings time = false");
+        Serial.println(F("It is not daylight savings time now."));
         mNextDSTspringForward = {getDST_SpringForward(next_year)};
         mNextDSTfallBack      = {getDSTfallBack(next_year)};
     }
@@ -1333,9 +1333,8 @@ byte Timing::getStateChangeDelayCounter()
 
 bool Timing::isIt4AM()
 {
-    if (timenow.getHour()  == 10 && timenow.getMinute() == 0 && timenow.getSecond() == 0)
+    if (timenow.getHour()  == 4 && timenow.getMinute() == 0 && timenow.getSecond() == 0)
     {
-        Serial.println("Timing::isIt4AM() = true!");
         return true;
     }
     else
@@ -2268,6 +2267,7 @@ void loop()
             voltmeter.initDailyStatistics();  //resets daily voltage highs and lows           
             messagemanager.init();  
             calendar.init();
+            Serial.println("Nightly maintenance completed.");
         }
         timing.updateCounters();    
         mylcd.drawDisplay();        
