@@ -2044,7 +2044,7 @@ int TrackLight::regulateVoltage(const int input_level)
 
 void setup()
 {
-    Serial.begin(250000);              // start the serial monitor
+    Serial.begin(115200);              // start the serial monitor
     Serial.println(F("If you are reading this, you are connected to the serial port via"));
     Serial.println(F("USB.  Your laptop raises the operating voltage of your"));
     Serial.println(F("microcontroller.  If you plan to leave this cable plugged in,"));
