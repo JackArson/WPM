@@ -1732,12 +1732,19 @@ void MyStateMachine::initDaytimeChargingfunction()
     digitalWrite(Pin::stage_one_inverter_relay, LOW); //relay one off
     digitalWrite(Pin::stage_two_inverter_relay, LOW); //relay two off
     setState(STATE_DAY_CHARGE);
+    const int minimum_on_time = 60;
+    timing.setCountdownTimer(minimum_on_time);
 }
 
 void MyStateMachine::daytimeChargingfunction()
 {
     const float voltage_to_switch_off_charger {13.40};
-    if (voltmeter.getVoltage() >= voltage_to_switch_off_charger)
+    if (timing.getStateChangeDelayCounter())
+    {    
+        //enforce minimum on time
+        return;
+    } 
+    else if (voltmeter.getVoltage() >= voltage_to_switch_off_charger)
     {
         setState(STATE_INIT_BALANCED);
     }
