@@ -397,7 +397,7 @@ time_t TimeNow::readRTC()
 {
     if (RTC.read(mRTC_Reading))
     {
-        mRTC_time_t = RTC.get();
+        mRTC_time_t = makeTime(mRTC_Reading);
         return mRTC_time_t;
     }
     else
