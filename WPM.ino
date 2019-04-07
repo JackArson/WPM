@@ -47,6 +47,9 @@ Controls and protects a track lighting system I converted to 12VDC.
 It also reads a potentiometer I am using as a dimmer switch.
 */
 
+//References to battery charger refer to a 120 volt AC auxillary charger.
+//Solar battery charging is being done automatically by separate system 
+
 #include <Time.h>
 #include <TimeLib.h>
 #include <LiquidCrystal_I2C.h>
@@ -1406,7 +1409,7 @@ public:
         STATE_INVERTER_STAGE_ONE,
         STATE_INIT_INVERTER_STAGE_TWO,
         STATE_INVERTER_STAGE_TWO,
-        STATE_INIT_DAY_CHARGE,
+        STATE_INIT_DAY_CHARGE, 
         STATE_DAY_CHARGE,
         STATE_INIT_INVERTER_COOL_DOWN,
         STATE_INVERTER_COOL_DOWN,
@@ -1434,6 +1437,8 @@ private: //methods
     void stageOneInverterStatefunction    ();
     void initStageTwoInverterStatefunction();
     void stageTwoInverterStatefunction    ();
+    //References to DaytimeCharging refer to a 120 volt AC auxillary charger.
+    //Solar battery charging is being done automatically by separate system 
     void initDaytimeChargingfunction      ();
     void daytimeChargingfunction          ();
     void initInverterCooldownfunction     ();

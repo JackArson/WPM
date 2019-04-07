@@ -249,3 +249,4 @@ idea:  a function that takes these parameters (min/max voltage allowable time mi
 04-05-19-19:13 proofreading, old comments deleted
 04-06-19-21:54 TimeNow::readRTC() aligned mRTC_Reading with mRTC_time_t
 04-07-19-09:33 added a minimum on time for daytime aux charging
+04-07-19-09:41 clarified term battery charger
