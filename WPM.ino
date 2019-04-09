@@ -2055,6 +2055,7 @@ void setup()
     Serial.println(F("controller."));
     Serial.println(F("                                                   -Paul 03.22.2019"));
     Serial.println();
+    
     //start the Wire library
     Wire.begin();
     //start the LiquidCrystal_I2C library
@@ -2062,6 +2063,7 @@ void setup()
     const int lcd_rows    { 4};
     liquidcrystali2c.begin(lcd_columns, lcd_rows);
     timenow.readRTC();
+    Serial.println(F("If this is the last thing the serial monitor prints, check your clock wiring."));
     voltmeter.readVoltage();
     voltmeter.initDailyStatistics();
     calendar.init();

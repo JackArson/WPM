@@ -251,3 +251,4 @@ idea:  a function that takes these parameters (min/max voltage allowable time mi
 04-07-19-09:33 added a minimum on time for daytime aux charging
 04-07-19-09:41 clarified term battery charger
 04-09-19-09:18 fixed glitch switching to stage two
+04-09-19-19:48 added diagnostic message about RTC clock
