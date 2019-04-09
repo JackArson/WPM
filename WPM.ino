@@ -1712,7 +1712,7 @@ void MyStateMachine::initStageTwoInverterStatefunction()
     digitalWrite(Pin::inverter, HIGH);                 //inverter on
     digitalWrite(Pin::stage_one_inverter_relay, HIGH); // relay one on
     digitalWrite(Pin::stage_two_inverter_relay, HIGH); // relay two on
-    setState(STATE_INIT_INVERTER_STAGE_TWO);
+    setState(STATE_INVERTER_STAGE_TWO);
 }
 
 void MyStateMachine::stageTwoInverterStatefunction()
