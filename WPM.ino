@@ -1416,12 +1416,12 @@ public:
         MAX_STATE
     };
 private: //variables
-    State mState              {STATE_INIT_BALANCED};
-    int   mInverterRunTime    {};
+    State     mState              {STATE_INIT_BALANCED};
+    uint32_t  mInverterRunTime    {60*60*9};
 public:  //methods
     void  main                ();
     State getState            ();
-    int   getInverterRunTime  ();
+    uint32_t   getInverterRunTime  ();
     void  resetInverterRunTime();
     void  setState            (const State);
 private: //methods
@@ -1508,14 +1508,14 @@ MyStateMachine::State MyStateMachine::getState()
     return mState;
 }
 
-int MyStateMachine::getInverterRunTime()
+uint32_t MyStateMachine::getInverterRunTime()
 {
     return mInverterRunTime;
 }
 
 void MyStateMachine::resetInverterRunTime()
 {
-    mInverterRunTime = 0;
+    mInverterRunTime = 60*60*9;
 }
 
 void MyStateMachine::setState(State state)
@@ -1640,7 +1640,8 @@ void MyStateMachine::balancedStatefunction()
     {
         setState(STATE_INIT_SLEEP);
     }
-    else if (voltmeter.getVoltage() >= voltage_to_start_inverter)
+    else if (voltmeter.getVoltage() >= voltage_to_start_inverter &&
+             timing.getStateChangeDelayCounter() == false)
     {
         setState(STATE_INIT_INVERTER_WARM_UP); 
     }
@@ -1752,6 +1753,8 @@ void MyStateMachine::daytimeChargingfunction()
     else if (voltmeter.getVoltage() >= voltage_to_switch_off_charger)
     {
         setState(STATE_INIT_BALANCED);
+        const int lockout_inverter_for {90};
+        timing.setCountdownTimer(lockout_inverter_for);
     }
 }
 
@@ -1842,7 +1845,7 @@ void MessageManager::main()
 
 void MessageManager::messageInverterRunTime()
 {
-    const int inverter_run_time {mystatemachine.getInverterRunTime()};
+    const uint32_t inverter_run_time {mystatemachine.getInverterRunTime()};
     String top_line    {F("Inverter harvested")};
     String bottom_line {""};
     if (inverter_run_time == 0)
