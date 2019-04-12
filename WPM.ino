@@ -1417,7 +1417,7 @@ public:
     };
 private: //variables
     State     mState              {STATE_INIT_BALANCED};
-    uint32_t  mInverterRunTime    {60*60*9};
+    uint32_t  mInverterRunTime    {};
 public:  //methods
     void  main                ();
     State getState            ();
@@ -1515,7 +1515,7 @@ uint32_t MyStateMachine::getInverterRunTime()
 
 void MyStateMachine::resetInverterRunTime()
 {
-    mInverterRunTime = 60*60*9;
+    mInverterRunTime = 0;
 }
 
 void MyStateMachine::setState(State state)
