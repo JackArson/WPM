@@ -254,3 +254,4 @@ idea:  a function that takes these parameters (min/max voltage allowable time mi
 04-09-19-19:48 added diagnostic message about RTC clock
 04-12-19-18:52 added delay so that inverter cant
 04-12-19-18:58 removed diagnostic code
+04-27-19-18:40 MyLCD fixed typo in display example

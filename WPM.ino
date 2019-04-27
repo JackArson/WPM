@@ -921,7 +921,7 @@ class MyLCD
 //0|Charging15 SA 13.02v               The number next to 'Charging' is a state change timer
 //1|  message display                  'S' indicates 'S'ummer sensor is detecting light
 //2|       box                         'A' indicates 'A'utumn sensor is detecting light
-//3|Wed, Mar 15 *11:53am               '*' before clock indicates daylight savings time active
+//3|Wed, Mar 15 11:53am+               '+' after clock indicates daylight savings time active
 
 private: //variables
     const byte mLCD_Width {20};
