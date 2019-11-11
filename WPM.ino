@@ -143,7 +143,10 @@ String MyString::get12Clock(const tmElements_t time, const bool right_justify,
     {
         clock_string += F("+");
     }
-    
+    else
+    {
+        clock_string += F(" "); //this space is necessary to erase the '+' sign after the DST change in November
+    }
     return clock_string;    
 }
 
